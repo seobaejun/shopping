@@ -1232,30 +1232,32 @@ document.addEventListener('click', (e) => {
 // ============================================
 
 // 추첨 대기 데이터 (샘플)
+// 파일 업데이트 시간: 2026-02-05 23:13:00
+// 주의: productSupport는 상품의 표기 지원금이며, 미선정자가 받을 실제 지원금은 추첨 시 계산됩니다.
 const LOTTERY_WAITING_DATA = {
-    'product-1': [ // 메가커피 30,000원
-        { id: 1, name: '김철수', phone: '010-1234-5678', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 09:30' },
-        { id: 2, name: '이영희', phone: '010-2345-6789', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 10:15' },
-        { id: 3, name: '박민수', phone: '010-3456-7890', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 11:20' },
-        { id: 4, name: '최지은', phone: '010-4567-8901', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 13:45' },
-        { id: 5, name: '정태양', phone: '010-5678-9012', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 14:30' },
-        { id: 6, name: '강민지', phone: '010-6789-0123', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 15:10' },
-        { id: 7, name: '윤서준', phone: '010-7890-1234', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 16:00' },
-        { id: 8, name: '임하늘', phone: '010-8901-2345', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 16:45' },
-        { id: 9, name: '한별', phone: '010-9012-3456', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 17:20' },
-        { id: 10, name: '송하나', phone: '010-0123-4567', amount: 30000, support: 1500, confirmed: true, date: '2026-02-04 18:00' },
+    'product-1': [ // 메가커피 30,000원 (표기 지원금: 1,500원)
+        { id: 1, name: '김철수', phone: '010-1234-5678', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 09:30' },
+        { id: 2, name: '이영희', phone: '010-2345-6789', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 10:15' },
+        { id: 3, name: '박민수', phone: '010-3456-7890', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 11:20' },
+        { id: 4, name: '최지은', phone: '010-4567-8901', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 13:45' },
+        { id: 5, name: '정태양', phone: '010-5678-9012', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 14:30' },
+        { id: 6, name: '강민지', phone: '010-6789-0123', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 15:10' },
+        { id: 7, name: '윤서준', phone: '010-7890-1234', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 16:00' },
+        { id: 8, name: '임하늘', phone: '010-8901-2345', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 16:45' },
+        { id: 9, name: '한별', phone: '010-9012-3456', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 17:20' },
+        { id: 10, name: '송하나', phone: '010-0123-4567', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 18:00' },
     ],
-    'product-2': [ // 스타벅스 4,500원
-        { id: 11, name: '오민석', phone: '010-1111-2222', amount: 4500, support: 225, confirmed: true, date: '2026-02-04 09:00' },
-        { id: 12, name: '신예진', phone: '010-2222-3333', amount: 4500, support: 225, confirmed: true, date: '2026-02-04 10:00' },
-        { id: 13, name: '조현우', phone: '010-3333-4444', amount: 4500, support: 225, confirmed: true, date: '2026-02-04 11:00' },
-        { id: 14, name: '배수지', phone: '010-4444-5555', amount: 4500, support: 225, confirmed: true, date: '2026-02-04 12:00' },
-        { id: 15, name: '나준호', phone: '010-5555-6666', amount: 4500, support: 225, confirmed: true, date: '2026-02-04 13:00' },
+    'product-2': [ // 스타벅스 4,500원 (표기 지원금: 225원)
+        { id: 11, name: '오민석', phone: '010-1111-2222', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 09:00' },
+        { id: 12, name: '신예진', phone: '010-2222-3333', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 10:00' },
+        { id: 13, name: '조현우', phone: '010-3333-4444', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 11:00' },
+        { id: 14, name: '배수지', phone: '010-4444-5555', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 12:00' },
+        { id: 15, name: '나준호', phone: '010-5555-6666', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 13:00' },
     ],
-    'product-3': [ // 배스킨라빈스 파인트 15,000원
-        { id: 16, name: '류지훈', phone: '010-6666-7777', amount: 15000, support: 750, confirmed: true, date: '2026-02-04 09:15' },
-        { id: 17, name: '서유나', phone: '010-7777-8888', amount: 15000, support: 750, confirmed: true, date: '2026-02-04 10:30' },
-        { id: 18, name: '황도현', phone: '010-8888-9999', amount: 15000, support: 750, confirmed: true, date: '2026-02-04 11:45' },
+    'product-3': [ // 배스킨라빈스 파인트 15,000원 (표기 지원금: 750원)
+        { id: 16, name: '류지훈', phone: '010-6666-7777', amount: 15000, productSupport: 750, confirmed: true, date: '2026-02-04 09:15' },
+        { id: 17, name: '서유나', phone: '010-7777-8888', amount: 15000, productSupport: 750, confirmed: true, date: '2026-02-04 10:30' },
+        { id: 18, name: '황도현', phone: '010-8888-9999', amount: 15000, productSupport: 750, confirmed: true, date: '2026-02-04 11:45' },
     ]
 };
 
@@ -1268,15 +1270,19 @@ function renderLotteryStatus() {
     if (!container) return;
 
     const products = [
-        { id: 'product-1', name: '메가커피 모바일금액권 3만원', price: 30000, support: 1500, waiting: LOTTERY_WAITING_DATA['product-1']?.length || 0 },
-        { id: 'product-2', name: '스타벅스 아메리카노 Tall', price: 4500, support: 225, waiting: LOTTERY_WAITING_DATA['product-2']?.length || 0 },
-        { id: 'product-3', name: '배스킨라빈스 파인트', price: 15000, support: 750, waiting: LOTTERY_WAITING_DATA['product-3']?.length || 0 },
+        { id: 'product-1', name: '메가커피 모바일금액권 3만원', price: 30000, productSupport: 1500, waiting: LOTTERY_WAITING_DATA['product-1']?.length || 0 },
+        { id: 'product-2', name: '스타벅스 아메리카노 Tall', price: 4500, productSupport: 225, waiting: LOTTERY_WAITING_DATA['product-2']?.length || 0 },
+        { id: 'product-3', name: '배스킨라빈스 파인트', price: 15000, productSupport: 750, waiting: LOTTERY_WAITING_DATA['product-3']?.length || 0 },
     ];
 
     container.innerHTML = products.map(product => {
         const groupSize = parseInt(document.getElementById('groupSize')?.value || 10);
+        const winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2);
         const canDraw = product.waiting >= groupSize;
         const progress = Math.min((product.waiting / groupSize) * 100, 100);
+        
+        // 당첨자 인원 × 상품 표기 지원금 = 총 지원금
+        const totalSupport = product.productSupport * winnerCount;
 
         return `
             <div class="lottery-product-card ${selectedProductId === product.id ? 'selected' : ''}" 
@@ -1296,7 +1302,7 @@ function renderLotteryStatus() {
                     </div>
                     <div class="info-row">
                         <span class="info-label">지원금</span>
-                        <span class="info-value">${product.support.toLocaleString()}원</span>
+                        <span class="info-value">${totalSupport.toLocaleString()}원</span>
                     </div>
                     ${canDraw ? '<div class="info-row"><span class="badge badge-success">추첨 가능</span></div>' : ''}
                 </div>
@@ -1344,18 +1350,49 @@ function renderWaitingList(productId) {
     if (productNameEl) productNameEl.textContent = products[productId];
     if (countEl) countEl.textContent = `${waitingData.length}명 대기`;
 
-    tbody.innerHTML = waitingData.map((person, index) => `
+    // 대기 목록에서 계산된 지원금 표시
+    const groupSize = parseInt(document.getElementById('groupSize')?.value || 10);
+    const winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2);
+    
+    console.log('🔍 대기자 데이터 확인:', waitingData[0]);
+    
+    // 당첨자가 받을 표기 지원금 합계 계산
+    const participants = waitingData.slice(0, groupSize);
+    const winnersSupport = participants.slice(0, winnerCount).reduce((sum, p) => sum + (p.productSupport || 0), 0);
+    // 미선정자 총 구매금 계산
+    const losersTotal = participants.slice(winnerCount).reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    console.log('🔍 winnersSupport:', winnersSupport);
+    console.log('🔍 losersTotal:', losersTotal);
+    
+    const htmlContent = waitingData.map((person, index) => {
+        let displaySupport = 0;
+        
+        // 미선정자 예상 지원금 계산
+        if (waitingData.length >= groupSize && index < groupSize && losersTotal > 0) {
+            displaySupport = (winnersSupport / losersTotal) * (person.amount || 0);
+            displaySupport = Math.floor(displaySupport / 10) * 10;
+        }
+        
+        console.log(`${person.name}: displaySupport = ${displaySupport}원`);
+        
+        return `
         <tr>
             <td><input type="checkbox" class="person-select" data-id="${person.id}"></td>
             <td>${index + 1}</td>
             <td>${person.name}</td>
             <td>${person.phone}</td>
             <td>${person.amount.toLocaleString()}원</td>
-            <td>${person.support.toLocaleString()}원</td>
+            <td>${displaySupport.toLocaleString()}원</td>
             <td><span class="badge badge-success">확인완료</span></td>
             <td>${person.date}</td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
+    
+    console.log('🔍 생성된 HTML (첫 번째 행):', htmlContent.substring(0, 300));
+    tbody.innerHTML = htmlContent;
+    console.log('🔍 실제 렌더링된 HTML:', tbody.innerHTML.substring(0, 300));
 }
 
 // 전체 선택 토글
@@ -1365,13 +1402,19 @@ function toggleSelectAll() {
     checkboxes.forEach(cb => cb.checked = selectAll.checked);
 }
 
-// 자동 모드 토글
+// 자동 모드 토글 (auto-lottery.js의 함수 사용)
 function toggleAutoMode() {
-    const autoMode = document.getElementById('autoLotteryMode').checked;
-    if (autoMode) {
-        alert('자동 추첨 모드가 활성화되었습니다.\n10명 달성 시 자동으로 추첨이 실행됩니다.');
+    if (typeof window.toggleAutoLotteryMode === 'function') {
+        window.toggleAutoLotteryMode();
+    } else {
+        console.error('toggleAutoLotteryMode 함수를 찾을 수 없습니다. auto-lottery.js가 로드되었는지 확인하세요.');
+        alert('자동 추첨 모드를 사용할 수 없습니다. 페이지를 새로고침해주세요.');
     }
 }
+
+// 현재 추첨 결과 저장 (confirmLotteryResult에서 사용)
+let currentLotteryWinners = [];
+let currentLotteryLosers = [];
 
 // 추첨 실행
 function executeLottery() {
@@ -1390,27 +1433,80 @@ function executeLottery() {
         }
     }
 
-    // 참가자 목록
+    // 참가자 목록 (10명)
     const participants = waitingData.slice(0, groupSize);
     
     // 랜덤 추첨 (암호학적 난수 사용 시뮬레이션)
     const shuffled = [...participants].sort(() => Math.random() - 0.5);
-    const winners = shuffled.slice(0, winnerCount);
-    const losers = shuffled.slice(winnerCount);
-
-    // 지원금 계산
-    const winnersSupport = winners.reduce((sum, w) => sum + w.support, 0);
-    const losersTotal = losers.reduce((sum, l) => sum + l.amount, 0);
+    const winners = shuffled.slice(0, winnerCount); // 당첨자 2명
+    let losers = shuffled.slice(winnerCount); // 미선정자 8명
     
-    losers.forEach(loser => {
+    // 지원금 계산 (먼저 계산)
+    // 당첨자의 상품 표기 지원금 합계 (productSupport 사용)
+    const winnersSupport = winners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
+    const losersTotal = losers.reduce((sum, l) => sum + (l.amount || 0), 0);
+    
+    console.log('🔵 지원금 계산 시작:');
+    console.log('  - 당첨자 표기 지원금 합계:', winnersSupport);
+    console.log('  - 미선정자 총 구매금:', losersTotal);
+    
+    // 지원금 계산 및 새로운 객체로 생성 (참조 문제 완전 해결)
+    losers = losers.map((loser, index) => {
         // 공식: (당첨자 지원금 합계 / 미선정자 총 구매금) × 나의 구매금
-        const supportAmount = (winnersSupport / losersTotal) * loser.amount;
+        let supportAmount = 0;
+        if (losersTotal > 0) {
+            supportAmount = (winnersSupport / losersTotal) * (loser.amount || 0);
+        }
         // 10원 단위 절삭
-        loser.calculatedSupport = Math.floor(supportAmount / 10) * 10;
+        const calculatedSupport = Math.floor(supportAmount / 10) * 10;
+        
+        console.log(`  - ${loser.name}: ${loser.amount}원 → 지원금 ${calculatedSupport}원`);
+        
+        // 새로운 객체 반환 (calculatedSupport 포함)
+        return {
+            ...loser,
+            calculatedSupport: calculatedSupport // 반드시 설정
+        };
     });
+    
+    console.log('✅ 지원금 계산 완료');
+    console.log('🔵 계산된 losers 배열:', losers.map(l => ({ name: l.name, calculatedSupport: l.calculatedSupport, hasSupport: !!l.support })));
+    
+    // 전역 변수에 저장 (confirmLotteryResult에서 사용)
+    currentLotteryWinners = winners;
+    currentLotteryLosers = losers;
 
     // 결과 표시
     showLotteryResult(winners, losers, participants.length);
+    
+    // ✅ 순환 구조: 당첨자 2명만 제거, 미선정자 8명은 다음 추첨에 포함
+    // 당첨자 2명의 인덱스를 찾아서 제거
+    const winnerIds = new Set(winners.map(w => w.id || w.userId));
+    const remainingData = waitingData.filter(person => {
+        const personId = person.id || person.userId;
+        return !winnerIds.has(personId);
+    });
+    
+    // 다음 대기 목록에서 2명 추가 (10명 유지)
+    const nextWaitingCount = groupSize - remainingData.length; // 필요한 인원 수
+    if (nextWaitingCount > 0 && waitingData.length > groupSize) {
+        // 대기 목록에 더 많은 인원이 있으면 추가
+        const additionalPeople = waitingData.slice(groupSize, groupSize + nextWaitingCount);
+        remainingData.push(...additionalPeople);
+    }
+    
+    // 대기 목록 업데이트 (당첨자 제거 + 다음 인원 추가)
+    LOTTERY_WAITING_DATA[selectedProductId] = remainingData;
+    
+    // UI 업데이트
+    if (typeof renderLotteryStatus === 'function') {
+        renderLotteryStatus();
+    }
+    if (typeof renderWaitingList === 'function') {
+        renderWaitingList();
+    }
+    
+    console.log(`✅ 추첨 완료: 당첨자 ${winners.length}명 제거, 미선정자 ${losers.length}명 유지, 남은 대기 인원: ${remainingData.length}명`);
 }
 
 // 추첨 결과 표시
@@ -1419,8 +1515,18 @@ function showLotteryResult(winners, losers, totalCount) {
     const winnersListEl = document.getElementById('winnersList');
     const losersListEl = document.getElementById('losersList');
     
+    // ✅ 추첨 확정 현황과 동일하게 currentLotteryLosers 사용 (calculatedSupport 포함)
+    // 전역 변수에 저장된 계산된 데이터 사용
+    const displayLosers = currentLotteryLosers && currentLotteryLosers.length > 0 ? currentLotteryLosers : losers;
+    const displayWinners = currentLotteryWinners && currentLotteryWinners.length > 0 ? currentLotteryWinners : winners;
+    
+    console.log('🔵 showLotteryResult - currentLotteryLosers 사용:', displayLosers.map(l => ({ 
+        name: l.name, 
+        calculatedSupport: l.calculatedSupport 
+    })));
+    
     // 당첨자 렌더링 (지원금 없음)
-    winnersListEl.innerHTML = winners.map(w => `
+    winnersListEl.innerHTML = displayWinners.map(w => `
         <div class="result-person winner">
             <div class="person-name">🎉 ${w.name}</div>
             <div class="person-phone">${w.phone}</div>
@@ -1429,21 +1535,64 @@ function showLotteryResult(winners, losers, totalCount) {
         </div>
     `).join('');
 
-    // 미선정자 렌더링
-    losersListEl.innerHTML = losers.map(l => `
+    // 미선정자 렌더링 - 추첨 확정 현황과 동일하게 calculatedSupport 직접 사용
+    console.log('🔵 showLotteryResult - displayLosers 확인:', displayLosers.map(l => ({ 
+        name: l.name, 
+        calculatedSupport: l.calculatedSupport,
+        support: l.support,
+        amount: l.amount
+    })));
+    
+    losersListEl.innerHTML = displayLosers.map((l, index) => {
+        // ✅ 추첨 확정 현황과 동일: calculatedSupport 직접 사용
+        let supportAmount = 0;
+        
+        // calculatedSupport가 있으면 사용 (추첨 확정 현황과 동일)
+        if (l.calculatedSupport !== undefined && !isNaN(l.calculatedSupport) && l.calculatedSupport !== null) {
+            supportAmount = l.calculatedSupport;
+            console.log(`✅ ${l.name}: calculatedSupport 사용 (${supportAmount}원)`);
+        } else {
+            // calculatedSupport가 없으면 계산 (productSupport 사용)
+            console.warn(`⚠️ ${l.name}: calculatedSupport가 없어서 재계산합니다.`);
+            const winnersSupport = displayWinners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
+            const losersTotal = displayLosers.reduce((sum, lo) => sum + (lo.amount || 0), 0);
+            if (losersTotal > 0 && l.amount) {
+                supportAmount = (winnersSupport / losersTotal) * l.amount;
+                supportAmount = Math.floor(supportAmount / 10) * 10;
+                console.log(`✅ ${l.name}: 재계산 완료 (${supportAmount}원)`);
+            }
+        }
+        
+        return `
         <div class="result-person loser">
             <div class="person-name">💰 ${l.name}</div>
             <div class="person-phone">${l.phone}</div>
             <div class="person-amount">구매금: ${l.amount.toLocaleString()}원</div>
-            <div class="person-support">지원금: ${l.calculatedSupport.toLocaleString()}원</div>
+            <div class="person-support">지원금: ${supportAmount.toLocaleString()}원</div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
-    // 요약 정보
-    const totalSupport = losers.reduce((sum, l) => sum + l.calculatedSupport, 0);
+    // 요약 정보 (calculatedSupport 직접 사용 - 추첨 확정 현황과 동일)
+    const totalSupport = displayLosers.reduce((sum, l) => {
+        // ✅ calculatedSupport 직접 사용 (추첨 확정 현황과 동일)
+        let support = 0;
+        if (l.calculatedSupport !== undefined && !isNaN(l.calculatedSupport) && l.calculatedSupport !== null) {
+            support = l.calculatedSupport;
+        } else {
+            // calculatedSupport가 없으면 재계산 (productSupport 사용)
+            const winnersSupport = displayWinners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
+            const losersTotal = displayLosers.reduce((sum, lo) => sum + (lo.amount || 0), 0);
+            if (losersTotal > 0 && l.amount) {
+                support = (winnersSupport / losersTotal) * l.amount;
+                support = Math.floor(support / 10) * 10;
+            }
+        }
+        return sum + support;
+    }, 0);
     document.getElementById('resultRound').textContent = `${currentRound}회차`;
     document.getElementById('resultTotal').textContent = totalCount;
-    document.getElementById('resultWinners').textContent = winners.length;
+    document.getElementById('resultWinners').textContent = displayWinners.length;
     document.getElementById('resultSupport').textContent = totalSupport.toLocaleString();
 
     modal.style.display = 'flex';
@@ -1454,68 +1603,98 @@ function closeLotteryResult() {
     document.getElementById('lotteryResultModal').style.display = 'none';
 }
 
-// 추첨 확정 결과 저장소
+// 추첨 확정 결과 저장소 (페이지 로드 시 초기화)
 let LOTTERY_CONFIRMED_RESULTS = [];
+
+// 기존 확정 결과 초기화 함수
+function clearConfirmedResults() {
+    if (confirm('⚠️ 모든 확정된 추첨 결과를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+        LOTTERY_CONFIRMED_RESULTS = [];
+        updateConfirmPage();
+        alert('✅ 모든 확정 결과가 삭제되었습니다.');
+    }
+}
 
 // 추첨 결과 확정
 function confirmLotteryResult() {
-    const winnersListEl = document.getElementById('winnersList');
-    const losersListEl = document.getElementById('losersList');
+    // executeLottery에서 저장된 데이터 사용 (calculatedSupport 포함)
+    if (!currentLotteryWinners || !currentLotteryLosers || currentLotteryWinners.length === 0) {
+        alert('추첨 결과를 찾을 수 없습니다. 다시 추첨해주세요.');
+        return;
+    }
     
-    if (!winnersListEl || !losersListEl) return;
+    // 저장된 데이터로 확정 결과 생성
+    const winners = currentLotteryWinners.map((w, index) => ({
+        id: Date.now() + index,
+        round: currentRound,
+        productId: selectedProductId,
+        productName: getProductName(selectedProductId),
+        name: w.name,
+        phone: w.phone,
+        amount: w.amount,
+        result: 'winner',
+        support: 0, // 당첨자는 지원금 없음
+        paymentStatus: 'completed', // 당첨자는 지급 완료 상태
+        date: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0]
+    }));
     
-    // 현재 결과 데이터 추출
-    const winners = Array.from(winnersListEl.querySelectorAll('.result-person')).map((el, index) => {
-        const name = el.querySelector('.person-name').textContent.replace('🎉 ', '');
-        const phone = el.querySelector('.person-phone').textContent;
-        const amountText = el.querySelector('.person-amount').textContent.replace('구매 확정: ', '').replace('원', '').replace(/,/g, '');
+    // ✅ 디버깅: currentLotteryLosers 확인
+    console.log('🔵 confirmLotteryResult - currentLotteryLosers:', currentLotteryLosers.map(l => ({
+        name: l.name,
+        calculatedSupport: l.calculatedSupport,
+        support: l.support,
+        amount: l.amount
+    })));
+    
+    const losers = currentLotteryLosers.map((l, index) => {
+        // ✅ calculatedSupport가 제대로 계산되었는지 확인
+        let supportAmount = 0;
         
-        return {
-            id: Date.now() + index,
-            round: currentRound,
-            productId: selectedProductId,
-            productName: getProductName(selectedProductId),
-            name: name,
-            phone: phone,
-            amount: parseInt(amountText),
-            result: 'winner',
-            support: 0, // 당첨자는 지원금 없음
-            paymentStatus: 'completed', // 당첨자는 지급 완료 상태
-            date: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0]
-        };
-    });
-    
-    const losers = Array.from(losersListEl.querySelectorAll('.result-person')).map((el, index) => {
-        const name = el.querySelector('.person-name').textContent.replace('💰 ', '');
-        const phone = el.querySelector('.person-phone').textContent;
-        const amountText = el.querySelector('.person-amount').textContent.replace('구매금: ', '').replace('원', '').replace(/,/g, '');
-        const supportText = el.querySelector('.person-support').textContent.replace('지원금: ', '').replace('원', '').replace(/,/g, '');
+        // calculatedSupport 우선 사용 (반드시)
+        if (l.calculatedSupport !== undefined && !isNaN(l.calculatedSupport) && l.calculatedSupport !== null) {
+            supportAmount = l.calculatedSupport;
+            console.log(`✅ ${l.name}: calculatedSupport 사용 (${supportAmount}원)`);
+        } else {
+            // calculatedSupport가 없으면 재계산 (productSupport 사용)
+            console.warn(`⚠️ ${l.name}: calculatedSupport가 없어서 재계산합니다.`);
+            const winnersSupport = currentLotteryWinners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
+            const losersTotal = currentLotteryLosers.reduce((sum, lo) => sum + (lo.amount || 0), 0);
+            if (losersTotal > 0 && l.amount) {
+                const calculated = (winnersSupport / losersTotal) * l.amount;
+                supportAmount = Math.floor(calculated / 10) * 10;
+                console.log(`✅ ${l.name}: 재계산 완료 (${supportAmount}원)`);
+            }
+        }
         
         return {
             id: Date.now() + winners.length + index,
             round: currentRound,
             productId: selectedProductId,
             productName: getProductName(selectedProductId),
-            name: name,
-            phone: phone,
-            amount: parseInt(amountText),
+            name: l.name,
+            phone: l.phone,
+            amount: l.amount,
             result: 'loser',
-            support: parseInt(supportText),
+            support: supportAmount, // ✅ calculatedSupport 사용 (절대 1500원 아님)
             paymentStatus: 'pending',
             date: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0]
         };
     });
+    
+    // ✅ 저장 전 최종 확인
+    console.log('🔵 confirmLotteryResult - 저장할 losers:', losers.map(l => ({
+        name: l.name,
+        support: l.support
+    })));
     
     // 확정 결과에 추가
     LOTTERY_CONFIRMED_RESULTS.push(...winners, ...losers);
     
     alert(`추첨 결과가 확정되었습니다!\n\n회차: ${currentRound}회\n당첨: ${winners.length}명\n미선정: ${losers.length}명\n총 지원금: ${losers.reduce((sum, l) => sum + l.support, 0).toLocaleString()}원\n\n※ 지원금은 당일 일괄 지급됩니다.`);
     
-    // 대기 목록에서 제거
-    if (selectedProductId && LOTTERY_WAITING_DATA[selectedProductId]) {
-        const groupSize = parseInt(document.getElementById('groupSize').value);
-        LOTTERY_WAITING_DATA[selectedProductId].splice(0, groupSize);
-    }
+    // ✅ 순환 구조: 당첨자만 제거 (이미 executeLottery에서 처리됨)
+    // confirmLotteryResult는 결과를 확정하는 것이므로 여기서는 제거하지 않음
+    // executeLottery에서 이미 당첨자만 제거하고 미선정자는 유지하도록 수정됨
     
     currentRound++;
     closeLotteryResult();

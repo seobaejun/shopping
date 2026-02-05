@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>서버 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .status-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .link-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        a {
+            color: #1976d2;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-box">
+        <h1>🚀 10쇼핑게임 서버 테스트</h1>
+        <p id="status" class="info">서버 상태 확인 중...</p>
+    </div>
+
+    <div class="status-box">
+        <h2>📋 접속 링크</h2>
+        <div class="link-box">
+            <h3>관리자 페이지</h3>
+            <a href="http://localhost:8000/admin/index.html" target="_blank">
+                http://localhost:8000/admin/index.html
+            </a>
+        </div>
+        <div class="link-box">
+            <h3>사용자 메인 페이지</h3>
+            <a href="http://localhost:8000/index.html" target="_blank">
+                http://localhost:8000/index.html
+            </a>
+        </div>
+        <div class="link-box">
+            <h3>회원가입 페이지</h3>
+            <a href="http://localhost:8000/signup.html" target="_blank">
+                http://localhost:8000/signup.html
+            </a>
+        </div>
+    </div>
+
+    <div class="status-box">
+        <h2>🔧 문제 해결 가이드</h2>
+        <h3>서버 시작 방법:</h3>
+        <ol>
+            <li>PowerShell 또는 CMD를 엽니다</li>
+            <li><code>cd C:\10-2\shopping</code> 명령어 실행</li>
+            <li><code>python -m http.server 8000</code> 명령어 실행</li>
+            <li>브라우저에서 <a href="http://localhost:8000" target="_blank">http://localhost:8000</a> 접속</li>
+        </ol>
+
+        <h3>포트가 이미 사용 중인 경우:</h3>
+        <ul>
+            <li>다른 포트 사용: <code>python -m http.server 8080</code></li>
+            <li>기존 프로세스 종료 후 재시도</li>
+        </ul>
+
+        <h3>Firebase 연결 오류 시:</h3>
+        <ul>
+            <li>브라우저 개발자 도구(F12) → Console 탭에서 오류 확인</li>
+            <li>인터넷 연결 확인 (Firebase CDN 접근 필요)</li>
+            <li>Firebase 프로젝트 설정 확인</li>
+        </ul>
+    </div>
+
+    <div class="status-box">
+        <h2>✅ 수정된 내용</h2>
+        <ul>
+            <li><strong>저결금 계산 오류 수정:</strong> 샘플 데이터의 <code>support</code> → <code>productSupport</code> 변경</li>
+            <li><strong>추첨 로직 개선:</strong> 당첨자의 표기 지원금을 올바르게 참조하도록 수정</li>
+            <li><strong>Firebase 설정 수정:</strong> <code>import.meta.env</code> 제거, 직접 설정값 사용</li>
+        </ul>
+        
+        <button onclick="window.location.href='admin/index.html'">
+            관리자 페이지로 이동
+        </button>
+    </div>
+
+    <script>
+        // 서버 상태 확인
+        fetch('/admin/index.html')
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('status').innerHTML = 
+                        '<span class="success">✅ 서버가 정상적으로 작동 중입니다!</span>';
+                } else {
+                    document.getElementById('status').innerHTML = 
+                        '<span class="error">❌ 서버 응답 오류</span>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = 
+                    '<span class="error">❌ 서버에 연결할 수 없습니다. 서버를 시작해주세요.</span>';
+            });
+
+        // 현재 URL 표시
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('현재 URL:', window.location.href);
+            console.log('서버 상태 확인 완료');
+        });
+    </script>
+</body>
+</html>
+

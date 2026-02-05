@@ -51,3 +51,4 @@ window.deleteAllFirebaseData = deleteAllFirebaseData;
 // 콘솔에서 실행 가능하도록
 console.log('Firebase 데이터 삭제: deleteAllFirebaseData() 함수를 실행하세요.');
 
+

@@ -1398,6 +1398,9 @@
                         <button class="btn btn-default" onclick="resetConfirmFilter()">
                             <i class="fas fa-undo"></i> 초기화
                         </button>
+                        <button class="btn btn-danger" onclick="clearConfirmedResults()" style="margin-left: 10px;">
+                            <i class="fas fa-trash"></i> 모든 결과 삭제
+                        </button>
                         <button class="btn btn-secondary" onclick="exportConfirmResults()">
                             <i class="fas fa-file-excel"></i> 엑셀 다운로드
                         </button>
@@ -2080,18 +2083,27 @@
                             document.body.appendChild(script4_5);
                             
                             script4_5.onload = () => {
-                                const script5 = document.createElement('script');
-                                script5.src = 'js/admin.js';
-                                script5.onload = () => {
-                                    console.log('✅ admin.js 로드 완료 - 네비게이션 초기화 실행');
-                                    // admin.js가 로드된 후 초기화 함수 호출
-                                    if (typeof initAdminPage === 'function') {
-                                        setTimeout(initAdminPage, 100);
-                                    } else {
-                                        console.error('❌ initAdminPage 함수를 찾을 수 없습니다!');
-                                    }
+                                // auto-lottery.js 로드
+                                const script4_6 = document.createElement('script');
+                                script4_6.src = 'js/auto-lottery.js';
+                                script4_6.onload = () => {
+                                    console.log('✅ auto-lottery.js 로드 완료');
+                                    
+                                    // auto-lottery.js 로드 후 admin.js 로드
+                                    const script5 = document.createElement('script');
+                                    script5.src = 'js/admin.js';
+                                    script5.onload = () => {
+                                        console.log('✅ admin.js 로드 완료 - 네비게이션 초기화 실행');
+                                        // admin.js가 로드된 후 초기화 함수 호출
+                                        if (typeof initAdminPage === 'function') {
+                                            setTimeout(initAdminPage, 100);
+                                        } else {
+                                            console.error('❌ initAdminPage 함수를 찾을 수 없습니다!');
+                                        }
+                                    };
+                                    document.body.appendChild(script5);
                                 };
-                                document.body.appendChild(script5);
+                                document.body.appendChild(script4_6);
                             };
                         };
                     };
