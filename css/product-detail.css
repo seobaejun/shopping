@@ -774,7 +774,7 @@
     background: var(--secondary-color);
 }
 
-/* 오늘 본 상품 개선 */
+/* 최근 본 상품 개선 */
 .viewed-list {
     max-height: 400px;
     overflow-y: auto;

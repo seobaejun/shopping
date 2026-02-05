@@ -1,46 +1,203 @@
 // 관리자 페이지 JavaScript
 
-// DOM 요소
-const menuToggle = document.getElementById('menuToggle');
-const adminSidebar = document.getElementById('adminSidebar');
-const navLinks = document.querySelectorAll('.nav-list a');
-const contentPages = document.querySelectorAll('.content-page');
+// DOM 요소 (나중에 초기화됨)
+let menuToggle, adminSidebar, navLinks, contentPages;
 
-// 사이드바 토글
-menuToggle.addEventListener('click', () => {
-    adminSidebar.classList.toggle('open');
-});
+// 사이드바 토글 (나중에 초기화됨)
 
-// 페이지 전환
-navLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
-        e.preventDefault();
-        
-        const targetPage = link.dataset.page;
-        
-        // 모든 페이지 숨기기
+// 페이지 전환 (나중에 초기화됨)
+
+// 페이지 전환 함수
+async function switchToPage(targetPage, clickedLink = null) {
+    if (!targetPage) {
+        console.warn('targetPage가 없습니다. dashboard로 전환합니다.');
+        targetPage = 'dashboard'; // 기본값
+    }
+    
+    console.log('페이지 전환 시작:', targetPage);
+    
+    // contentPages가 없으면 다시 초기화
+    if (!contentPages || contentPages.length === 0) {
+        contentPages = document.querySelectorAll('.content-page');
+        console.log('contentPages 재초기화:', contentPages.length);
+    }
+    
+    // 모든 페이지 숨기기
+    if (contentPages && contentPages.length > 0) {
         contentPages.forEach(page => {
             page.classList.remove('active');
         });
+        console.log('모든 페이지 active 제거 완료');
+    } else {
+        console.warn('contentPages가 비어있습니다');
+    }
+    
+    // 선택한 페이지 표시
+    const targetElement = document.getElementById(targetPage);
+    if (targetElement) {
+        targetElement.classList.add('active');
+        console.log('페이지 활성화:', targetPage);
         
-        // 선택한 페이지 표시
-        const targetElement = document.getElementById(targetPage);
-        if (targetElement) {
-            targetElement.classList.add('active');
+        // 페이지별 데이터 로드
+        try {
+            await loadPageData(targetPage);
+        } catch (error) {
+            console.error('페이지 데이터 로드 오류:', error);
         }
-        
-        // 네비게이션 활성 상태 변경
-        document.querySelectorAll('.nav-list li').forEach(li => {
-            li.classList.remove('active');
-        });
-        link.parentElement.classList.add('active');
-        
-        // 모바일에서 사이드바 닫기
-        if (window.innerWidth <= 1024) {
-            adminSidebar.classList.remove('open');
+    } else {
+        console.error('페이지를 찾을 수 없습니다:', targetPage);
+        // 페이지를 찾을 수 없으면 기본 페이지로
+        const dashboardPage = document.getElementById('dashboard');
+        if (dashboardPage) {
+            dashboardPage.classList.add('active');
+            targetPage = 'dashboard';
+            console.log('기본 페이지로 전환:', targetPage);
+        } else {
+            console.error('dashboard 페이지도 찾을 수 없습니다!');
+            return;
         }
+    }
+    
+    // 네비게이션 활성 상태 변경
+    document.querySelectorAll('.nav-list li').forEach(li => {
+        li.classList.remove('active');
     });
-});
+    
+    // 클릭된 링크가 있으면 해당 링크 활성화, 없으면 해당 페이지 링크 찾기
+    if (clickedLink) {
+        clickedLink.parentElement.classList.add('active');
+        console.log('클릭된 링크 활성화:', clickedLink);
+    } else {
+        const pageLink = document.querySelector(`[data-page="${targetPage}"]`);
+        if (pageLink) {
+            pageLink.parentElement.classList.add('active');
+            console.log('네비게이션 활성화:', targetPage);
+        } else {
+            console.warn('네비게이션 링크를 찾을 수 없습니다:', targetPage);
+        }
+    }
+    
+    // 모바일에서 사이드바 닫기
+    if (window.innerWidth <= 1024 && adminSidebar) {
+        adminSidebar.classList.remove('open');
+    }
+    
+    console.log('페이지 전환 완료:', targetPage);
+}
+
+// 페이지별 데이터 로드 함수
+async function loadPageData(pageId) {
+    console.log('🔵 loadPageData 호출됨, pageId:', pageId);
+    
+    // Firebase 초기화 확인
+    if (window.firebaseAdmin && !window.firebaseAdmin.db) {
+        await window.firebaseAdmin.initFirebase();
+    }
+    
+    console.log('🔵 loadPageData switch 진입, pageId:', pageId);
+    
+    switch(pageId) {
+        case 'dashboard':
+            if (window.loadDashboardData) {
+                await window.loadDashboardData();
+            }
+            break;
+        case 'basic-settings':
+            if (window.loadSettings) {
+                await window.loadSettings();
+            }
+            // 이벤트 위임이 이미 등록되어 있으므로 추가 작업 불필요
+            console.log('기본환경설정 페이지 로드 완료');
+            break;
+        case 'member-search':
+            // 회원조회 페이지 로드 (기본환경설정과 동일한 패턴)
+            console.log('🔵🔵🔵 회원조회 페이지 로드 시작 (loadPageData)');
+            
+            // 테이블 초기화
+            const memberTableBody = document.getElementById('memberTableBody');
+            if (memberTableBody) {
+                memberTableBody.innerHTML = '<tr><td colspan="13" class="empty-message">데이터를 불러오는 중...</td></tr>';
+                console.log('✅ 테이블 초기화 완료');
+            } else {
+                console.error('❌ memberTableBody를 찾을 수 없습니다!');
+            }
+            
+            // loadAllMembers 함수가 로드될 때까지 대기 (최대 5초)
+            let waitCount = 0;
+            const maxWait = 50; // 5초
+            
+            while (!window.loadAllMembers && waitCount < maxWait) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                waitCount++;
+                if (waitCount % 10 === 0) {
+                    console.log(`🔵 loadAllMembers 함수 대기 중... (${waitCount * 100}ms)`);
+                }
+            }
+            
+            // loadAllMembers 함수 호출 (settings.js의 loadSettings와 동일한 패턴)
+            console.log('🔵 window.loadAllMembers 확인:', typeof window.loadAllMembers);
+            if (window.loadAllMembers) {
+                console.log('🔵 loadAllMembers 함수 호출 시작...');
+                try {
+                    await window.loadAllMembers();
+                    console.log('✅✅✅ 회원조회 페이지 로드 완료');
+                } catch (error) {
+                    console.error('❌❌❌ 회원조회 페이지 로드 오류:', error);
+                    console.error('오류 스택:', error.stack);
+                    if (memberTableBody) {
+                        memberTableBody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+                    }
+                }
+            } else {
+                console.error('❌❌❌ loadAllMembers 함수를 찾을 수 없습니다! (대기 후에도 없음)');
+                console.error('window 객체 확인:', Object.keys(window).filter(k => k.includes('load') || k.includes('member')));
+                if (memberTableBody) {
+                    memberTableBody.innerHTML = '<tr><td colspan="13" class="empty-message">loadAllMembers 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.</td></tr>';
+                }
+            }
+            break;
+        case 'product-list':
+            await loadProducts();
+            break;
+        case 'purchase-request':
+            await loadPurchaseRequests();
+            break;
+        case 'draw-lottery':
+            // 추첨 현황 업데이트
+            if (typeof renderLotteryStatus === 'function') {
+                setTimeout(renderLotteryStatus, 100);
+            }
+            break;
+        case 'draw-confirm':
+            // 추첨 확정 현황 업데이트
+            if (typeof updateConfirmPage === 'function') {
+                setTimeout(updateConfirmPage, 100);
+            }
+            break;
+        // 다른 페이지들도 추가 가능
+    }
+}
+
+// 상품 목록 로드
+async function loadProducts() {
+    try {
+        const products = await window.firebaseAdmin.productService.getProducts();
+        renderProductTable(products);
+    } catch (error) {
+        console.error('상품 목록 로드 오류:', error);
+        renderProductTable(PRODUCT_DATA);
+    }
+}
+
+// 구매 요청 목록 로드
+async function loadPurchaseRequests() {
+    try {
+        const orders = await window.firebaseAdmin.orderService.getOrders({ status: 'pending' });
+        // 추후 구현
+    } catch (error) {
+        console.error('구매 요청 목록 로드 오류:', error);
+    }
+}
 
 // 검색 기능
 const searchBtn = document.getElementById('searchBtn');
@@ -93,148 +250,631 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// 페이지네이션
-const pageNums = document.querySelectorAll('.page-num');
-pageNums.forEach(btn => {
-    btn.addEventListener('click', () => {
-        pageNums.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+// 페이지네이션 (DOMContentLoaded 이벤트 내부로 이동)
+// 이 코드는 DOMContentLoaded 이벤트 핸들러 내부에서 실행됩니다
+
+// loadPageData 함수는 위에서 이미 정의됨 (89번째 줄)
+// 중복 정의 제거됨
+
+// 반응형 처리 및 외부 클릭 이벤트는 DOMContentLoaded 내부에서 초기화됩니다
+// (이 코드는 DOMContentLoaded 이벤트 핸들러 내부로 이동됨)
+
+// 로그아웃, 홈 버튼 등은 DOMContentLoaded 내부에서 초기화됩니다
+// 이 코드는 DOMContentLoaded 이벤트 핸들러 내부로 이동되었습니다
+
+// ============================================
+// 회원 데이터 - Firestore에서 가져옴
+// 더미데이터는 제거되었습니다.
+// ============================================
+
+// ============================================
+// 회원정보 페이지 기능 (Firestore 연동)
+// ============================================
+
+// 페이지네이션 변수
+let currentMemberPage = 1;
+const membersPerPage = 10;
+let allMembersData = []; // 전체 회원 데이터
+let filteredMembersData = []; // 필터링된 회원 데이터
+
+// 전역으로도 export (member-search.js에서 사용)
+window.allMembersData = allMembersData;
+window.filteredMembersData = filteredMembersData;
+window.currentMemberPage = currentMemberPage;
+
+// 회원 검색 함수는 member-search.js로 이동됨
+// admin.js에서는 제거하고 member-search.js의 함수를 사용
+
+// 전체 회원 데이터 로드
+async function loadAllMembers() {
+    console.log('🔵 loadAllMembers 함수 호출됨');
+    
+    try {
+        // Firebase 초기화 확인 및 대기
+        if (!window.firebaseAdmin) {
+            console.log('Firebase Admin 대기 중...');
+            let waitCount = 0;
+            while (!window.firebaseAdmin && waitCount < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                waitCount++;
+            }
+        }
         
-        // 페이지 데이터 로드
-        const pageNumber = btn.textContent;
-        loadPageData(pageNumber);
-    });
-});
-
-function loadPageData(pageNumber) {
-    console.log(`Loading page ${pageNumber}`);
-    // 서버에서 데이터 로드
-}
-
-// 반응형 처리
-window.addEventListener('resize', () => {
-    if (window.innerWidth > 1024) {
-        adminSidebar.classList.remove('open');
-    }
-});
-
-// 외부 클릭 시 사이드바 닫기 (모바일)
-document.addEventListener('click', (e) => {
-    if (window.innerWidth <= 1024) {
-        if (!adminSidebar.contains(e.target) && !menuToggle.contains(e.target)) {
-            adminSidebar.classList.remove('open');
+        if (!window.firebaseAdmin) {
+            console.error('❌ Firebase Admin을 찾을 수 없습니다.');
+            const tbody = document.getElementById('memberTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">Firebase가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.</td></tr>';
+            }
+            return;
+        }
+        
+        // Firebase 초기화 확인
+        if (!window.firebaseAdmin.db) {
+            console.log('Firebase DB 초기화 중...');
+            const initResult = await window.firebaseAdmin.initFirebase();
+            console.log('초기화 결과:', initResult);
+        }
+        
+        if (!window.firebaseAdmin.db) {
+            console.error('❌ DB 초기화 실패!');
+            const tbody = document.getElementById('memberTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">Firebase DB 초기화에 실패했습니다. 콘솔에서 testFirestoreMembers()를 실행해보세요.</td></tr>';
+            }
+            return;
+        }
+        
+        console.log('✅ DB 확인 완료:', window.firebaseAdmin.db);
+        
+        if (!window.firebaseAdmin.memberService) {
+            console.error('❌ memberService를 찾을 수 없습니다.');
+            console.log('window.firebaseAdmin:', window.firebaseAdmin);
+            const tbody = document.getElementById('memberTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">memberService를 찾을 수 없습니다.</td></tr>';
+            }
+            return;
+        }
+        
+        console.log('✅ Firebase Admin 및 memberService 확인 완료');
+        console.log('전체 회원 데이터 로드 시작...');
+        console.log('memberService:', window.firebaseAdmin.memberService);
+        console.log('getMembers 함수:', typeof window.firebaseAdmin.memberService.getMembers);
+        
+        // 직접 Firestore 접근 (가장 확실한 방법)
+        console.log('🔵🔵🔵 직접 Firestore 접근으로 데이터 가져오기 시작');
+        let members = [];
+        
+        try {
+            // 방법 1: memberService.getMembers() 시도
+            console.log('🔵 방법 1: memberService.getMembers() 호출');
+            members = await window.firebaseAdmin.memberService.getMembers();
+            console.log('✅✅✅ memberService.getMembers() 성공:', members.length, '명');
+        } catch (error) {
+            console.error('❌ memberService.getMembers() 실패:', error);
+            console.error('오류 상세:', error.message, error.code);
+            
+            // 방법 2: 직접 Firestore 접근
+            console.log('🔵 방법 2: 직접 Firestore 접근 시도');
+            try {
+                const membersRef = window.firebaseAdmin.db.collection('members');
+                console.log('members 컬렉션 참조 생성:', membersRef);
+                
+                const snapshot = await membersRef.get();
+                console.log('✅✅✅ 직접 접근 성공!');
+                console.log('문서 개수:', snapshot.docs.length);
+                console.log('빈 컬렉션 여부:', snapshot.empty);
+                
+                if (snapshot.empty) {
+                    console.warn('⚠️ members 컬렉션이 비어있습니다.');
+                    members = [];
+                } else {
+                    members = snapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            id: doc.id,
+                            ...data
+                        };
+                    });
+                    console.log('✅ 직접 접근으로 데이터 변환 완료:', members.length, '명');
+                }
+            } catch (directError) {
+                console.error('❌❌❌ 직접 접근도 실패:', directError);
+                console.error('오류 메시지:', directError.message);
+                console.error('오류 코드:', directError.code);
+                console.error('오류 스택:', directError.stack);
+                throw directError;
+            }
+        }
+        
+        // 데이터 확인 및 로그
+        console.log('🔵🔵🔵 최종 회원 데이터 확인');
+        console.log('members 배열:', members);
+        console.log('members 개수:', members.length);
+        console.log('members 타입:', typeof members);
+        console.log('members 배열 여부:', Array.isArray(members));
+        
+        if (members && members.length > 0) {
+            console.log('✅✅✅ 회원 데이터 있음!');
+            console.log('첫 번째 회원 데이터 샘플:', JSON.stringify(members[0], null, 2));
+            console.log('모든 회원 ID:', members.map(m => m.id));
+        } else {
+            console.warn('⚠️⚠️⚠️ 회원 데이터가 없습니다!');
+            console.log('Firestore Console에서 members 컬렉션을 확인하세요.');
+        }
+        
+        // 데이터 저장 (전역 변수에 저장 - member-search.js에서 사용)
+        window.allMembersData = Array.isArray(members) ? members : [];
+        window.filteredMembersData = window.allMembersData;
+        allMembersData = window.allMembersData;
+        filteredMembersData = window.filteredMembersData;
+        
+        console.log('🔵🔵🔵 데이터 저장 완료');
+        console.log('window.allMembersData:', window.allMembersData);
+        console.log('window.allMembersData.length:', window.allMembersData.length);
+        console.log('window.filteredMembersData:', window.filteredMembersData);
+        console.log('window.filteredMembersData.length:', window.filteredMembersData.length);
+        
+        // 총 회원 수 업데이트
+        updateTotalMemberCount(window.allMembersData.length);
+        console.log('✅ 총 회원 수 업데이트:', window.allMembersData.length);
+        
+        // 첫 페이지로 리셋
+        window.currentMemberPage = 1;
+        currentMemberPage = 1;
+        console.log('✅ 현재 페이지 리셋:', currentMemberPage);
+        
+        // 테이블 렌더링 (window.filteredMembersData 사용)
+        console.log('🔵🔵🔵 테이블 렌더링 시작');
+        renderMemberInfoTable();
+        console.log('✅✅✅ 회원정보 테이블 렌더링 완료!');
+        
+    } catch (error) {
+        console.error('❌ 회원 데이터 로드 오류:', error);
+        console.error('오류 상세:', error.message, error.stack);
+        
+        const tbody = document.getElementById('memberTableBody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
     }
-});
+}
 
-// 로그아웃
-const logoutBtn = document.querySelector('.btn-logout');
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-        if (confirm('로그아웃 하시겠습니까?')) {
-            // 로그아웃 처리
-            window.location.href = '../index.html';
+// 전역 함수로 export
+window.loadAllMembers = loadAllMembers;
+
+// 테스트 함수 - 콘솔에서 직접 호출 가능
+window.testFirestoreMembers = async function() {
+    console.log('🔵 테스트: Firestore members 컬렉션 직접 접근');
+    
+    try {
+        // Firebase 확인
+        if (!window.firebaseAdmin) {
+            console.error('❌ window.firebaseAdmin이 없습니다!');
+            return;
         }
+        
+        console.log('✅ window.firebaseAdmin 존재:', window.firebaseAdmin);
+        
+        // DB 초기화
+        if (!window.firebaseAdmin.db) {
+            console.log('DB 초기화 중...');
+            await window.firebaseAdmin.initFirebase();
+        }
+        
+        if (!window.firebaseAdmin.db) {
+            console.error('❌ DB 초기화 실패!');
+            return;
+        }
+        
+        console.log('✅ DB 초기화 완료:', window.firebaseAdmin.db);
+        
+        // 직접 members 컬렉션 접근
+        console.log('members 컬렉션 직접 접근 시도...');
+        const membersRef = window.firebaseAdmin.db.collection('members');
+        console.log('members 컬렉션 참조:', membersRef);
+        
+        const snapshot = await membersRef.get();
+        console.log('✅ Firestore 쿼리 완료!');
+        console.log('문서 개수:', snapshot.docs.length);
+        console.log('빈 컬렉션 여부:', snapshot.empty);
+        
+        if (snapshot.empty) {
+            console.warn('⚠️ members 컬렉션이 비어있습니다.');
+        } else {
+            console.log('첫 번째 문서:', snapshot.docs[0].id, snapshot.docs[0].data());
+            const allMembers = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            console.log('전체 회원 데이터:', allMembers);
+            
+            // 테이블에 표시
+            allMembersData = allMembers;
+            filteredMembersData = allMembers;
+            updateTotalMemberCount(allMembers.length);
+            renderMemberInfoTable();
+            console.log('✅ 테이블 업데이트 완료!');
+        }
+        
+    } catch (error) {
+        console.error('❌ 테스트 실패:', error);
+        console.error('오류 메시지:', error.message);
+        console.error('오류 코드:', error.code);
+        console.error('오류 스택:', error.stack);
+    }
+};
+
+// 총 회원 수 업데이트
+function updateTotalMemberCount(count) {
+    const totalCountEl = document.getElementById('totalMemberCount');
+    if (totalCountEl) {
+        totalCountEl.textContent = count;
+    }
+}
+
+// 회원정보 테이블 렌더링 (새로운 구조)
+function renderMemberInfoTable(data = null) {
+    console.log('🔵🔵🔵 renderMemberInfoTable 호출됨');
+    console.log('전달된 data:', data);
+    console.log('filteredMembersData:', filteredMembersData);
+    console.log('filteredMembersData 타입:', typeof filteredMembersData);
+    console.log('filteredMembersData 배열 여부:', Array.isArray(filteredMembersData));
+    console.log('filteredMembersData.length:', filteredMembersData?.length || 0);
+    console.log('allMembersData:', allMembersData);
+    console.log('allMembersData.length:', allMembersData?.length || 0);
+    
+    const tbody = document.getElementById('memberTableBody');
+    if (!tbody) {
+        console.error('❌❌❌ memberTableBody를 찾을 수 없습니다!');
+        console.error('HTML에 id="memberTableBody"가 있는지 확인하세요.');
+        return;
+    }
+    
+    console.log('✅ memberTableBody 찾음');
+    
+    // 데이터가 없으면 필터링된 데이터 사용 (전역 변수 우선)
+    // window.filteredMembersData를 명시적으로 확인
+    let membersToRender;
+    if (data !== null && Array.isArray(data) && data.length > 0) {
+        membersToRender = data;
+        console.log('🔵 전달된 data 사용:', data.length, '명');
+    } else if (window.filteredMembersData && Array.isArray(window.filteredMembersData) && window.filteredMembersData.length > 0) {
+        membersToRender = window.filteredMembersData;
+        console.log('🔵 window.filteredMembersData 사용:', window.filteredMembersData.length, '명');
+    } else if (filteredMembersData && Array.isArray(filteredMembersData) && filteredMembersData.length > 0) {
+        membersToRender = filteredMembersData;
+        console.log('🔵 로컬 filteredMembersData 사용:', filteredMembersData.length, '명');
+    } else {
+        membersToRender = [];
+        console.log('🔵 모든 데이터 소스가 비어있음');
+    }
+    
+    console.log('🔵🔵🔵 렌더링할 회원 데이터 확인');
+    console.log('membersToRender:', membersToRender);
+    console.log('membersToRender 타입:', typeof membersToRender);
+    console.log('membersToRender 배열 여부:', Array.isArray(membersToRender));
+    console.log('membersToRender.length:', membersToRender?.length || 0);
+    
+    if (!membersToRender || !Array.isArray(membersToRender) || membersToRender.length === 0) {
+        console.warn('⚠️⚠️⚠️ 렌더링할 회원 데이터가 없습니다!');
+        console.log('membersToRender 값:', membersToRender);
+        console.log('membersToRender 타입:', typeof membersToRender);
+        console.log('Firestore Console에서 members 컬렉션에 데이터가 있는지 확인하세요.');
+        tbody.innerHTML = '<tr><td colspan="13" class="empty-message">등록된 회원이 없습니다. Firestore Console에서 members 컬렉션을 확인하세요.</td></tr>';
+        renderMemberPagination(0);
+        return;
+    }
+    
+    console.log('✅✅✅ 렌더링할 데이터 있음:', membersToRender.length, '명');
+    
+    // 페이지네이션 계산
+    const totalPages = Math.ceil(membersToRender.length / membersPerPage);
+    const startIndex = (currentMemberPage - 1) * membersPerPage;
+    const endIndex = startIndex + membersPerPage;
+    const pageMembers = membersToRender.slice(startIndex, endIndex);
+    
+    console.log(`페이지 ${currentMemberPage}/${totalPages} 렌더링: ${pageMembers.length}명`);
+    console.log('현재 페이지 회원 데이터:', pageMembers);
+    
+    try {
+        const tableHTML = pageMembers.map((member, index) => {
+        // Firestore 데이터 형식에 맞게 변환
+        const memberId = member.userId || member.id || '';
+        const name = member.name || '';
+        const phone = member.phone || '';
+        
+        // 가입일 처리
+        let joinDate = '';
+        if (member.joinDate) {
+            joinDate = member.joinDate;
+        } else if (member.createdAt) {
+            if (member.createdAt.seconds) {
+                const date = new Date(member.createdAt.seconds * 1000);
+                joinDate = date.toISOString().replace('T', ' ').substring(0, 19);
+            } else if (member.createdAt.toDate) {
+                const date = member.createdAt.toDate();
+                joinDate = date.toISOString().replace('T', ' ').substring(0, 19);
+            }
+        }
+        
+        // 주소 (postcode + address + detailAddress)
+        const address = [member.postcode, member.address, member.detailAddress]
+            .filter(Boolean)
+            .join(' ') || '';
+        
+        // 계좌번호 (현재는 없음, 추후 추가 가능)
+        const accountNumber = member.accountNumber || '';
+        
+        // 추천인 코드 (referralCode 우선)
+        const referralCode = member.referralCode || member.recommender || '';
+        
+        // MD코드 (현재는 없음, 추후 추가 가능)
+        const mdCode = member.mdCode || '';
+        
+        // 구매금액 (현재는 없음, 추후 추가 가능)
+        const purchaseAmount = member.purchaseAmount || 0;
+        
+        // 지원금/누적 (현재는 없음, 추후 추가 가능)
+        const supportAmount = member.supportAmount || 0;
+        const accumulatedSupport = member.accumulatedSupport || 0;
+        
+        // 상태
+        const status = member.status || '정상';
+        const statusClass = status === '정상' ? 'badge-success' : 'badge-danger';
+        
+        // 전화번호 마스킹 (뒷자리 4자리)
+        const maskedPhone = phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '';
+        
+        // 이름 마스킹 (뒷자리 1자리)
+        const maskedName = name && name.length > 1 ? name.substring(0, 1) + '**' : name;
+        
+        return `
+            <tr>
+                <td>${startIndex + index + 1}</td>
+                <td>${escapeHtml(memberId)}</td>
+                <td>${escapeHtml(maskedName)}</td>
+                <td>${escapeHtml(maskedPhone)}</td>
+                <td>${escapeHtml(joinDate)}</td>
+                <td>${escapeHtml(address)}</td>
+                <td>${escapeHtml(accountNumber)}</td>
+                <td>${escapeHtml(referralCode)}</td>
+                <td>${escapeHtml(mdCode)}</td>
+                <td>${purchaseAmount.toLocaleString()}</td>
+                <td>${supportAmount.toLocaleString()} / ${accumulatedSupport.toLocaleString()}</td>
+                <td><span class="badge ${statusClass}">${escapeHtml(status)}</span></td>
+                <td>
+                    <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-icon btn-delete" onclick="deleteMemberInfo('${member.id || memberId}')" title="삭제">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        }).join('');
+        
+        console.log('테이블 HTML 생성 완료, 길이:', tableHTML.length);
+        tbody.innerHTML = tableHTML;
+        console.log('✅ 테이블 렌더링 완료');
+        
+        // 페이지네이션 렌더링
+        renderMemberPagination(membersToRender.length);
+    } catch (error) {
+        console.error('❌ 테이블 렌더링 중 오류:', error);
+        console.error('오류 상세:', error.message, error.stack);
+        tbody.innerHTML = `<tr><td colspan="13" class="empty-message">테이블 렌더링 오류: ${error.message}</td></tr>`;
+    }
+}
+
+// HTML 이스케이프 함수
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, (m) => {
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return map[m];
     });
 }
 
-// 홈 버튼
-const homeBtn = document.querySelector('.btn-home');
-if (homeBtn) {
-    homeBtn.addEventListener('click', () => {
-        window.location.href = '../index.html';
-    });
+// 페이지네이션 렌더링
+function renderMemberPagination(totalMembers) {
+    const paginationEl = document.getElementById('memberPagination');
+    if (!paginationEl) return;
+    
+    const totalPages = Math.ceil(totalMembers / membersPerPage);
+    
+    if (totalPages <= 1) {
+        paginationEl.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '';
+    
+    // 이전 버튼
+    paginationHTML += `<button class="page-btn" ${currentMemberPage === 1 ? 'disabled' : ''} onclick="changeMemberPage(${currentMemberPage - 1})">
+        <i class="fas fa-chevron-left"></i>
+    </button>`;
+    
+    // 페이지 번호
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentMemberPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `<button class="page-num ${i === currentMemberPage ? 'active' : ''}" onclick="changeMemberPage(${i})">${i}</button>`;
+    }
+    
+    // 다음 버튼
+    paginationHTML += `<button class="page-btn" ${currentMemberPage === totalPages ? 'disabled' : ''} onclick="changeMemberPage(${currentMemberPage + 1})">
+        <i class="fas fa-chevron-right"></i>
+    </button>`;
+    
+    paginationEl.innerHTML = paginationHTML;
 }
 
-// MD관리자 버튼
-const mdAdminBtn = document.querySelector('.btn-md-admin');
-if (mdAdminBtn) {
-    mdAdminBtn.addEventListener('click', () => {
-        alert('MD관리자 페이지로 이동합니다.');
-        // window.location.href = 'md-admin.html';
-    });
+// 페이지 변경
+function changeMemberPage(page) {
+    const totalPages = Math.ceil(filteredMembersData.length / membersPerPage);
+    if (page < 1 || page > totalPages) return;
+    
+    currentMemberPage = page;
+    renderMemberInfoTable();
+    
+    // 페이지 상단으로 스크롤
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 설정 버튼
-const settingsBtn = document.querySelector('.btn-settings');
-if (settingsBtn) {
-    settingsBtn.addEventListener('click', () => {
-        alert('설정 페이지로 이동합니다.');
-    });
+// 회원 수정
+async function editMemberInfo(memberId) {
+    try {
+        const members = await window.firebaseAdmin.memberService.getMembers();
+        const member = members.find(m => m.id === memberId || m.userId === memberId);
+        
+        if (member) {
+            alert(`${memberId} 회원 정보 수정 기능은 추후 구현 예정입니다.`);
+            // TODO: 수정 모달 구현
+        } else {
+            alert(`${memberId} 회원을 찾을 수 없습니다.`);
+        }
+    } catch (error) {
+        console.error('회원 수정 오류:', error);
+        alert('회원 정보 수정 중 오류가 발생했습니다.');
+    }
 }
 
-// ============================================
-// 회원 데이터 (샘플)
-// ============================================
-const MEMBER_DATA = [
-    { id: 1, userId: 'user001', name: '김철수', phone: '010-1234-5678', joinDate: '2025-12-01', recommender: '관리자', status: '정상' },
-    { id: 2, userId: 'user002', name: '이영희', phone: '010-2345-6789', joinDate: '2025-12-05', recommender: 'user001', status: '정상' },
-    { id: 3, userId: 'user003', name: '박민수', phone: '010-3456-7890', joinDate: '2025-12-10', recommender: 'user001', status: '정상' },
-    { id: 4, userId: 'user004', name: '최지은', phone: '010-4567-8901', joinDate: '2025-12-15', recommender: 'user002', status: '정지' },
-    { id: 5, userId: 'user005', name: '정태양', phone: '010-5678-9012', joinDate: '2025-12-20', recommender: '관리자', status: '정상' },
-    { id: 6, userId: 'user006', name: '강민지', phone: '010-6789-0123', joinDate: '2026-01-05', recommender: 'user003', status: '정상' },
-    { id: 7, userId: 'user007', name: '윤서준', phone: '010-7890-1234', joinDate: '2026-01-10', recommender: 'user005', status: '정상' },
-    { id: 8, userId: 'user008', name: '임하늘', phone: '010-8901-2345', joinDate: '2026-01-15', recommender: 'user002', status: '정상' },
-];
-
-// ============================================
-// 회원조회 기능
-// ============================================
-function searchMembers() {
-    const searchId = document.getElementById('searchId')?.value.toLowerCase() || '';
-    const searchName = document.getElementById('searchName')?.value.toLowerCase() || '';
-    const searchPhone = document.getElementById('searchPhone')?.value || '';
-
-    const filtered = MEMBER_DATA.filter(member => {
-        const matchId = !searchId || member.userId.toLowerCase().includes(searchId);
-        const matchName = !searchName || member.name.includes(searchName);
-        const matchPhone = !searchPhone || member.phone.includes(searchPhone);
-        return matchId && matchName && matchPhone;
-    });
-
-    renderMemberTable(filtered);
+// 회원 삭제
+async function deleteMemberInfo(memberId) {
+    if (!confirm('회원을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        await window.firebaseAdmin.memberService.deleteMember(memberId);
+        alert('삭제되었습니다.');
+        await loadAllMembers(); // 목록 새로고침
+    } catch (error) {
+        console.error('회원 삭제 오류:', error);
+        alert('회원 삭제 중 오류가 발생했습니다: ' + error.message);
+    }
 }
 
-function resetSearch() {
-    document.getElementById('searchId').value = '';
-    document.getElementById('searchName').value = '';
-    document.getElementById('searchPhone').value = '';
-    renderMemberTable(MEMBER_DATA);
-}
+// 전역 함수로 export (member-search.js의 함수를 사용)
+// window.searchMemberInfo는 member-search.js에서 export됨
+// window.resetMemberSearch는 member-search.js에서 export됨
+window.changeMemberPage = changeMemberPage;
+window.editMemberInfo = editMemberInfo;
+window.deleteMemberInfo = deleteMemberInfo;
 
 function renderMemberTable(data) {
     const tbody = document.getElementById('memberSearchBody');
-    if (!tbody) return;
-
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-message">검색 결과가 없습니다.</td></tr>';
+    if (!tbody) {
+        console.warn('memberSearchBody를 찾을 수 없습니다.');
         return;
     }
 
-    tbody.innerHTML = data.map(member => `
+    // 데이터가 없거나 빈 배열인 경우
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-message">등록된 회원이 없습니다.</td></tr>';
+        console.log('회원 데이터가 없습니다. 빈 테이블 표시.');
+        return;
+    }
+
+    console.log('회원 테이블 렌더링:', data.length, '명');
+    
+    tbody.innerHTML = data.map((member, index) => {
+        // Firestore 데이터 형식에 맞게 변환
+        const memberId = member.id || member.userId || '';
+        const name = member.name || '';
+        const phone = member.phone || '';
+        
+        // 가입일 처리 (Firestore Timestamp 또는 문자열)
+        let joinDate = '';
+        if (member.joinDate) {
+            joinDate = member.joinDate;
+        } else if (member.createdAt) {
+            if (member.createdAt.seconds) {
+                // Firestore Timestamp
+                joinDate = new Date(member.createdAt.seconds * 1000).toISOString().split('T')[0];
+            } else if (member.createdAt.toDate) {
+                // Firestore Timestamp 객체
+                joinDate = member.createdAt.toDate().toISOString().split('T')[0];
+            } else {
+                // 문자열 또는 Date 객체
+                joinDate = new Date(member.createdAt).toISOString().split('T')[0];
+            }
+        }
+        
+        const recommender = member.recommender || member.recommenderId || '';
+        const status = member.status || '정상';
+        
+        // XSS 방지를 위한 이스케이프 (간단한 버전)
+        const escapeHtml = (str) => {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, (m) => {
+                const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+                return map[m];
+            });
+        };
+        
+        return `
         <tr>
-            <td>${member.id}</td>
-            <td>${member.userId}</td>
-            <td>${member.name}</td>
-            <td>${member.phone}</td>
-            <td>${member.joinDate}</td>
-            <td>${member.recommender}</td>
-            <td><span class="badge ${member.status === '정상' ? 'badge-success' : 'badge-danger'}">${member.status}</span></td>
+            <td>${index + 1}</td>
+            <td>${escapeHtml(memberId)}</td>
+            <td>${escapeHtml(name)}</td>
+            <td>${escapeHtml(phone)}</td>
+            <td>${escapeHtml(joinDate)}</td>
+            <td>${escapeHtml(recommender)}</td>
+            <td><span class="badge ${status === '정상' ? 'badge-success' : 'badge-danger'}">${escapeHtml(status)}</span></td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editMember('${member.userId}')">수정</button>
-                <button class="btn btn-sm btn-secondary" onclick="deleteMember('${member.userId}')">삭제</button>
+                <button class="btn btn-sm btn-primary" onclick="editMember('${member.id || memberId}')">수정</button>
+                <button class="btn btn-sm btn-secondary" onclick="deleteMember('${member.id || memberId}')">삭제</button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
-function editMember(userId) {
-    alert(`${userId} 회원 정보를 수정합니다.\n(서버 연동 후 구현)`);
+async function editMember(memberId) {
+    try {
+        // Firestore에서 회원 정보 가져오기
+        const members = await window.firebaseAdmin.memberService.getMembers();
+        const member = members.find(m => m.id === memberId || m.userId === memberId);
+        
+        if (member) {
+            // 수정 모달 열기 (추후 구현)
+            const newName = prompt('이름을 입력하세요:', member.name);
+            if (newName) {
+                await window.firebaseAdmin.memberService.updateMember(memberId, {
+                    name: newName
+                });
+                alert('회원 정보가 수정되었습니다.');
+                searchMembers(); // 목록 새로고침
+            }
+        } else {
+            alert(`${memberId} 회원을 찾을 수 없습니다.`);
+        }
+    } catch (error) {
+        console.error('회원 수정 오류:', error);
+        alert('회원 정보 수정 중 오류가 발생했습니다.');
+    }
 }
 
-function deleteMember(userId) {
-    if (confirm(`${userId} 회원을 삭제하시겠습니까?`)) {
-        alert('삭제되었습니다.\n(서버 연동 후 구현)');
+async function deleteMember(memberId) {
+    if (confirm('회원을 삭제하시겠습니까?')) {
+        try {
+            await window.firebaseAdmin.memberService.deleteMember(memberId);
+            alert('삭제되었습니다.');
+            searchMembers(); // 목록 새로고침
+        } catch (error) {
+            console.error('회원 삭제 오류:', error);
+            alert('회원 삭제 중 오류가 발생했습니다.');
+        }
     }
 }
 
@@ -315,27 +955,9 @@ function renderPurchaseTable(data) {
 // 대시보드 빠른 작업 네비게이션
 // ============================================
 function navigateToPage(pageId) {
-    // 모든 페이지 숨기기
-    contentPages.forEach(page => {
-        page.classList.remove('active');
-    });
-    
-    // 선택한 페이지 표시
-    const targetElement = document.getElementById(pageId);
-    if (targetElement) {
-        targetElement.classList.add('active');
-    }
-    
-    // 네비게이션 활성 상태 변경
-    document.querySelectorAll('.nav-list li').forEach(li => {
-        li.classList.remove('active');
-    });
-    
-    // 해당 메뉴 활성화
-    const menuLink = document.querySelector(`[data-page="${pageId}"]`);
-    if (menuLink) {
-        menuLink.parentElement.classList.add('active');
-    }
+    console.log('navigateToPage 호출:', pageId);
+    // switchToPage 함수 사용
+    switchToPage(pageId);
 }
 
 // ============================================
@@ -355,17 +977,12 @@ function switchBoardTab(boardType) {
 }
 
 // ============================================
-// 패널 링크 클릭 이벤트
+// navigateToPage 함수 - switchToPage로 통일
 // ============================================
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('panel-link')) {
-        e.preventDefault();
-        const pageId = e.target.dataset.page;
-        if (pageId) {
-            navigateToPage(pageId);
-        }
-    }
-});
+function navigateToPage(pageId) {
+    console.log('navigateToPage 호출:', pageId);
+    switchToPage(pageId);
+}
 
 // ============================================
 // ============================================
@@ -383,28 +1000,53 @@ const PRODUCT_DATA = [
 ];
 
 // ============================================
-// 상품 목록 조회
+// 상품 목록 조회 (Firestore 연동)
 // ============================================
-function searchProducts() {
+async function searchProducts() {
     const name = document.getElementById('productSearchName')?.value.toLowerCase() || '';
     const category = document.getElementById('productSearchCategory')?.value || '';
     const status = document.getElementById('productSearchStatus')?.value || '';
 
-    const filtered = PRODUCT_DATA.filter(product => {
-        const matchName = !name || product.name.toLowerCase().includes(name);
-        const matchCategory = !category || product.category === category;
-        const matchStatus = !status || product.status === status;
-        return matchName && matchCategory && matchStatus;
-    });
+    try {
+        const filters = {};
+        if (status) filters.status = status;
+        if (category) filters.category = category;
+        
+        const products = await window.firebaseAdmin.productService.getProducts(filters);
+        
+        // 클라이언트 측 필터링
+        const filtered = products.filter(product => {
+            const matchName = !name || (product.name || '').toLowerCase().includes(name);
+            const matchCategory = !category || product.category === category;
+            const matchStatus = !status || product.status === status;
+            return matchName && matchCategory && matchStatus;
+        });
 
-    renderProductTable(filtered);
+        renderProductTable(filtered);
+    } catch (error) {
+        console.error('상품 검색 오류:', error);
+        const filtered = PRODUCT_DATA.filter(product => {
+            const matchName = !name || product.name.toLowerCase().includes(name);
+            const matchCategory = !category || product.category === category;
+            const matchStatus = !status || product.status === status;
+            return matchName && matchCategory && matchStatus;
+        });
+        renderProductTable(filtered);
+    }
 }
 
-function resetProductSearch() {
+async function resetProductSearch() {
     document.getElementById('productSearchName').value = '';
     document.getElementById('productSearchCategory').value = '';
     document.getElementById('productSearchStatus').value = '';
-    renderProductTable(PRODUCT_DATA);
+    
+    try {
+        const products = await window.firebaseAdmin.productService.getProducts();
+        renderProductTable(products);
+    } catch (error) {
+        console.error('상품 목록 로드 오류:', error);
+        renderProductTable(PRODUCT_DATA);
+    }
 }
 
 function renderProductTable(data) {
@@ -436,47 +1078,103 @@ function renderProductTable(data) {
         fashion: '패션'
     };
 
-    tbody.innerHTML = data.map(product => `
+    tbody.innerHTML = data.map((product, index) => {
+        const productId = product.id || `product-${index}`;
+        const name = product.name || '';
+        const image = product.image || 'https://via.placeholder.com/50';
+        const category = categoryMap[product.category] || product.category || '';
+        const price = product.price || 0;
+        const stock = product.stock || 0;
+        const status = product.status || 'sale';
+        const date = product.date || (product.createdAt ? new Date(product.createdAt.seconds * 1000).toISOString().split('T')[0] : '');
+        
+        return `
         <tr>
-            <td>${product.id}</td>
-            <td><img src="${product.image}" alt="${product.name}" class="product-image"></td>
-            <td style="text-align: left; padding-left: 15px;">${product.name}</td>
-            <td>${categoryMap[product.category] || product.category}</td>
-            <td>${product.price.toLocaleString()}원</td>
-            <td>${product.stock}</td>
-            <td><span class="badge ${statusMap[product.status].class}">${statusMap[product.status].text}</span></td>
-            <td>${product.date}</td>
+            <td>${index + 1}</td>
+            <td><img src="${image}" alt="${name}" class="product-image"></td>
+            <td style="text-align: left; padding-left: 15px;">${name}</td>
+            <td>${category}</td>
+            <td>${price.toLocaleString()}원</td>
+            <td>${stock}</td>
+            <td><span class="badge ${statusMap[status]?.class || 'badge-success'}">${statusMap[status]?.text || status}</span></td>
+            <td>${date}</td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editProduct(${product.id})">수정</button>
-                <button class="btn btn-sm btn-secondary" onclick="deleteProduct(${product.id})">삭제</button>
+                <button class="btn btn-sm btn-primary" onclick="editProduct('${productId}')">수정</button>
+                <button class="btn btn-sm btn-secondary" onclick="deleteProduct('${productId}')">삭제</button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
-function editProduct(id) {
-    alert(`상품 ID ${id} 수정 기능\n(서버 연동 후 구현)`);
+async function editProduct(productId) {
+    try {
+        const products = await window.firebaseAdmin.productService.getProducts();
+        const product = products.find(p => p.id === productId);
+        
+        if (product) {
+            const newName = prompt('상품명을 입력하세요:', product.name);
+            if (newName) {
+                await window.firebaseAdmin.productService.updateProduct(productId, {
+                    name: newName
+                });
+                alert('상품 정보가 수정되었습니다.');
+                searchProducts();
+            }
+        } else {
+            alert('상품을 찾을 수 없습니다.');
+        }
+    } catch (error) {
+        console.error('상품 수정 오류:', error);
+        alert('상품 정보 수정 중 오류가 발생했습니다.');
+    }
 }
 
-function deleteProduct(id) {
+async function deleteProduct(productId) {
     if (confirm('정말 삭제하시겠습니까?')) {
-        alert(`상품 ID ${id} 삭제됨\n(서버 연동 후 구현)`);
+        try {
+            await window.firebaseAdmin.productService.deleteProduct(productId);
+            alert('삭제되었습니다.');
+            searchProducts();
+        } catch (error) {
+            console.error('상품 삭제 오류:', error);
+            alert('상품 삭제 중 오류가 발생했습니다.');
+        }
     }
 }
 
 // ============================================
-// 상품 등록
+// 상품 등록 (Firestore 연동)
 // ============================================
-function registerProduct(event) {
+async function registerProduct(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData);
     
-    console.log('상품 등록 데이터:', data);
-    alert('상품이 등록되었습니다!\n(서버 연동 후 실제 저장)');
-    
-    // 상품 목록으로 이동
-    navigateToPage('product-list');
+    try {
+        // 숫자 필드 변환
+        const productData = {
+            name: data.name,
+            category: data.category,
+            price: parseInt(data.price) || 0,
+            stock: parseInt(data.stock) || 0,
+            status: data.status || 'sale',
+            image: data.image || '',
+            description: data.description || ''
+        };
+        
+        await window.firebaseAdmin.productService.addProduct(productData);
+        alert('상품이 등록되었습니다!');
+        
+        // 상품 목록으로 이동
+        const productListLink = document.querySelector('[data-page="product-list"]');
+        if (productListLink) {
+            productListLink.click();
+        }
+    } catch (error) {
+        console.error('상품 등록 오류:', error);
+        alert('상품 등록 중 오류가 발생했습니다.');
+    }
 }
 
 // ============================================
@@ -553,6 +1251,11 @@ const LOTTERY_WAITING_DATA = {
         { id: 13, name: '조현우', phone: '010-3333-4444', amount: 4500, support: 225, confirmed: true, date: '2026-02-04 11:00' },
         { id: 14, name: '배수지', phone: '010-4444-5555', amount: 4500, support: 225, confirmed: true, date: '2026-02-04 12:00' },
         { id: 15, name: '나준호', phone: '010-5555-6666', amount: 4500, support: 225, confirmed: true, date: '2026-02-04 13:00' },
+    ],
+    'product-3': [ // 배스킨라빈스 파인트 15,000원
+        { id: 16, name: '류지훈', phone: '010-6666-7777', amount: 15000, support: 750, confirmed: true, date: '2026-02-04 09:15' },
+        { id: 17, name: '서유나', phone: '010-7777-8888', amount: 15000, support: 750, confirmed: true, date: '2026-02-04 10:30' },
+        { id: 18, name: '황도현', phone: '010-8888-9999', amount: 15000, support: 750, confirmed: true, date: '2026-02-04 11:45' },
     ]
 };
 
@@ -567,7 +1270,7 @@ function renderLotteryStatus() {
     const products = [
         { id: 'product-1', name: '메가커피 모바일금액권 3만원', price: 30000, support: 1500, waiting: LOTTERY_WAITING_DATA['product-1']?.length || 0 },
         { id: 'product-2', name: '스타벅스 아메리카노 Tall', price: 4500, support: 225, waiting: LOTTERY_WAITING_DATA['product-2']?.length || 0 },
-        { id: 'product-3', name: '배스킨라빈스 파인트', price: 15000, support: 750, waiting: 0 },
+        { id: 'product-3', name: '배스킨라빈스 파인트', price: 15000, support: 750, waiting: LOTTERY_WAITING_DATA['product-3']?.length || 0 },
     ];
 
     container.innerHTML = products.map(product => {
@@ -1061,22 +1764,233 @@ function processDailyPayment() {
 
 // 페이지 로드 시 초기 데이터 렌더링
 // ============================================
-document.addEventListener('DOMContentLoaded', () => {
-    renderMemberTable(MEMBER_DATA);
-    renderProductTable(PRODUCT_DATA);
-    renderLotteryStatus();
-    updateConfirmPage();
+// DOMContentLoaded와 window.onload 모두 처리
+function initAdminPage() {
+    console.log('🔵🔵🔵 initAdminPage 함수 실행 시작');
+    // DOM 요소 초기화
+    menuToggle = document.getElementById('menuToggle');
+    adminSidebar = document.getElementById('adminSidebar');
+    navLinks = document.querySelectorAll('.nav-list a');
+    contentPages = document.querySelectorAll('.content-page');
     
-    // 페이지 전환 시 추첨 현황 업데이트
-    navLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            if (link.dataset.page === 'draw-lottery') {
-                setTimeout(renderLotteryStatus, 100);
-            } else if (link.dataset.page === 'draw-confirm') {
-                setTimeout(updateConfirmPage, 100);
+    console.log('DOM 요소 초기화:', {
+        menuToggle: !!menuToggle,
+        adminSidebar: !!adminSidebar,
+        navLinks: navLinks.length,
+        contentPages: contentPages.length
+    });
+    
+    // 사이드바 토글 초기화
+    if (menuToggle && adminSidebar) {
+        menuToggle.addEventListener('click', () => {
+            adminSidebar.classList.toggle('open');
+        });
+    }
+    
+    // 페이지 전환 이벤트 초기화 - 가장 간단하고 확실한 방법
+    console.log('🔵 네비게이션 이벤트 초기화 시작...');
+    
+    // 모든 네비게이션 링크에 직접 이벤트 등록
+    const allNavLinks = document.querySelectorAll('.nav-list a[data-page]');
+    console.log('찾은 네비게이션 링크 개수:', allNavLinks.length);
+    
+    allNavLinks.forEach((link, index) => {
+        const targetPage = link.getAttribute('data-page');
+        console.log(`링크 ${index} 등록:`, targetPage);
+        
+        link.onclick = async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔵🔵🔵 링크 클릭됨:', targetPage);
+            
+            try {
+                await switchToPage(targetPage, link);
+            } catch (error) {
+                console.error('❌ 페이지 전환 오류:', error);
+                alert('페이지 전환 중 오류: ' + error.message);
+            }
+            return false;
+        };
+    });
+    
+    // 헤더 버튼에 직접 이벤트 등록
+    const homeBtn = document.querySelector('.btn-home');
+    const logoutBtn = document.querySelector('.btn-logout');
+    const mdAdminBtn = document.querySelector('.btn-md-admin');
+    const settingsBtn = document.querySelector('.btn-settings');
+    
+    if (homeBtn) {
+        homeBtn.onclick = function(e) {
+            e.preventDefault();
+            console.log('🔵 홈 버튼 클릭됨');
+            window.location.href = '../index.html';
+            return false;
+        };
+        console.log('✅ 홈 버튼 등록 완료');
+    } else {
+        console.error('❌ 홈 버튼을 찾을 수 없습니다!');
+    }
+    
+    if (logoutBtn) {
+        logoutBtn.onclick = function(e) {
+            e.preventDefault();
+            console.log('🔵 로그아웃 버튼 클릭됨');
+            if (confirm('로그아웃 하시겠습니까?')) {
+                window.location.href = '../index.html';
+            }
+            return false;
+        };
+        console.log('✅ 로그아웃 버튼 등록 완료');
+    }
+    
+    if (mdAdminBtn) {
+        mdAdminBtn.onclick = function(e) {
+            e.preventDefault();
+            alert('MD관리자 페이지로 이동합니다.');
+            return false;
+        };
+    }
+    
+    if (settingsBtn) {
+        settingsBtn.onclick = function(e) {
+            e.preventDefault();
+            alert('설정 페이지로 이동합니다.');
+            return false;
+        };
+    }
+    
+    console.log('✅ 모든 네비게이션 이벤트 등록 완료');
+    
+    // 초기 데이터 렌더링
+    try {
+        // 현재 활성화된 페이지 확인
+        const activePage = document.querySelector('.content-page.active');
+        if (activePage && activePage.id === 'member-search') {
+            console.log('🔵 초기 로드: member-search 페이지가 활성화되어 있음, 즉시 데이터 로드');
+            // 약간의 지연 후 데이터 로드 (다른 스크립트 로드 대기)
+            setTimeout(async () => {
+                if (typeof loadAllMembers === 'function' || typeof window.loadAllMembers === 'function') {
+                    const loadFn = typeof loadAllMembers === 'function' ? loadAllMembers : window.loadAllMembers;
+                    try {
+                        await loadFn();
+                    } catch (error) {
+                        console.error('초기 로드 중 오류:', error);
+                    }
+                }
+            }, 500);
+        }
+        
+        // 회원정보 페이지 검색 버튼 이벤트 등록
+        const memberSearchBtn = document.getElementById('memberSearchBtn');
+        const memberResetBtn = document.getElementById('memberResetBtn');
+        const memberExportBtn = document.getElementById('memberExportBtn');
+        
+        if (memberSearchBtn) {
+            memberSearchBtn.onclick = async function(e) {
+                e.preventDefault();
+                if (typeof window.searchMemberInfo === 'function') {
+                    await window.searchMemberInfo();
+                } else {
+                    console.error('searchMemberInfo 함수를 찾을 수 없습니다.');
+                    alert('검색 기능을 사용할 수 없습니다. 페이지를 새로고침해주세요.');
+                }
+                return false;
+            };
+            console.log('✅ 회원정보 검색 버튼 등록 완료');
+        }
+        
+        if (memberResetBtn) {
+            memberResetBtn.onclick = async function(e) {
+                e.preventDefault();
+                if (typeof window.resetMemberSearch === 'function') {
+                    await window.resetMemberSearch();
+                } else {
+                    console.error('resetMemberSearch 함수를 찾을 수 없습니다.');
+                }
+                return false;
+            };
+            console.log('✅ 회원정보 초기화 버튼 등록 완료');
+        }
+        
+        if (memberExportBtn) {
+            memberExportBtn.onclick = function(e) {
+                e.preventDefault();
+                if (typeof window.exportMembersToExcel === 'function') {
+                    window.exportMembersToExcel();
+                } else {
+                    console.error('exportMembersToExcel 함수를 찾을 수 없습니다.');
+                    alert('엑셀 다운로드 기능을 사용할 수 없습니다. 페이지를 새로고침해주세요.');
+                }
+                return false;
+            };
+            console.log('✅ 회원정보 엑셀 다운로드 버튼 등록 완료');
+        }
+        
+        renderProductTable(PRODUCT_DATA);
+        renderLotteryStatus();
+        updateConfirmPage();
+    } catch (error) {
+        console.error('초기 데이터 렌더링 오류:', error);
+    }
+    
+    // 페이지네이션 초기화
+    const pageNums = document.querySelectorAll('.page-num');
+    if (pageNums && pageNums.length > 0) {
+        pageNums.forEach(btn => {
+            if (btn && btn.classList) {
+                btn.addEventListener('click', () => {
+                    pageNums.forEach(b => {
+                        if (b && b.classList) {
+                            b.classList.remove('active');
+                        }
+                    });
+                    if (btn.classList) {
+                        btn.classList.add('active');
+                    }
+                    
+                    // 페이지 데이터 로드
+                    const pageNumber = btn.textContent;
+                    loadPageData(pageNumber);
+                });
             }
         });
-    });
+        console.log('페이지네이션 이벤트 리스너 등록 완료:', pageNums.length, '개');
+    }
+    
+    // 헤더 버튼은 위의 전역 이벤트 위임에서 처리됨
+    console.log('✅ 모든 네비게이션 이벤트 초기화 완료');
+    
+    // 초기 활성화된 페이지가 member-search인 경우 데이터 로드
+    const activePage = document.querySelector('.content-page.active');
+    if (activePage && activePage.id === 'member-search') {
+        console.log('🔵🔵🔵 초기 로드: member-search 페이지 활성화됨, 데이터 로드 시작');
+        setTimeout(async () => {
+            if (typeof window.loadAllMembers === 'function') {
+                try {
+                    await window.loadAllMembers();
+                    console.log('✅✅✅ 초기 로드: 회원 데이터 로드 완료');
+                } catch (error) {
+                    console.error('❌ 초기 로드: 회원 데이터 로드 오류:', error);
+                }
+            } else {
+                console.error('❌ 초기 로드: window.loadAllMembers 함수를 찾을 수 없습니다.');
+            }
+        }, 300);
+    }
+}
+
+// 즉시 실행 + DOMContentLoaded + window.onload 모두 처리
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAdminPage);
+} else if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    // 이미 로드됨
+    setTimeout(initAdminPage, 100);
+}
+
+// window.onload도 처리
+window.addEventListener('load', () => {
+    console.log('🔵 window.onload 실행 - 네비게이션 재초기화');
+    setTimeout(initAdminPage, 200);
 });
 
 // 초기화

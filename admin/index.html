@@ -114,8 +114,8 @@
                         </div>
                         <div class="stat-info">
                             <h3>전체 회원</h3>
-                            <p class="stat-number">164명</p>
-                            <span class="stat-change positive">+12 (이번 주)</span>
+                            <p class="stat-number" id="totalMembers">0명</p>
+                            <span class="stat-change" id="memberChange">-</span>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -124,8 +124,8 @@
                         </div>
                         <div class="stat-info">
                             <h3>총 구매건수</h3>
-                            <p class="stat-number">1,247건</p>
-                            <span class="stat-change positive">+45 (오늘)</span>
+                            <p class="stat-number" id="totalOrders">0건</p>
+                            <span class="stat-change" id="orderChange">-</span>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -134,8 +134,8 @@
                         </div>
                         <div class="stat-info">
                             <h3>총 지원금</h3>
-                            <p class="stat-number">12,450,000원</p>
-                            <span class="stat-change positive">+250,000원 (이번 달)</span>
+                            <p class="stat-number" id="totalSupport">0원</p>
+                            <span class="stat-change" id="supportChange">-</span>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -144,7 +144,7 @@
                         </div>
                         <div class="stat-info">
                             <h3>승인 대기</h3>
-                            <p class="stat-number">23건</p>
+                            <p class="stat-number" id="pendingOrders">0건</p>
                             <span class="stat-change">처리 필요</span>
                         </div>
                     </div>
@@ -167,24 +167,9 @@
                                         <th>상태</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="recentMembersList">
                                     <tr>
-                                        <td>서**</td>
-                                        <td>spring1004</td>
-                                        <td>2026-01-26</td>
-                                        <td><span class="badge badge-success">정상</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>류**</td>
-                                        <td>goldls</td>
-                                        <td>2026-01-26</td>
-                                        <td><span class="badge badge-success">정상</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>송**</td>
-                                        <td>10game</td>
-                                        <td>2026-01-26</td>
-                                        <td><span class="badge badge-success">정상</span></td>
+                                        <td colspan="4" class="empty-message">데이터를 불러오는 중...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -206,24 +191,9 @@
                                         <th>상태</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="recentOrdersList">
                                     <tr>
-                                        <td>최**</td>
-                                        <td>메가커피 3만원권</td>
-                                        <td>30,000원</td>
-                                        <td><span class="badge badge-warning">승인대기</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>김**</td>
-                                        <td>스타벅스 아메리카노</td>
-                                        <td>4,500원</td>
-                                        <td><span class="badge badge-success">승인완료</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>이**</td>
-                                        <td>배스킨라빈스 파인트</td>
-                                        <td>15,000원</td>
-                                        <td><span class="badge badge-success">승인완료</span></td>
+                                        <td colspan="4" class="empty-message">데이터를 불러오는 중...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -241,19 +211,19 @@
                             <div class="stat-list">
                                 <div class="stat-item">
                                     <span class="stat-label">신규 회원</span>
-                                    <span class="stat-value">12명</span>
+                                    <span class="stat-value" id="weekNewMembers">0명</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">총 구매액</span>
-                                    <span class="stat-value">2,450,000원</span>
+                                    <span class="stat-value" id="weekTotalAmount">0원</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">지원금 지급</span>
-                                    <span class="stat-value">122,500원</span>
+                                    <span class="stat-value" id="weekSupport">0원</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">추첨 진행</span>
-                                    <span class="stat-value">8회</span>
+                                    <span class="stat-value" id="weekLotteries">0회</span>
                                 </div>
                             </div>
                         </div>
@@ -300,19 +270,19 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>사이트 이름</label>
-                                <input type="text" class="form-control" value="10쇼핑게임">
+                                <input type="text" class="form-control" id="siteName" value="10쇼핑게임">
                             </div>
                             <div class="form-group">
                                 <label>사이트 URL</label>
-                                <input type="text" class="form-control" value="https://10-2market.com">
+                                <input type="text" class="form-control" id="siteUrl" value="https://10-2market.com">
                             </div>
                             <div class="form-group">
                                 <label>관리자 이메일</label>
-                                <input type="email" class="form-control" value="admin@10market.com">
+                                <input type="email" class="form-control" id="adminEmail" value="admin@10market.com">
                             </div>
                             <div class="form-group">
                                 <label>고객센터 전화번호</label>
-                                <input type="tel" class="form-control" value="1588-0000">
+                                <input type="tel" class="form-control" id="customerPhone" value="1588-0000">
                             </div>
                         </div>
                     </div>
@@ -322,60 +292,65 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>기본 지원금 비율 (%)</label>
-                                <input type="number" class="form-control" value="5" min="0" max="100">
+                                <input type="number" class="form-control" id="supportRate" value="5" min="0" max="100">
                             </div>
                             <div class="form-group">
                                 <label>최소 구매 금액 (원)</label>
-                                <input type="number" class="form-control" value="1000" step="1000">
+                                <input type="number" class="form-control" id="minPurchaseAmount" value="1000" step="1000">
                             </div>
                             <div class="form-group">
                                 <label>최대 지원금 (원)</label>
-                                <input type="number" class="form-control" value="100000" step="10000">
+                                <input type="number" class="form-control" id="maxSupportAmount" value="100000" step="10000">
                             </div>
                             <div class="form-group">
                                 <label>추첨 당첨 확률 (%)</label>
-                                <input type="number" class="form-control" value="10" min="0" max="100">
+                                <input type="number" class="form-control" id="lotteryWinRate" value="10" min="0" max="100">
                             </div>
                         </div>
                     </div>
 
                     <div class="settings-section">
-                        <h3><i class="fas fa-clock"></i> 운영 시간 설정</h3>
+                        <h3><i class="fas fa-clock"></i> 추첨 시간 설정</h3>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>추첨 시작 시간</label>
-                                <input type="time" class="form-control" value="09:00">
+                                <input type="time" class="form-control" id="lotteryStartTime" value="09:00">
                             </div>
                             <div class="form-group">
                                 <label>추첨 종료 시간</label>
-                                <input type="time" class="form-control" value="18:00">
+                                <input type="time" class="form-control" id="lotteryEndTime" value="18:00">
                             </div>
                             <div class="form-group">
-                                <label>추첨 주기</label>
-                                <select class="form-control">
-                                    <option value="daily">매일</option>
-                                    <option value="weekly" selected>매주</option>
-                                    <option value="monthly">매월</option>
+                                <label>추첨 간격</label>
+                                <select class="form-control" id="lotteryInterval">
+                                    <option value="10">10분</option>
+                                    <option value="20">20분</option>
+                                    <option value="30" selected>30분</option>
+                                    <option value="60">1시간</option>
+                                    <option value="120">2시간</option>
+                                    <option value="180">3시간</option>
+                                    <option value="240">4시간</option>
+                                    <option value="300">5시간</option>
+                                    <option value="360">6시간</option>
+                                    <option value="480">8시간</option>
+                                    <option value="600">10시간</option>
+                                    <option value="720">12시간</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>추첨 요일</label>
-                                <select class="form-control">
-                                    <option value="1">월요일</option>
-                                    <option value="2">화요일</option>
-                                    <option value="3">수요일</option>
-                                    <option value="4">목요일</option>
-                                    <option value="5" selected>금요일</option>
-                                    <option value="6">토요일</option>
-                                    <option value="0">일요일</option>
+                                <label>추첨 주기</label>
+                                <select class="form-control" id="lotteryPeriod">
+                                    <option value="daily" selected>매일</option>
+                                    <option value="weekday">월~금</option>
+                                    <option value="weekday-sat">월~토</option>
                                 </select>
                             </div>
                         </div>
                     </div>
 
                     <div class="settings-actions">
-                        <button class="btn btn-primary"><i class="fas fa-save"></i> 설정 저장</button>
-                        <button class="btn btn-default"><i class="fas fa-undo"></i> 초기화</button>
+                        <button class="btn btn-primary" id="saveSettingsBtn"><i class="fas fa-save"></i> 설정 저장</button>
+                        <button class="btn btn-default" id="resetSettingsBtn"><i class="fas fa-undo"></i> 초기화</button>
                     </div>
                 </div>
             </div>
@@ -956,7 +931,7 @@
             <div id="member-search" class="content-page">
                 <div class="page-header">
                     <h2>회원정보</h2>
-                    <p class="page-description">총 <strong>164</strong>명의 회원이 등록되어 있습니다.</p>
+                    <p class="page-description">총 <strong id="totalMemberCount">0</strong>명의 회원이 등록되어 있습니다.</p>
                 </div>
 
                 <!-- 검색 필터 -->
@@ -964,44 +939,75 @@
                     <div class="search-row">
                         <div class="form-group">
                             <label>아이디</label>
-                            <input type="text" class="form-control" placeholder="아이디 입력">
+                            <input type="text" class="form-control" id="memberSearchId" placeholder="아이디 입력">
                         </div>
                         <div class="form-group">
                             <label>이름</label>
-                            <input type="text" class="form-control" placeholder="이름 입력">
+                            <input type="text" class="form-control" id="memberSearchName" placeholder="이름 입력">
                         </div>
                         <div class="form-group">
                             <label>추천인 ID</label>
-                            <input type="text" class="form-control" placeholder="추천인 ID 입력">
+                            <input type="text" class="form-control" id="memberSearchReferrer" placeholder="추천인 ID 입력">
                         </div>
                         <div class="form-group">
                             <label>승인상태</label>
-                            <select class="form-control">
+                            <select class="form-control" id="memberSearchStatus">
                                 <option value="">전체</option>
-                                <option value="approved">승인</option>
-                                <option value="pending">대기</option>
-                                <option value="rejected">거부</option>
+                                <option value="정상">정상</option>
+                                <option value="대기">대기</option>
+                                <option value="정지">정지</option>
                             </select>
                         </div>
                     </div>
-                    <div class="search-row">
-                        <div class="form-group">
-                            <label>시작시간</label>
-                            <input type="date" class="form-control" value="2026-01-26">
-                        </div>
-                        <div class="form-group">
-                            <label>종료시간</label>
-                            <input type="date" class="form-control" value="2026-02-02">
-                        </div>
-                    </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary" id="searchBtn">검색</button>
-                        <button class="btn btn-secondary" id="exportBtn">엑셀 다운로드</button>
-                        <button class="btn btn-default" id="resetBtn">취소</button>
+                        <button class="btn btn-primary" id="memberSearchBtn">검색</button>
+                        <button class="btn btn-secondary" id="memberExportBtn">엑셀 다운로드</button>
+                        <button class="btn btn-default" id="memberResetBtn">취소</button>
                     </div>
                 </div>
 
-                <!-- 회원 테이블 -->
+                <!-- 검색 결과 영역 (검색 후에만 표시, 검색 버튼 바로 아래) -->
+                <div id="searchResultsContainer" class="search-results-container" style="display: block; margin-top: 20px; margin-bottom: 30px;">
+                    <div class="page-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #4A5FC1;">
+                        <h3 style="font-size: 18px; margin: 0; color: #333;">검색 결과: <strong id="searchResultCount" style="color: #4A5FC1; font-size: 20px;">0</strong>명</h3>
+                    </div>
+                    <!-- 검색 결과 테이블 -->
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>번호</th>
+                                    <th>아이디</th>
+                                    <th>이름</th>
+                                    <th>전화번호</th>
+                                    <th>가입날짜</th>
+                                    <th>주소</th>
+                                    <th>계좌번호</th>
+                                    <th>추천인</th>
+                                    <th>MD코드</th>
+                                    <th>구매금액</th>
+                                    <th>지원금/누적</th>
+                                    <th>상태</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="searchResultsBody">
+                                <tr><td colspan="13" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- 검색 결과 페이지네이션 -->
+                    <div class="pagination" id="searchResultsPagination" style="margin-top: 20px;">
+                        <!-- JavaScript로 동적 생성 -->
+                    </div>
+                </div>
+
+                <!-- 전체 회원 테이블 (검색 결과 아래) -->
+                <div style="margin-top: 30px;">
+                    <div class="page-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #4A5FC1;">
+                        <h3 style="font-size: 18px; margin: 0; color: #333;">전체회원</h3>
+                    </div>
+                </div>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -1022,60 +1028,7 @@
                             </tr>
                         </thead>
                         <tbody id="memberTableBody">
-                            <tr>
-                                <td>1</td>
-                                <td>spring1004</td>
-                                <td>서**</td>
-                                <td>010-****-3342</td>
-                                <td>2026-01-26 19:08:52</td>
-                                <td>대전 유성구 동서대로</td>
-                                <td>국민12233375</td>
-                                <td>1024</td>
-                                <td></td>
-                                <td>0</td>
-                                <td>0 / 0</td>
-                                <td><span class="badge badge-success">정상</span></td>
-                                <td>
-                                    <button class="btn-icon btn-edit" title="수정"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-icon btn-delete" title="삭제"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>2</td>
-                                <td>goldls</td>
-                                <td>류**</td>
-                                <td>010-****-5544</td>
-                                <td>2026-01-26 11:58:48</td>
-                                <td></td>
-                                <td></td>
-                                <td>2026</td>
-                                <td></td>
-                                <td>0</td>
-                                <td>0 / 0</td>
-                                <td><span class="badge badge-success">정상</span></td>
-                                <td>
-                                    <button class="btn-icon btn-edit" title="수정"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-icon btn-delete" title="삭제"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>3</td>
-                                <td>10game</td>
-                                <td>송**</td>
-                                <td>010-****-3321</td>
-                                <td>2026-01-26 14:04:37</td>
-                                <td>대전 유성구 동서대로(대덕교)</td>
-                                <td>국민12233375</td>
-                                <td>1024</td>
-                                <td></td>
-                                <td>0</td>
-                                <td>0 / 0</td>
-                                <td><span class="badge badge-success">정상</span></td>
-                                <td>
-                                    <button class="btn-icon btn-edit" title="수정"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-icon btn-delete" title="삭제"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
+                            <!-- JavaScript로 동적 생성 -->
                         </tbody>
                     </table>
                 </div>
@@ -2072,7 +2025,84 @@
         </main>
     </div>
 
-    <script src="js/admin.js"></script>
+    <!-- Firebase SDK (compat 버전 사용) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    
+    <script>
+        // Firebase SDK 로드 확인
+        function waitForFirebase() {
+            return new Promise((resolve, reject) => {
+                let attempts = 0;
+                const maxAttempts = 50; // 5초 대기
+                
+                const checkFirebase = setInterval(() => {
+                    attempts++;
+                    if (typeof firebase !== 'undefined' && firebase.apps) {
+                        console.log('✅ Firebase SDK 로드 확인됨');
+                        clearInterval(checkFirebase);
+                        resolve();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkFirebase);
+                        console.error('❌ Firebase SDK 로드 실패');
+                        reject(new Error('Firebase SDK 로드 시간 초과'));
+                    }
+                }, 100);
+            });
+        }
+        
+        // Firebase SDK 로드 후 스크립트 실행
+        waitForFirebase().then(() => {
+            // Firebase Admin 연동
+            const script1 = document.createElement('script');
+            script1.src = 'js/firebase-admin.js';
+            document.body.appendChild(script1);
+            
+                script1.onload = () => {
+                const script2 = document.createElement('script');
+                script2.src = 'js/delete-firebase-data.js';
+                document.body.appendChild(script2);
+                
+                script2.onload = () => {
+                    const script3 = document.createElement('script');
+                    script3.src = 'js/dashboard.js';
+                    document.body.appendChild(script3);
+                    
+                    script3.onload = () => {
+                        const script4 = document.createElement('script');
+                        script4.src = 'js/settings.js';
+                        document.body.appendChild(script4);
+                        
+                        script4.onload = () => {
+                            const script4_5 = document.createElement('script');
+                            script4_5.src = 'js/member-search.js';
+                            document.body.appendChild(script4_5);
+                            
+                            script4_5.onload = () => {
+                                const script5 = document.createElement('script');
+                                script5.src = 'js/admin.js';
+                                script5.onload = () => {
+                                    console.log('✅ admin.js 로드 완료 - 네비게이션 초기화 실행');
+                                    // admin.js가 로드된 후 초기화 함수 호출
+                                    if (typeof initAdminPage === 'function') {
+                                        setTimeout(initAdminPage, 100);
+                                    } else {
+                                        console.error('❌ initAdminPage 함수를 찾을 수 없습니다!');
+                                    }
+                                };
+                                document.body.appendChild(script5);
+                            };
+                        };
+                    };
+                };
+            };
+        }).catch(error => {
+            console.error('Firebase 초기화 실패:', error);
+            alert('Firebase SDK를 로드할 수 없습니다. 네트워크 연결을 확인하세요.');
+        });
+    </script>
+    
 </body>
 </html>
 

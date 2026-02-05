@@ -527,7 +527,7 @@ function renderProducts() {
     }
 }
 
-// 오늘 본 상품 관리
+// 최근 본 상품 관리
 function initTodayViewed() {
     // 퀵메뉴 버튼 클릭 시 패널 열기
     if (elements.toggleViewed && elements.viewedPanel) {
@@ -557,7 +557,7 @@ function initTodayViewed() {
     // 전체삭제 버튼
     if (elements.btnClearAll) {
         elements.btnClearAll.addEventListener('click', () => {
-            if (confirm('오늘 본 상품을 모두 삭제하시겠습니까?')) {
+            if (confirm('최근 본 상품을 모두 삭제하시겠습니까?')) {
                 localStorage.removeItem('todayViewedProducts');
                 updateViewedList();
                 updateViewedCount();
@@ -569,14 +569,14 @@ function initTodayViewed() {
     updateViewedCount();
 }
 
-// 오늘 본 상품 목록 업데이트
+// 최근 본 상품 목록 업데이트
 function updateViewedList() {
     if (!elements.viewedList) return;
 
     const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
     
     if (viewedProducts.length === 0) {
-        elements.viewedList.innerHTML = '<p class="empty-message">오늘 본 상품이 없습니다.</p>';
+        elements.viewedList.innerHTML = '<p class="empty-message">최근 본 상품이 없습니다.</p>';
         return;
     }
 
@@ -609,7 +609,7 @@ function updateViewedList() {
     });
 }
 
-// 오늘 본 상품 개수 업데이트
+// 최근 본 상품 개수 업데이트
 function updateViewedCount() {
     const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
     const count = viewedProducts.length;
@@ -629,7 +629,7 @@ function updateViewedCount() {
     }
 }
 
-// 상품 상세 페이지에서 오늘 본 상품에 추가
+// 상품 상세 페이지에서 최근 본 상품에 추가
 function addToTodayViewed(product) {
     if (!product || !product.id) return;
 

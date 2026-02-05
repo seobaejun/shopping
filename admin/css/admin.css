@@ -1848,3 +1848,30 @@ body {
     background: #555;
 }
 
+/* 검색 결과 영역 */
+.search-results-container {
+    margin-top: 30px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.search-results-container .page-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.search-results-container .page-header h3 {
+    font-size: 18px;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.search-results-container .page-header h3 strong {
+    color: var(--primary-color);
+    font-size: 20px;
+}
+
