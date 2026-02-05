@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10쇼핑게임 관리자</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 상단 헤더 -->
+    <header class="admin-header">
+        <div class="header-left">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="admin-title">ADMINISTRATOR</h1>
+        </div>
+        <div class="header-right">
+            <span class="admin-name">최고관리자 님 로그인 중</span>
+            <button class="btn-md-admin">MD관리자</button>
+            <button class="btn-home"><i class="fas fa-home"></i></button>
+            <button class="btn-settings"><i class="fas fa-cog"></i></button>
+            <button class="btn-logout">LOGOUT <i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </header>
+
+    <div class="admin-container">
+        <!-- 사이드바 -->
+        <aside class="admin-sidebar" id="adminSidebar">
+            <nav class="sidebar-nav">
+                <!-- 환경설정 -->
+                <div class="nav-section active">
+                    <h3 class="nav-title"><i class="fas fa-cog"></i> 환경설정</h3>
+                    <ul class="nav-list">
+                        <li class="active"><a href="#" data-page="dashboard"><i class="fas fa-tachometer-alt"></i> 관리자메인</a></li>
+                        <li><a href="#" data-page="basic-settings"><i class="fas fa-wrench"></i> 기본환경설정</a></li>
+                        <li><a href="#" data-page="admin-settings"><i class="fas fa-user-shield"></i> 관리권한설정</a></li>
+                    </ul>
+                </div>
+
+                <!-- 회원관리 -->
+                <div class="nav-section">
+                    <h3 class="nav-title"><i class="fas fa-users"></i> 회원관리</h3>
+                    <ul class="nav-list">
+                        <li><a href="#" data-page="member-search"><i class="fas fa-search"></i> 회원조회</a></li>
+                        <li><a href="#" data-page="member-purchase"><i class="fas fa-shopping-cart"></i> 개인별 구매 누적정보</a></li>
+                    </ul>
+                </div>
+
+                <!-- 상품관리 -->
+                <div class="nav-section">
+                    <h3 class="nav-title"><i class="fas fa-box"></i> 상품관리</h3>
+                    <ul class="nav-list">
+                        <li><a href="#" data-page="product-list"><i class="fas fa-list"></i> 상품목록</a></li>
+                        <li><a href="#" data-page="product-register"><i class="fas fa-plus-circle"></i> 상품등록</a></li>
+                        <li><a href="#" data-page="category-manage"><i class="fas fa-tags"></i> 카테고리관리</a></li>
+                    </ul>
+                </div>
+
+                <!-- 추첨관리 -->
+                <div class="nav-section">
+                    <h3 class="nav-title"><i class="fas fa-trophy"></i> 추첨관리</h3>
+                    <ul class="nav-list">
+                        <li><a href="#" data-page="purchase-request"><i class="fas fa-clock"></i> 구매 요청 및 승인대기</a></li>
+                        <li><a href="#" data-page="draw-lottery"><i class="fas fa-dice"></i> 조별 추첨하기</a></li>
+                        <li><a href="#" data-page="draw-confirm"><i class="fas fa-check-circle"></i> 조별 추첨 확정 현황</a></li>
+                    </ul>
+                </div>
+
+                <!-- 정산관리 -->
+                <div class="nav-section">
+                    <h3 class="nav-title"><i class="fas fa-calculator"></i> 정산관리</h3>
+                    <ul class="nav-list">
+                        <li><a href="#" data-page="settlement-personal"><i class="fas fa-user-check"></i> 개인별 정산관리</a></li>
+                        <li><a href="#" data-page="settlement-round"><i class="fas fa-calendar-alt"></i> 회차별 정산관리</a></li>
+                    </ul>
+                </div>
+
+                <!-- 배송관리 -->
+                <div class="nav-section">
+                    <h3 class="nav-title"><i class="fas fa-truck"></i> 배송관리</h3>
+                    <ul class="nav-list">
+                        <li><a href="#" data-page="delivery-register"><i class="fas fa-box"></i> 배송진행 등록</a></li>
+                    </ul>
+                </div>
+
+                <!-- 통계/분석 -->
+                <div class="nav-section">
+                    <h3 class="nav-title"><i class="fas fa-chart-bar"></i> 통계/분석</h3>
+                    <ul class="nav-list">
+                        <li><a href="#" data-page="visitor-stats"><i class="fas fa-users"></i> 접속자집계</a></li>
+                        <li><a href="#" data-page="board-manage"><i class="fas fa-clipboard"></i> 게시판관리</a></li>
+                        <li><a href="#" data-page="product-sales"><i class="fas fa-chart-line"></i> 상품판매순위</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 메인 콘텐츠 -->
+        <main class="admin-content">
+            <!-- 관리자 메인 대시보드 -->
+            <div id="dashboard" class="content-page active">
+                <div class="page-header">
+                    <h2>관리자 대시보드</h2>
+                    <p class="page-description">10쇼핑게임 관리자 메인 페이지입니다.</p>
+                </div>
+
+                <!-- 통계 카드 -->
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #4A5FC1;">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>전체 회원</h3>
+                            <p class="stat-number">164명</p>
+                            <span class="stat-change positive">+12 (이번 주)</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #28a745;">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>총 구매건수</h3>
+                            <p class="stat-number">1,247건</p>
+                            <span class="stat-change positive">+45 (오늘)</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #ffc107;">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>총 지원금</h3>
+                            <p class="stat-number">12,450,000원</p>
+                            <span class="stat-change positive">+250,000원 (이번 달)</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #dc3545;">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>승인 대기</h3>
+                            <p class="stat-number">23건</p>
+                            <span class="stat-change">처리 필요</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 최근 활동 -->
+                <div class="dashboard-grid">
+                    <div class="dashboard-panel">
+                        <div class="panel-header">
+                            <h3><i class="fas fa-bell"></i> 최근 가입 회원</h3>
+                            <a href="#" data-page="member-search" class="panel-link">전체보기 →</a>
+                        </div>
+                        <div class="panel-content">
+                            <table class="simple-table">
+                                <thead>
+                                    <tr>
+                                        <th>이름</th>
+                                        <th>아이디</th>
+                                        <th>가입일</th>
+                                        <th>상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>서**</td>
+                                        <td>spring1004</td>
+                                        <td>2026-01-26</td>
+                                        <td><span class="badge badge-success">정상</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>류**</td>
+                                        <td>goldls</td>
+                                        <td>2026-01-26</td>
+                                        <td><span class="badge badge-success">정상</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>송**</td>
+                                        <td>10game</td>
+                                        <td>2026-01-26</td>
+                                        <td><span class="badge badge-success">정상</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-panel">
+                        <div class="panel-header">
+                            <h3><i class="fas fa-shopping-bag"></i> 최근 구매 내역</h3>
+                            <a href="#" data-page="purchase-request" class="panel-link">전체보기 →</a>
+                        </div>
+                        <div class="panel-content">
+                            <table class="simple-table">
+                                <thead>
+                                    <tr>
+                                        <th>회원</th>
+                                        <th>상품</th>
+                                        <th>금액</th>
+                                        <th>상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>최**</td>
+                                        <td>메가커피 3만원권</td>
+                                        <td>30,000원</td>
+                                        <td><span class="badge badge-warning">승인대기</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>김**</td>
+                                        <td>스타벅스 아메리카노</td>
+                                        <td>4,500원</td>
+                                        <td><span class="badge badge-success">승인완료</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>이**</td>
+                                        <td>배스킨라빈스 파인트</td>
+                                        <td>15,000원</td>
+                                        <td><span class="badge badge-success">승인완료</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 추가 정보 패널 -->
+                <div class="dashboard-grid">
+                    <div class="dashboard-panel">
+                        <div class="panel-header">
+                            <h3><i class="fas fa-chart-line"></i> 이번 주 통계</h3>
+                        </div>
+                        <div class="panel-content">
+                            <div class="stat-list">
+                                <div class="stat-item">
+                                    <span class="stat-label">신규 회원</span>
+                                    <span class="stat-value">12명</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">총 구매액</span>
+                                    <span class="stat-value">2,450,000원</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">지원금 지급</span>
+                                    <span class="stat-value">122,500원</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">추첨 진행</span>
+                                    <span class="stat-value">8회</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-panel">
+                        <div class="panel-header">
+                            <h3><i class="fas fa-tasks"></i> 빠른 작업</h3>
+                        </div>
+                        <div class="panel-content">
+                            <div class="quick-actions">
+                                <button class="quick-btn" onclick="navigateToPage('member-search')">
+                                    <i class="fas fa-user-plus"></i>
+                                    <span>회원 조회</span>
+                                </button>
+                                <button class="quick-btn" onclick="navigateToPage('purchase-request')">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>구매 승인</span>
+                                </button>
+                                <button class="quick-btn" onclick="navigateToPage('draw-lottery')">
+                                    <i class="fas fa-dice"></i>
+                                    <span>추첨 진행</span>
+                                </button>
+                                <button class="quick-btn" onclick="navigateToPage('delivery-register')">
+                                    <i class="fas fa-truck"></i>
+                                    <span>배송 관리</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 기본환경설정 페이지 -->
+            <div id="basic-settings" class="content-page">
+                <div class="page-header">
+                    <h2>기본환경설정</h2>
+                    <p class="page-description">사이트의 기본 설정을 관리합니다.</p>
+                </div>
+
+                <div class="settings-panel">
+                    <div class="settings-section">
+                        <h3><i class="fas fa-globe"></i> 사이트 기본 정보</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>사이트 이름</label>
+                                <input type="text" class="form-control" value="10쇼핑게임">
+                            </div>
+                            <div class="form-group">
+                                <label>사이트 URL</label>
+                                <input type="text" class="form-control" value="https://10-2market.com">
+                            </div>
+                            <div class="form-group">
+                                <label>관리자 이메일</label>
+                                <input type="email" class="form-control" value="admin@10market.com">
+                            </div>
+                            <div class="form-group">
+                                <label>고객센터 전화번호</label>
+                                <input type="tel" class="form-control" value="1588-0000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3><i class="fas fa-percent"></i> 지원금 설정</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>기본 지원금 비율 (%)</label>
+                                <input type="number" class="form-control" value="5" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>최소 구매 금액 (원)</label>
+                                <input type="number" class="form-control" value="1000" step="1000">
+                            </div>
+                            <div class="form-group">
+                                <label>최대 지원금 (원)</label>
+                                <input type="number" class="form-control" value="100000" step="10000">
+                            </div>
+                            <div class="form-group">
+                                <label>추첨 당첨 확률 (%)</label>
+                                <input type="number" class="form-control" value="10" min="0" max="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3><i class="fas fa-clock"></i> 운영 시간 설정</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>추첨 시작 시간</label>
+                                <input type="time" class="form-control" value="09:00">
+                            </div>
+                            <div class="form-group">
+                                <label>추첨 종료 시간</label>
+                                <input type="time" class="form-control" value="18:00">
+                            </div>
+                            <div class="form-group">
+                                <label>추첨 주기</label>
+                                <select class="form-control">
+                                    <option value="daily">매일</option>
+                                    <option value="weekly" selected>매주</option>
+                                    <option value="monthly">매월</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>추첨 요일</label>
+                                <select class="form-control">
+                                    <option value="1">월요일</option>
+                                    <option value="2">화요일</option>
+                                    <option value="3">수요일</option>
+                                    <option value="4">목요일</option>
+                                    <option value="5" selected>금요일</option>
+                                    <option value="6">토요일</option>
+                                    <option value="0">일요일</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-actions">
+                        <button class="btn btn-primary"><i class="fas fa-save"></i> 설정 저장</button>
+                        <button class="btn btn-default"><i class="fas fa-undo"></i> 초기화</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 관리권한설정 페이지 -->
+            <div id="admin-settings" class="content-page">
+                <div class="page-header">
+                    <h2>관리권한설정</h2>
+                    <p class="page-description">관리자 계정과 권한을 관리합니다.</p>
+                </div>
+
+                <div class="settings-panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-user-shield"></i> 관리자 목록</h3>
+                        <button class="btn btn-primary btn-sm" onclick="alert('관리자 추가 기능 (서버 연동 후 구현)')">
+                            <i class="fas fa-plus"></i> 관리자 추가
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>번호</th>
+                                    <th>아이디</th>
+                                    <th>이름</th>
+                                    <th>권한</th>
+                                    <th>이메일</th>
+                                    <th>전화번호</th>
+                                    <th>최근 접속</th>
+                                    <th>상태</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>superadmin</td>
+                                    <td>최고관리자</td>
+                                    <td><span class="badge badge-danger">최고관리자</span></td>
+                                    <td>admin@10market.com</td>
+                                    <td>010-0000-0000</td>
+                                    <td>2026-02-04 10:30</td>
+                                    <td><span class="badge badge-success">활성</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">수정</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td>mdadmin</td>
+                                    <td>MD관리자</td>
+                                    <td><span class="badge badge-warning">MD관리자</span></td>
+                                    <td>md@10market.com</td>
+                                    <td>010-1111-1111</td>
+                                    <td>2026-02-03 15:20</td>
+                                    <td><span class="badge badge-success">활성</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">수정</button>
+                                        <button class="btn btn-sm btn-secondary">비활성화</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td>csadmin</td>
+                                    <td>CS관리자</td>
+                                    <td><span class="badge badge-info">CS관리자</span></td>
+                                    <td>cs@10market.com</td>
+                                    <td>010-2222-2222</td>
+                                    <td>2026-02-02 09:15</td>
+                                    <td><span class="badge badge-success">활성</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">수정</button>
+                                        <button class="btn btn-sm btn-secondary">비활성화</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="settings-section" style="margin-top: 30px;">
+                        <h3><i class="fas fa-key"></i> 권한 레벨 설명</h3>
+                        <div class="permission-info">
+                            <div class="permission-item">
+                                <span class="badge badge-danger">최고관리자</span>
+                                <p>모든 기능에 대한 전체 권한 (회원관리, 추첨관리, 정산관리, 배송관리, 환경설정)</p>
+                            </div>
+                            <div class="permission-item">
+                                <span class="badge badge-warning">MD관리자</span>
+                                <p>상품 관리, 배송 관리, 통계 조회 권한</p>
+                            </div>
+                            <div class="permission-item">
+                                <span class="badge badge-info">CS관리자</span>
+                                <p>회원 조회, 게시판 관리, 문의 응대 권한</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 접속자집계 페이지 -->
+            <div id="visitor-stats" class="content-page">
+                <div class="page-header">
+                    <h2>접속자집계</h2>
+                    <p class="page-description">사이트 방문자 통계를 확인합니다.</p>
+                </div>
+
+                <!-- 기간 선택 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" value="2026-01-01">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" value="2026-02-04">
+                        </div>
+                        <div class="form-group">
+                            <label>통계 유형</label>
+                            <select class="form-control">
+                                <option value="daily">일별</option>
+                                <option value="weekly">주별</option>
+                                <option value="monthly" selected>월별</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary">조회</button>
+                        <button class="btn btn-secondary">엑셀 다운로드</button>
+                    </div>
+                </div>
+
+                <!-- 통계 요약 -->
+                <div class="stats-summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-icon" style="background: #4A5FC1;">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="summary-content">
+                            <h4>총 방문자</h4>
+                            <p class="summary-number">12,547명</p>
+                            <span class="summary-period">최근 30일</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon" style="background: #28a745;">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="summary-content">
+                            <h4>순 방문자</h4>
+                            <p class="summary-number">8,234명</p>
+                            <span class="summary-period">최근 30일</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon" style="background: #ffc107;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="summary-content">
+                            <h4>평균 체류시간</h4>
+                            <p class="summary-number">5분 32초</p>
+                            <span class="summary-period">최근 30일</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon" style="background: #17a2b8;">
+                            <i class="fas fa-mouse-pointer"></i>
+                        </div>
+                        <div class="summary-content">
+                            <h4>페이지뷰</h4>
+                            <p class="summary-number">45,678회</p>
+                            <span class="summary-period">최근 30일</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 일별 통계 테이블 -->
+                <div class="table-container">
+                    <h3 style="padding: 20px; margin: 0; border-bottom: 2px solid #ddd;">일별 접속 통계</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>날짜</th>
+                                <th>방문자 수</th>
+                                <th>순 방문자</th>
+                                <th>페이지뷰</th>
+                                <th>신규 회원</th>
+                                <th>평균 체류시간</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2026-02-04</td>
+                                <td>523</td>
+                                <td>412</td>
+                                <td>1,847</td>
+                                <td>8</td>
+                                <td>5분 12초</td>
+                            </tr>
+                            <tr>
+                                <td>2026-02-03</td>
+                                <td>487</td>
+                                <td>389</td>
+                                <td>1,654</td>
+                                <td>6</td>
+                                <td>4분 58초</td>
+                            </tr>
+                            <tr>
+                                <td>2026-02-02</td>
+                                <td>612</td>
+                                <td>501</td>
+                                <td>2,134</td>
+                                <td>12</td>
+                                <td>6분 23초</td>
+                            </tr>
+                            <tr>
+                                <td>2026-02-01</td>
+                                <td>445</td>
+                                <td>367</td>
+                                <td>1,523</td>
+                                <td>5</td>
+                                <td>4분 45초</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 게시판관리 페이지 -->
+            <div id="board-manage" class="content-page">
+                <div class="page-header">
+                    <h2>게시판관리</h2>
+                    <p class="page-description">공지사항, 이벤트, Q&A 게시판을 관리합니다.</p>
+                </div>
+
+                <!-- 게시판 선택 탭 -->
+                <div class="board-tabs">
+                    <button class="board-tab active" onclick="switchBoardTab('notice')">공지사항</button>
+                    <button class="board-tab" onclick="switchBoardTab('event')">이벤트</button>
+                    <button class="board-tab" onclick="switchBoardTab('qna')">Q&A</button>
+                    <button class="board-tab" onclick="switchBoardTab('review')">상품후기</button>
+                </div>
+
+                <!-- 검색 패널 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>검색어</label>
+                            <input type="text" class="form-control" placeholder="제목 또는 내용 검색">
+                        </div>
+                        <div class="form-group">
+                            <label>작성자</label>
+                            <input type="text" class="form-control" placeholder="작성자 검색">
+                        </div>
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" value="2026-01-01">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" value="2026-02-04">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary">검색</button>
+                        <button class="btn btn-default">초기화</button>
+                        <button class="btn btn-secondary"><i class="fas fa-plus"></i> 글 작성</button>
+                    </div>
+                </div>
+
+                <!-- 게시글 목록 -->
+                <div class="table-container">
+                    <p class="info-text">총 45개의 게시글이 있습니다.</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">번호</th>
+                                <th>제목</th>
+                                <th style="width: 100px;">작성자</th>
+                                <th style="width: 120px;">작성일</th>
+                                <th style="width: 80px;">조회수</th>
+                                <th style="width: 100px;">상태</th>
+                                <th style="width: 120px;">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge badge-danger">공지</span></td>
+                                <td style="text-align: left; padding-left: 15px;">2026년 2월 추첨 일정 안내</td>
+                                <td>관리자</td>
+                                <td>2026-02-01</td>
+                                <td>1,234</td>
+                                <td><span class="badge badge-success">게시중</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary">수정</button>
+                                    <button class="btn btn-sm btn-secondary">삭제</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-danger">공지</span></td>
+                                <td style="text-align: left; padding-left: 15px;">신규 상품 입고 안내</td>
+                                <td>관리자</td>
+                                <td>2026-01-28</td>
+                                <td>987</td>
+                                <td><span class="badge badge-success">게시중</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary">수정</button>
+                                    <button class="btn btn-sm btn-secondary">삭제</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>43</td>
+                                <td style="text-align: left; padding-left: 15px;">설 연휴 배송 일정 안내</td>
+                                <td>관리자</td>
+                                <td>2026-01-25</td>
+                                <td>756</td>
+                                <td><span class="badge badge-success">게시중</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary">수정</button>
+                                    <button class="btn btn-sm btn-secondary">삭제</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>42</td>
+                                <td style="text-align: left; padding-left: 15px;">1월 당첨자 발표</td>
+                                <td>관리자</td>
+                                <td>2026-01-20</td>
+                                <td>2,345</td>
+                                <td><span class="badge badge-warning">임시저장</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary">수정</button>
+                                    <button class="btn btn-sm btn-secondary">삭제</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 페이지네이션 -->
+                <div class="pagination">
+                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
+                    <button class="page-num active">1</button>
+                    <button class="page-num">2</button>
+                    <button class="page-num">3</button>
+                    <button class="page-num">4</button>
+                    <button class="page-num">5</button>
+                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <!-- 상품판매순위 페이지 -->
+            <div id="product-sales" class="content-page">
+                <div class="page-header">
+                    <h2>상품판매순위</h2>
+                    <p class="page-description">인기 상품과 판매 통계를 확인합니다.</p>
+                </div>
+
+                <!-- 기간 선택 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" value="2026-01-01">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" value="2026-02-04">
+                        </div>
+                        <div class="form-group">
+                            <label>카테고리</label>
+                            <select class="form-control">
+                                <option value="">전체</option>
+                                <option value="coffee">커피/음료</option>
+                                <option value="food">식품</option>
+                                <option value="beauty">뷰티</option>
+                                <option value="life">생활용품</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary">조회</button>
+                        <button class="btn btn-secondary">엑셀 다운로드</button>
+                    </div>
+                </div>
+
+                <!-- TOP 10 상품 -->
+                <div class="ranking-container">
+                    <h3 style="margin-bottom: 20px;"><i class="fas fa-trophy"></i> TOP 10 인기 상품</h3>
+                    <div class="ranking-grid">
+                        <div class="ranking-card rank-1">
+                            <div class="rank-badge">1</div>
+                            <div class="product-info">
+                                <h4>메가커피 모바일금액권 3만원</h4>
+                                <p class="sales-count">판매: 234건</p>
+                                <p class="sales-amount">매출: 7,020,000원</p>
+                            </div>
+                        </div>
+                        <div class="ranking-card rank-2">
+                            <div class="rank-badge">2</div>
+                            <div class="product-info">
+                                <h4>스타벅스 아메리카노 Tall</h4>
+                                <p class="sales-count">판매: 189건</p>
+                                <p class="sales-amount">매출: 850,500원</p>
+                            </div>
+                        </div>
+                        <div class="ranking-card rank-3">
+                            <div class="rank-badge">3</div>
+                            <div class="product-info">
+                                <h4>배스킨라빈스 파인트 아이스크림</h4>
+                                <p class="sales-count">판매: 156건</p>
+                                <p class="sales-amount">매출: 2,340,000원</p>
+                            </div>
+                        </div>
+                        <div class="ranking-card">
+                            <div class="rank-badge">4</div>
+                            <div class="product-info">
+                                <h4>CU 편의점 모바일상품권 1만원</h4>
+                                <p class="sales-count">판매: 145건</p>
+                                <p class="sales-amount">매출: 1,450,000원</p>
+                            </div>
+                        </div>
+                        <div class="ranking-card">
+                            <div class="rank-badge">5</div>
+                            <div class="product-info">
+                                <h4>GS25 모바일상품권 1만원</h4>
+                                <p class="sales-count">판매: 132건</p>
+                                <p class="sales-amount">매출: 1,320,000원</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 상세 판매 통계 -->
+                <div class="table-container" style="margin-top: 30px;">
+                    <h3 style="padding: 20px; margin: 0; border-bottom: 2px solid #ddd;">전체 상품 판매 통계</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>순위</th>
+                                <th>상품명</th>
+                                <th>카테고리</th>
+                                <th>판매건수</th>
+                                <th>총 매출</th>
+                                <th>지원금</th>
+                                <th>순이익</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="rank-badge-small gold">1</span></td>
+                                <td style="text-align: left; padding-left: 15px;">메가커피 모바일금액권 3만원</td>
+                                <td>커피/음료</td>
+                                <td>234건</td>
+                                <td>7,020,000원</td>
+                                <td>351,000원</td>
+                                <td>6,669,000원</td>
+                            </tr>
+                            <tr>
+                                <td><span class="rank-badge-small silver">2</span></td>
+                                <td style="text-align: left; padding-left: 15px;">스타벅스 아메리카노 Tall</td>
+                                <td>커피/음료</td>
+                                <td>189건</td>
+                                <td>850,500원</td>
+                                <td>42,525원</td>
+                                <td>807,975원</td>
+                            </tr>
+                            <tr>
+                                <td><span class="rank-badge-small bronze">3</span></td>
+                                <td style="text-align: left; padding-left: 15px;">배스킨라빈스 파인트 아이스크림</td>
+                                <td>식품</td>
+                                <td>156건</td>
+                                <td>2,340,000원</td>
+                                <td>117,000원</td>
+                                <td>2,223,000원</td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td style="text-align: left; padding-left: 15px;">CU 편의점 모바일상품권 1만원</td>
+                                <td>생활용품</td>
+                                <td>145건</td>
+                                <td>1,450,000원</td>
+                                <td>72,500원</td>
+                                <td>1,377,500원</td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td style="text-align: left; padding-left: 15px;">GS25 모바일상품권 1만원</td>
+                                <td>생활용품</td>
+                                <td>132건</td>
+                                <td>1,320,000원</td>
+                                <td>66,000원</td>
+                                <td>1,254,000원</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 상품목록 페이지 -->
+            <div id="product-list" class="content-page">
+                <div class="page-header">
+                    <h2>상품목록</h2>
+                    <p class="page-description">등록된 상품을 조회하고 관리합니다.</p>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>상품명</label>
+                            <input type="text" class="form-control" id="productSearchName" placeholder="상품명 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>카테고리</label>
+                            <select class="form-control" id="productSearchCategory">
+                                <option value="">전체</option>
+                                <option value="coffee">커피/음료</option>
+                                <option value="food">식품</option>
+                                <option value="beauty">뷰티</option>
+                                <option value="life">생활용품</option>
+                                <option value="fashion">패션</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>상태</label>
+                            <select class="form-control" id="productSearchStatus">
+                                <option value="">전체</option>
+                                <option value="sale">판매중</option>
+                                <option value="soldout">품절</option>
+                                <option value="hidden">숨김</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary" onclick="searchProducts()">검색</button>
+                        <button class="btn btn-default" onclick="resetProductSearch()">초기화</button>
+                        <button class="btn btn-secondary" onclick="navigateToPage('product-register')">
+                            <i class="fas fa-plus"></i> 상품 등록
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 상품 목록 -->
+                <div class="table-container">
+                    <p class="info-text">총 <strong id="productCount">12</strong>개의 상품이 등록되어 있습니다.</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">번호</th>
+                                <th style="width: 100px;">이미지</th>
+                                <th>상품명</th>
+                                <th style="width: 100px;">카테고리</th>
+                                <th style="width: 100px;">판매가</th>
+                                <th style="width: 80px;">재고</th>
+                                <th style="width: 100px;">상태</th>
+                                <th style="width: 120px;">등록일</th>
+                                <th style="width: 150px;">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productListBody">
+                            <!-- JavaScript로 동적 생성 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 페이지네이션 -->
+                <div class="pagination">
+                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
+                    <button class="page-num active">1</button>
+                    <button class="page-num">2</button>
+                    <button class="page-num">3</button>
+                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <!-- 회원조회 페이지 -->
+            <div id="member-search" class="content-page">
+                <div class="page-header">
+                    <h2>회원정보</h2>
+                    <p class="page-description">총 <strong>164</strong>명의 회원이 등록되어 있습니다.</p>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>아이디</label>
+                            <input type="text" class="form-control" placeholder="아이디 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>이름</label>
+                            <input type="text" class="form-control" placeholder="이름 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>추천인 ID</label>
+                            <input type="text" class="form-control" placeholder="추천인 ID 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>승인상태</label>
+                            <select class="form-control">
+                                <option value="">전체</option>
+                                <option value="approved">승인</option>
+                                <option value="pending">대기</option>
+                                <option value="rejected">거부</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>시작시간</label>
+                            <input type="date" class="form-control" value="2026-01-26">
+                        </div>
+                        <div class="form-group">
+                            <label>종료시간</label>
+                            <input type="date" class="form-control" value="2026-02-02">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary" id="searchBtn">검색</button>
+                        <button class="btn btn-secondary" id="exportBtn">엑셀 다운로드</button>
+                        <button class="btn btn-default" id="resetBtn">취소</button>
+                    </div>
+                </div>
+
+                <!-- 회원 테이블 -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>아이디</th>
+                                <th>이름</th>
+                                <th>전화번호</th>
+                                <th>가입날짜</th>
+                                <th>주소</th>
+                                <th>계좌번호</th>
+                                <th>추천인</th>
+                                <th>MD코드</th>
+                                <th>구매금액</th>
+                                <th>지원금/누적</th>
+                                <th>상태</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberTableBody">
+                            <tr>
+                                <td>1</td>
+                                <td>spring1004</td>
+                                <td>서**</td>
+                                <td>010-****-3342</td>
+                                <td>2026-01-26 19:08:52</td>
+                                <td>대전 유성구 동서대로</td>
+                                <td>국민12233375</td>
+                                <td>1024</td>
+                                <td></td>
+                                <td>0</td>
+                                <td>0 / 0</td>
+                                <td><span class="badge badge-success">정상</span></td>
+                                <td>
+                                    <button class="btn-icon btn-edit" title="수정"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon btn-delete" title="삭제"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>goldls</td>
+                                <td>류**</td>
+                                <td>010-****-5544</td>
+                                <td>2026-01-26 11:58:48</td>
+                                <td></td>
+                                <td></td>
+                                <td>2026</td>
+                                <td></td>
+                                <td>0</td>
+                                <td>0 / 0</td>
+                                <td><span class="badge badge-success">정상</span></td>
+                                <td>
+                                    <button class="btn-icon btn-edit" title="수정"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon btn-delete" title="삭제"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>10game</td>
+                                <td>송**</td>
+                                <td>010-****-3321</td>
+                                <td>2026-01-26 14:04:37</td>
+                                <td>대전 유성구 동서대로(대덕교)</td>
+                                <td>국민12233375</td>
+                                <td>1024</td>
+                                <td></td>
+                                <td>0</td>
+                                <td>0 / 0</td>
+                                <td><span class="badge badge-success">정상</span></td>
+                                <td>
+                                    <button class="btn-icon btn-edit" title="수정"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon btn-delete" title="삭제"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 페이지네이션 -->
+                <div class="pagination">
+                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
+                    <button class="page-num active">1</button>
+                    <button class="page-num">2</button>
+                    <button class="page-num">3</button>
+                    <button class="page-num">4</button>
+                    <button class="page-num">5</button>
+                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <!-- 회원조회 페이지 -->
+            <div id="member-search" class="content-page">
+                <div class="page-header">
+                    <h2>회원조회</h2>
+                    <p class="page-description">회원 정보를 조회하고 관리합니다.</p>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>아이디</label>
+                            <input type="text" class="form-control" id="searchId" placeholder="아이디 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>이름</label>
+                            <input type="text" class="form-control" id="searchName" placeholder="이름 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>전화번호</label>
+                            <input type="text" class="form-control" id="searchPhone" placeholder="전화번호 입력">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary" onclick="searchMembers()">검색</button>
+                        <button class="btn btn-default" onclick="resetSearch()">초기화</button>
+                    </div>
+                </div>
+
+                <!-- 회원 테이블 -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>아이디</th>
+                                <th>이름</th>
+                                <th>전화번호</th>
+                                <th>가입날짜</th>
+                                <th>추천인</th>
+                                <th>상태</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberSearchBody">
+                            <!-- JavaScript로 동적 생성 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 개인별 구매 누적정보 페이지 -->
+            <div id="member-purchase" class="content-page">
+                <div class="page-header">
+                    <h2>개인별 구매 누적정보</h2>
+                    <p class="page-description">회원별 구매 이력과 누적 정보를 확인합니다.</p>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>이름</label>
+                            <input type="text" class="form-control" id="purchaseName" placeholder="이름 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" id="purchaseStartDate" value="2025-12-04">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" id="purchaseEndDate" value="2026-02-02">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary" onclick="searchPurchase()">검색</button>
+                        <button class="btn btn-default" onclick="resetPurchase()">취소</button>
+                    </div>
+                </div>
+
+                <!-- 누계 정보 -->
+                <div class="stats-panel">
+                    <h3>누계 정보</h3>
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>누계</th>
+                                <th>구매총금액</th>
+                                <th>지원금</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>0</td>
+                                <td>0</td>
+                                <td>0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 구매 내역 테이블 -->
+                <div class="table-container">
+                    <p class="empty-message">총 0 명의 회원이 검색되었습니다.</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>이름</th>
+                                <th>날짜</th>
+                                <th>구매상품</th>
+                                <th>상품가격</th>
+                                <th>지원금</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchaseTableBody">
+                            <!-- JavaScript로 동적 생성 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- 구매요청 및 승인대기 페이지 -->
+            <div id="purchase-request" class="content-page">
+                <div class="page-header">
+                    <h2>구매 요청 및 승인대기</h2>
+                    <p class="page-description">회원들의 구매 요청을 승인하거나 거부합니다.</p>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>이름</label>
+                            <input type="text" class="form-control" placeholder="이름 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" value="2026-01-03">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" value="2026-02-02">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary">검색</button>
+                        <button class="btn btn-default">취소</button>
+                    </div>
+                </div>
+
+                <!-- 구매 요청 테이블 -->
+                <div class="table-container">
+                    <p class="info-text">총 11개의 구매상품이 검색되었습니다.</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>이름</th>
+                                <th>전화번호</th>
+                                <th>상품명</th>
+                                <th>상품가격</th>
+                                <th>소팅지원금</th>
+                                <th>날짜</th>
+                                <th>상태</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>최**</td>
+                                <td>010-****-7</td>
+                                <td>메가커피 모바일금액권 3만원 모바일쿠폰</td>
+                                <td>30,000</td>
+                                <td>1,500</td>
+                                <td>2026-01-08</td>
+                                <td><span class="badge badge-warning">승인</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary">승인</button>
+                                    <button class="btn btn-sm btn-secondary">구매취소</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 조별 추첨하기 페이지 -->
+            <div id="draw-lottery" class="content-page">
+                <div class="page-header">
+                    <h2>조별 추첨하기</h2>
+                    <p class="page-description">상품별로 10명씩 조를 구성하여 추첨을 진행합니다.</p>
+                </div>
+
+                <!-- 추첨 설정 -->
+                <div class="lottery-settings-panel">
+                    <div class="settings-row">
+                        <div class="setting-item">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="autoLotteryMode" onchange="toggleAutoMode()">
+                                <span>자동 추첨 모드</span>
+                            </label>
+                            <small>10명 달성 시 자동으로 추첨 실행</small>
+                        </div>
+                        <div class="setting-item">
+                            <label>조당 인원</label>
+                            <select class="form-control" id="groupSize" style="width: 150px;">
+                                <option value="10" selected>10명</option>
+                                <option value="5">5명</option>
+                                <option value="15">15명</option>
+                                <option value="20">20명</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label>당첨 인원</label>
+                            <select class="form-control" id="winnerCount" style="width: 150px;">
+                                <option value="2" selected>2명</option>
+                                <option value="1">1명</option>
+                                <option value="3">3명</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 상품별 추첨 현황 -->
+                <div class="lottery-status-grid">
+                    <!-- JavaScript로 동적 생성 -->
+                </div>
+
+                <!-- 상품별 추첨 대기자 목록 -->
+                <div class="lottery-product-section">
+                    <div class="section-header">
+                        <h3>
+                            <span id="selectedProductName">상품을 선택해주세요</span>
+                            <span id="waitingCount" class="badge badge-info"></span>
+                        </h3>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" id="executeLotteryBtn" onclick="executeLottery()" disabled>
+                                <i class="fas fa-dice"></i> 조별 추첨 실행
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 추첨 대기자 테이블 -->
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">
+                                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                    </th>
+                                    <th>번호</th>
+                                    <th>이름</th>
+                                    <th>전화번호</th>
+                                    <th>구매금액</th>
+                                    <th>지원금</th>
+                                    <th>입금확인</th>
+                                    <th>대기일시</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lotteryWaitingList">
+                                <tr>
+                                    <td colspan="8" class="empty-message">상품을 선택하면 대기자 목록이 표시됩니다.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 추첨 결과 모달 -->
+                <div id="lotteryResultModal" class="lottery-modal" style="display: none;">
+                    <div class="modal-content lottery-result-content">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-trophy"></i> 추첨 결과</h3>
+                            <button class="modal-close" onclick="closeLotteryResult()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="result-section">
+                                <h4 class="winner-title">🎉 당첨자 (구매 확정)</h4>
+                                <div id="winnersList" class="winners-list"></div>
+                            </div>
+                            <div class="result-section">
+                                <h4 class="loser-title">💰 미선정자 (쇼핑 지원금 지급)</h4>
+                                <div id="losersList" class="losers-list"></div>
+                            </div>
+                            <div class="result-summary">
+                                <p><strong>회차:</strong> <span id="resultRound"></span></p>
+                                <p><strong>총 참여인원:</strong> <span id="resultTotal"></span>명</p>
+                                <p><strong>당첨:</strong> <span id="resultWinners"></span>명</p>
+                                <p><strong>총 지원금:</strong> <span id="resultSupport"></span>원</p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-primary" onclick="confirmLotteryResult()">
+                                <i class="fas fa-check"></i> 결과 확정
+                            </button>
+                            <button class="btn btn-default" onclick="closeLotteryResult()">
+                                <i class="fas fa-times"></i> 닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 조별 추첨 확정 현황 페이지 -->
+            <div id="draw-confirm" class="content-page">
+                <div class="page-header">
+                    <h2>조별 추첨 확정 현황</h2>
+                    <p class="page-description">완료된 추첨 내역과 지원금 지급 현황을 확인합니다.</p>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>상품 선택</label>
+                            <select class="form-control" id="confirmProductFilter" onchange="filterConfirmResults()">
+                                <option value="">전체 상품</option>
+                                <option value="product-1">메가커피 모바일금액권 3만원</option>
+                                <option value="product-2">스타벅스 아메리카노 Tall</option>
+                                <option value="product-3">배스킨라빈스 파인트</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>회차 선택</label>
+                            <select class="form-control" id="confirmRoundFilter" onchange="filterConfirmResults()">
+                                <option value="">전체 회차</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>추첨 결과</label>
+                            <select class="form-control" id="confirmResultFilter" onchange="filterConfirmResults()">
+                                <option value="">전체</option>
+                                <option value="winner">당첨</option>
+                                <option value="loser">미선정</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" id="confirmStartDate" value="2026-01-01" onchange="filterConfirmResults()">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" id="confirmEndDate" value="2026-02-04" onchange="filterConfirmResults()">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary" onclick="filterConfirmResults()">
+                            <i class="fas fa-search"></i> 검색
+                        </button>
+                        <button class="btn btn-default" onclick="resetConfirmFilter()">
+                            <i class="fas fa-undo"></i> 초기화
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportConfirmResults()">
+                            <i class="fas fa-file-excel"></i> 엑셀 다운로드
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 지급 요약 정보 -->
+                <div class="payment-summary-panel">
+                    <div class="summary-card-group">
+                        <div class="summary-info-card">
+                            <div class="summary-icon" style="background: #4A5FC1;">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>총 추첨 횟수</h4>
+                                <p class="summary-value" id="totalRounds">0회</p>
+                            </div>
+                        </div>
+                        <div class="summary-info-card">
+                            <div class="summary-icon" style="background: #28a745;">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>총 당첨자</h4>
+                                <p class="summary-value" id="totalWinners">0명</p>
+                            </div>
+                        </div>
+                        <div class="summary-info-card">
+                            <div class="summary-icon" style="background: #17a2b8;">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>총 미선정자</h4>
+                                <p class="summary-value" id="totalLosers">0명</p>
+                            </div>
+                        </div>
+                        <div class="summary-info-card">
+                            <div class="summary-icon" style="background: #ffc107;">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="summary-content">
+                                <h4>지원금 총액 (당일 지급)</h4>
+                                <p class="summary-value" id="totalSupport">0원</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 확정 현황 테이블 -->
+                <div class="table-container">
+                    <div class="table-header-actions">
+                        <p class="info-text">
+                            총 <strong id="confirmCount">0</strong>건의 추첨 결과가 확정되었습니다.
+                        </p>
+                        <button class="btn btn-primary btn-sm" onclick="processDailyPayment()">
+                            <i class="fas fa-money-bill-wave"></i> 당일 지원금 일괄 지급
+                        </button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">번호</th>
+                                <th style="width: 80px;">회차</th>
+                                <th>상품명</th>
+                                <th style="width: 100px;">이름</th>
+                                <th style="width: 130px;">전화번호</th>
+                                <th style="width: 100px;">구매금액</th>
+                                <th style="width: 100px;">추첨결과</th>
+                                <th style="width: 100px;">지원금</th>
+                                <th style="width: 100px;">지급상태</th>
+                                <th style="width: 140px;">추첨일시</th>
+                            </tr>
+                        </thead>
+                        <tbody id="confirmResultsBody">
+                            <tr>
+                                <td colspan="10" class="empty-message">추첨 확정 내역이 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 페이지네이션 -->
+                <div class="pagination" id="confirmPagination" style="display: none;">
+                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
+                    <button class="page-num active">1</button>
+                    <button class="page-num">2</button>
+                    <button class="page-num">3</button>
+                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <!-- 개인별 정산관리 페이지 -->
+            <div id="settlement-personal" class="content-page">
+                <div class="page-header">
+                    <h2>개인별 정산관리</h2>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>이름</label>
+                            <input type="text" class="form-control" placeholder="이름 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" value="2026-01-26">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" value="2026-02-02">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary">검색</button>
+                        <button class="btn btn-default">취소</button>
+                        <button class="btn btn-secondary">출력</button>
+                    </div>
+                </div>
+
+                <!-- 정산 테이블 -->
+                <div class="table-container">
+                    <p class="info-text">총 0 개의 구매상품이 검색되었습니다.</p>
+                    <div class="stats-summary">
+                        <p>지원금 총지급액: <strong>0</strong></p>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>이름</th>
+                                <th>날짜</th>
+                                <th>회차</th>
+                                <th>전화번호</th>
+                                <th>계좌번호</th>
+                                <th>상품명</th>
+                                <th>구분</th>
+                                <th>지원금 총지급액</th>
+                                <th>승인상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="10" class="empty-message">등록된 데이터가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 회차별 정산관리 페이지 -->
+            <div id="settlement-round" class="content-page">
+                <div class="page-header">
+                    <h2>회차별 정산관리</h2>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>이름</label>
+                            <input type="text" class="form-control" placeholder="이름 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" value="2026-01-26">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" value="2026-02-02">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary">검색</button>
+                        <button class="btn btn-default">취소</button>
+                    </div>
+                </div>
+
+                <!-- 회차별 정산 테이블 -->
+                <div class="table-container">
+                    <p class="info-text">총 0 개의 구매상품이 검색되었습니다.</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>날짜</th>
+                                <th>회차</th>
+                                <th>이름</th>
+                                <th>전화번호</th>
+                                <th>계좌번호</th>
+                                <th>상품명</th>
+                                <th>구분</th>
+                                <th>지원금 총지급액</th>
+                                <th>환불금액</th>
+                                <th>지원금 총지급액</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="11" class="empty-message">등록된 데이터가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 상품등록 페이지 -->
+            <div id="product-register" class="content-page">
+                <div class="page-header">
+                    <h2>상품등록</h2>
+                    <p class="page-description">새로운 상품을 등록합니다.</p>
+                </div>
+
+                <div class="product-form-container">
+                    <form id="productRegisterForm" onsubmit="registerProduct(event)">
+                        <!-- 상품 이미지 -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-image"></i> 상품 이미지</h3>
+                            <div class="image-upload-section">
+                                <div class="form-group">
+                                    <label>대표 이미지 <span class="required">*</span></label>
+                                    <div class="image-upload-box">
+                                        <input type="file" id="mainImage" accept="image/*" onchange="previewImage(event, 'mainImagePreview')" hidden>
+                                        <label for="mainImage" class="upload-label">
+                                            <div id="mainImagePreview" class="image-preview">
+                                                <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                                                <p>클릭하여 이미지 업로드</p>
+                                                <small>권장 크기: 600x600px (JPG, PNG)</small>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>추가 이미지 (최대 4장)</label>
+                                    <div class="additional-images">
+                                        <div class="image-upload-box small">
+                                            <input type="file" id="addImage1" accept="image/*" onchange="previewImage(event, 'addImagePreview1')" hidden>
+                                            <label for="addImage1" class="upload-label">
+                                                <div id="addImagePreview1" class="image-preview">
+                                                    <i class="fas fa-plus"></i>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <div class="image-upload-box small">
+                                            <input type="file" id="addImage2" accept="image/*" onchange="previewImage(event, 'addImagePreview2')" hidden>
+                                            <label for="addImage2" class="upload-label">
+                                                <div id="addImagePreview2" class="image-preview">
+                                                    <i class="fas fa-plus"></i>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <div class="image-upload-box small">
+                                            <input type="file" id="addImage3" accept="image/*" onchange="previewImage(event, 'addImagePreview3')" hidden>
+                                            <label for="addImage3" class="upload-label">
+                                                <div id="addImagePreview3" class="image-preview">
+                                                    <i class="fas fa-plus"></i>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <div class="image-upload-box small">
+                                            <input type="file" id="addImage4" accept="image/*" onchange="previewImage(event, 'addImagePreview4')" hidden>
+                                            <label for="addImage4" class="upload-label">
+                                                <div id="addImagePreview4" class="image-preview">
+                                                    <i class="fas fa-plus"></i>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <p class="form-help-text">
+                                        <i class="fas fa-info-circle"></i> 
+                                        현재는 플레이스홀더 이미지가 표시됩니다. 이미지를 업로드하시면 실제 상품 이미지로 변경됩니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 기본 정보 -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-info-circle"></i> 기본 정보</h3>
+                            <div class="form-grid-2">
+                                <div class="form-group full-width">
+                                    <label>상품명 <span class="required">*</span></label>
+                                    <input type="text" class="form-control" name="productName" placeholder="상품명을 입력하세요" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>카테고리 <span class="required">*</span></label>
+                                    <select class="form-control" name="category" required>
+                                        <option value="">선택하세요</option>
+                                        <option value="coffee">커피/음료</option>
+                                        <option value="food">식품</option>
+                                        <option value="beauty">뷰티</option>
+                                        <option value="life">생활용품</option>
+                                        <option value="fashion">패션</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>브랜드</label>
+                                    <input type="text" class="form-control" name="brand" placeholder="브랜드명">
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>상품 설명 (간단)</label>
+                                    <input type="text" class="form-control" name="shortDesc" placeholder="한 줄 설명">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 가격 정보 -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-won-sign"></i> 가격 정보</h3>
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label>정가 <span class="required">*</span></label>
+                                    <input type="number" class="form-control" name="originalPrice" placeholder="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>판매가 <span class="required">*</span></label>
+                                    <input type="number" class="form-control" name="salePrice" placeholder="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>할인율 (%)</label>
+                                    <input type="number" class="form-control" name="discountRate" placeholder="0" min="0" max="100">
+                                </div>
+                                <div class="form-group">
+                                    <label>지원금 비율 (%)</label>
+                                    <input type="number" class="form-control" name="supportRate" placeholder="5" value="5" min="0" max="100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 재고 및 옵션 -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-boxes"></i> 재고 및 옵션</h3>
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label>재고 수량</label>
+                                    <input type="number" class="form-control" name="stock" placeholder="0" value="999">
+                                </div>
+                                <div class="form-group">
+                                    <label>최소 구매 수량</label>
+                                    <input type="number" class="form-control" name="minOrder" placeholder="1" value="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>최대 구매 수량</label>
+                                    <input type="number" class="form-control" name="maxOrder" placeholder="10" value="10">
+                                </div>
+                                <div class="form-group">
+                                    <label>상품 상태</label>
+                                    <select class="form-control" name="status">
+                                        <option value="sale">판매중</option>
+                                        <option value="soldout">품절</option>
+                                        <option value="hidden">숨김</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 상세 설명 -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-align-left"></i> 상세 설명</h3>
+                            <div class="form-group full-width">
+                                <label>상품 상세 설명</label>
+                                <textarea class="form-control" name="description" rows="10" placeholder="상품에 대한 상세한 설명을 입력하세요"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 배송 정보 -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-truck"></i> 배송 정보</h3>
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label>배송비</label>
+                                    <input type="number" class="form-control" name="deliveryFee" placeholder="0" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>배송 방법</label>
+                                    <select class="form-control" name="deliveryMethod">
+                                        <option value="parcel">택배배송</option>
+                                        <option value="direct">직접배송</option>
+                                        <option value="quick">퀵배송</option>
+                                        <option value="digital">디지털상품</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>배송 예정일</label>
+                                    <input type="text" class="form-control" name="deliveryDays" placeholder="예: 2-3일" value="2-3일">
+                                </div>
+                                <div class="form-group">
+                                    <label>무료배송 기준금액</label>
+                                    <input type="number" class="form-control" name="freeDeliveryAmount" placeholder="0" value="30000">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 추가 설정 -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-cog"></i> 추가 설정</h3>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="isNew" checked>
+                                    <span>신상품</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="isBest">
+                                    <span>베스트상품</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="isRecommend">
+                                    <span>추천상품</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="isHit">
+                                    <span>히트상품</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 버튼 -->
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> 상품 등록
+                            </button>
+                            <button type="button" class="btn btn-default btn-lg" onclick="navigateToPage('product-list')">
+                                <i class="fas fa-times"></i> 취소
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 카테고리관리 페이지 -->
+            <div id="category-manage" class="content-page">
+                <div class="page-header">
+                    <h2>카테고리관리</h2>
+                    <p class="page-description">상품 카테고리를 추가, 수정, 삭제할 수 있습니다.</p>
+                </div>
+
+                <div class="category-container">
+                    <div class="category-grid">
+                        <!-- 카테고리 목록 -->
+                        <div class="category-list-panel">
+                            <div class="panel-header">
+                                <h3><i class="fas fa-list"></i> 카테고리 목록</h3>
+                                <button class="btn btn-primary btn-sm" onclick="showAddCategoryForm()">
+                                    <i class="fas fa-plus"></i> 추가
+                                </button>
+                            </div>
+                            <div class="category-tree">
+                                <div class="category-item" data-id="1">
+                                    <div class="category-info">
+                                        <i class="fas fa-coffee"></i>
+                                        <span class="category-name">커피/음료</span>
+                                        <span class="category-count">(45)</span>
+                                    </div>
+                                    <div class="category-actions">
+                                        <button class="btn-icon btn-edit" onclick="editCategory(1)"><i class="fas fa-edit"></i></button>
+                                        <button class="btn-icon btn-delete" onclick="deleteCategory(1)"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </div>
+                                <div class="category-item" data-id="2">
+                                    <div class="category-info">
+                                        <i class="fas fa-utensils"></i>
+                                        <span class="category-name">식품</span>
+                                        <span class="category-count">(32)</span>
+                                    </div>
+                                    <div class="category-actions">
+                                        <button class="btn-icon btn-edit" onclick="editCategory(2)"><i class="fas fa-edit"></i></button>
+                                        <button class="btn-icon btn-delete" onclick="deleteCategory(2)"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </div>
+                                <div class="category-item" data-id="3">
+                                    <div class="category-info">
+                                        <i class="fas fa-spa"></i>
+                                        <span class="category-name">뷰티</span>
+                                        <span class="category-count">(28)</span>
+                                    </div>
+                                    <div class="category-actions">
+                                        <button class="btn-icon btn-edit" onclick="editCategory(3)"><i class="fas fa-edit"></i></button>
+                                        <button class="btn-icon btn-delete" onclick="deleteCategory(3)"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </div>
+                                <div class="category-item" data-id="4">
+                                    <div class="category-info">
+                                        <i class="fas fa-home"></i>
+                                        <span class="category-name">생활용품</span>
+                                        <span class="category-count">(56)</span>
+                                    </div>
+                                    <div class="category-actions">
+                                        <button class="btn-icon btn-edit" onclick="editCategory(4)"><i class="fas fa-edit"></i></button>
+                                        <button class="btn-icon btn-delete" onclick="deleteCategory(4)"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </div>
+                                <div class="category-item" data-id="5">
+                                    <div class="category-info">
+                                        <i class="fas fa-tshirt"></i>
+                                        <span class="category-name">패션</span>
+                                        <span class="category-count">(23)</span>
+                                    </div>
+                                    <div class="category-actions">
+                                        <button class="btn-icon btn-edit" onclick="editCategory(5)"><i class="fas fa-edit"></i></button>
+                                        <button class="btn-icon btn-delete" onclick="deleteCategory(5)"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 카테고리 등록/수정 폼 -->
+                        <div class="category-form-panel">
+                            <div class="panel-header">
+                                <h3><i class="fas fa-edit"></i> 카테고리 등록/수정</h3>
+                            </div>
+                            <div class="panel-content">
+                                <form id="categoryForm" onsubmit="saveCategory(event)">
+                                    <div class="form-group">
+                                        <label>카테고리명 <span class="required">*</span></label>
+                                        <input type="text" class="form-control" name="categoryName" placeholder="카테고리명 입력" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>아이콘 선택</label>
+                                        <div class="icon-selector">
+                                            <button type="button" class="icon-btn active" data-icon="coffee"><i class="fas fa-coffee"></i></button>
+                                            <button type="button" class="icon-btn" data-icon="utensils"><i class="fas fa-utensils"></i></button>
+                                            <button type="button" class="icon-btn" data-icon="spa"><i class="fas fa-spa"></i></button>
+                                            <button type="button" class="icon-btn" data-icon="home"><i class="fas fa-home"></i></button>
+                                            <button type="button" class="icon-btn" data-icon="tshirt"><i class="fas fa-tshirt"></i></button>
+                                            <button type="button" class="icon-btn" data-icon="gift"><i class="fas fa-gift"></i></button>
+                                            <button type="button" class="icon-btn" data-icon="book"><i class="fas fa-book"></i></button>
+                                            <button type="button" class="icon-btn" data-icon="gamepad"><i class="fas fa-gamepad"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>정렬 순서</label>
+                                        <input type="number" class="form-control" name="sortOrder" placeholder="1" value="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>설명</label>
+                                        <textarea class="form-control" name="description" rows="3" placeholder="카테고리 설명"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="isActive" checked>
+                                            <span>활성화</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-actions">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> 저장
+                                        </button>
+                                        <button type="button" class="btn btn-default" onclick="resetCategoryForm()">
+                                            <i class="fas fa-undo"></i> 초기화
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 배송진행 등록 페이지 -->
+            <div id="delivery-register" class="content-page">
+                <div class="page-header">
+                    <h2>배송관리</h2>
+                    <h3>검색등록</h3>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>기재자명</label>
+                            <input type="text" class="form-control" placeholder="기재자명 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>배송상태</label>
+                            <select class="form-control">
+                                <option value="">전체</option>
+                                <option value="ready">배송준비</option>
+                                <option value="shipping">배송중</option>
+                                <option value="complete">배송완료</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" value="2026-01-26">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" value="2026-02-02">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary">검색</button>
+                        <button class="btn btn-default">취소</button>
+                        <button class="btn btn-secondary">출력</button>
+                    </div>
+                </div>
+
+                <!-- 배송 테이블 -->
+                <div class="table-container">
+                    <p class="info-text">총 0 개의 배송상품이 검색되었습니다.</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>기재자</th>
+                                <th>상품명</th>
+                                <th>수량</th>
+                                <th>구매자</th>
+                                <th>전화번호</th>
+                                <th>주소</th>
+                                <th>날짜</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="9" class="empty-message">등록된 데이터가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>
+

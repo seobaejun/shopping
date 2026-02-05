@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>제주도 노지 조생귤 5kg - 10쇼핑게임</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/product-detail.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 상단 유틸 메뉴 -->
+    <div class="top-bar">
+        <div class="container">
+            <ul class="top-menu">
+                <li><a href="#"><i class="fas fa-shopping-bag"></i> 주문내역</a></li>
+                <li><a href="#"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                <li><a href="#"><i class="fas fa-comment"></i> 1:1문의</a></li>
+                <li><a href="#"><i class="fas fa-star"></i> 사용후기</a></li>
+                <li><a href="#"><i class="fas fa-keyboard"></i> 상품문의</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a href="index.html">
+                        <h1>10쇼핑게임</h1>
+                    </a>
+                </div>
+                <div class="search-bar">
+                    <form action="#" method="get">
+                        <input type="text" placeholder="검색어를 입력해주세요" required>
+                        <button type="submit"><i class="fas fa-search"></i> 검색</button>
+                    </form>
+                </div>
+                <div class="user-menu">
+                    <a href="#" class="search-btn"><i class="fas fa-search"></i> 검색</a>
+                    <a href="#"><i class="fas fa-user"></i> 로그인</a>
+                    <a href="#" class="signup-btn">
+                        <i class="fas fa-user-plus"></i> 회원가입
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 네비게이션 -->
+    <nav class="navbar">
+        <div class="container">
+            <button class="category-btn" id="categoryBtn">
+                <i class="fas fa-bars"></i>
+                <span>전체카테고리</span>
+            </button>
+            <ul class="main-nav">
+                <li><a href="#"><i class="fas fa-fire"></i> 히트상품</a></li>
+                <li><a href="#"><i class="fas fa-thumbs-up"></i> 추천상품</a></li>
+                <li><a href="#"><i class="fas fa-sparkles"></i> 최신상품</a></li>
+                <li><a href="#"><i class="fas fa-heart"></i> 인기상품</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 카테고리 사이드바 -->
+    <div class="category-sidebar" id="categorySidebar">
+        <div class="sidebar-header">
+            <h2>전체카테고리</h2>
+            <button class="close-btn" id="closeSidebar">&times;</button>
+        </div>
+        <div class="sidebar-content">
+            <div class="user-quick">
+                <a href="#"><i class="fas fa-sign-in-alt"></i> 로그인</a>
+                <a href="#"><i class="fas fa-user-plus"></i> 회원가입</a>
+            </div>
+            <ul class="category-list">
+                <li class="has-submenu">
+                    <a href="#"><i class="fas fa-paw"></i> 반려동물</a>
+                    <ul class="submenu">
+                        <li><a href="#">강아지</a></li>
+                        <li><a href="#">고양이</a></li>
+                    </ul>
+                </li>
+                <li><a href="#"><i class="fas fa-utensils"></i> 식품</a></li>
+                <li><a href="#"><i class="fas fa-pills"></i> 건강보조식품</a></li>
+                <li><a href="#"><i class="fas fa-spray-can"></i> 화장품</a></li>
+                <li><a href="#"><i class="fas fa-home"></i> 생활용품</a></li>
+                <li><a href="#"><i class="fas fa-plug"></i> 가전제품</a></li>
+                <li><a href="#"><i class="fas fa-gift"></i> 선물용품</a></li>
+                <li class="has-submenu">
+                    <a href="#"><i class="fas fa-ticket-alt"></i> e-쿠폰</a>
+                    <ul class="submenu">
+                        <li><a href="#">커피/음료</a></li>
+                        <li><a href="#">치킨/피자</a></li>
+                        <li><a href="#">베이커리</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 브레드크럼 -->
+    <div class="breadcrumb">
+        <div class="container">
+            <ul>
+                <li><a href="index.html"><i class="fas fa-home"></i> 홈</a></li>
+                <li><i class="fas fa-chevron-right"></i></li>
+                <li><a href="#">식품</a></li>
+                <li><i class="fas fa-chevron-right"></i></li>
+                <li>제주도 노지 조생귤 5kg</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 상품 상세 -->
+    <section class="product-detail">
+        <div class="container">
+            <div class="product-detail-wrap">
+                <!-- 좌측: 상품 이미지 -->
+                <div class="product-image-section">
+                    <div class="main-image">
+                        <img src="https://placehold.co/600x600/FFA726/FFF?text=제주귤+5kg&font=nanum-gothic" alt="제주도 노지 조생귤 5kg" id="mainImage">
+                        <button class="zoom-btn"><i class="fas fa-search-plus"></i> 확대보기</button>
+                    </div>
+                    <div class="thumbnail-images">
+                        <img src="https://placehold.co/100x100/FFA726/FFF?text=1&font=nanum-gothic" alt="귤1" class="active">
+                        <img src="https://placehold.co/100x100/FF9800/FFF?text=2&font=nanum-gothic" alt="귤2">
+                        <img src="https://placehold.co/100x100/FFA726/FFF?text=3&font=nanum-gothic" alt="귤3">
+                        <img src="https://placehold.co/100x100/FF9800/FFF?text=4&font=nanum-gothic" alt="귤4">
+                    </div>
+                </div>
+
+                <!-- 우측: 상품 정보 -->
+                <div class="product-info-section">
+                    <div class="product-header">
+                        <span class="category-tag"><i class="fas fa-utensils"></i> 식품</span>
+                        <h1 class="product-title product-name">제주도 노지 조생귤 5kg</h1>
+                        <p class="product-subtitle" id="productSubtitle">중과 (S-M)</p>
+                    </div>
+
+                    <div class="product-support-banner">
+                        <i class="fas fa-gift"></i>
+                        <span>쇼핑지원금 <strong>2,000원</strong></span>
+                    </div>
+
+                    <div class="shipping-info">
+                        <span class="free-shipping"><i class="fas fa-truck"></i> 무료배송</span>
+                    </div>
+
+                    <div class="product-info-table">
+                        <table>
+                            <tr>
+                                <th>제조사</th>
+                                <td>상세페이지 참조</td>
+                            </tr>
+                            <tr>
+                                <th>원산지</th>
+                                <td>제주도</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="product-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-star"></i>
+                            <span>사용후기 (0)</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-heart"></i>
+                            <span>❤️3명의 회원이 이 상품을 좋아합니다.</span>
+                        </div>
+                    </div>
+
+                    <div class="product-options">
+                        <h3>선택옵션</h3>
+                        <select class="option-select" id="productOption">
+                            <option value="">옵션을 선택해주세요</option>
+                            <option value="1">제주도 노지 조생귤 5kg - 중과 (S-M)</option>
+                        </select>
+                    </div>
+
+                    <div class="selected-options" id="selectedOptions">
+                        <!-- 선택된 옵션이 여기에 표시됩니다 -->
+                    </div>
+
+                    <div class="total-price">
+                        <span>총 상품금액</span>
+                        <span class="price" id="totalPrice">0원</span>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn-wishlist"><i class="far fa-heart"></i> 관심상품</button>
+                        <button class="btn-cart"><i class="fas fa-shopping-cart"></i> 장바구니</button>
+                        <button class="btn-buy"><i class="fas fa-bolt"></i> 바로구매</button>
+                    </div>
+
+                    <div class="share-buttons">
+                        <button class="share-btn"><i class="fab fa-facebook-f"></i></button>
+                        <button class="share-btn"><i class="fab fa-twitter"></i></button>
+                        <button class="share-btn"><i class="fab fa-line"></i></button>
+                        <button class="share-btn"><i class="fas fa-link"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 상품 상세 탭 -->
+    <section class="product-tabs">
+        <div class="container">
+            <div class="tabs-header">
+                <button class="tab-btn active" data-tab="detail">상품정보</button>
+                <button class="tab-btn" data-tab="review">사용후기 <span class="count">0</span></button>
+                <button class="tab-btn" data-tab="qna">상품문의 <span class="count">0</span></button>
+                <button class="tab-btn" data-tab="shipping">배송/교환</button>
+            </div>
+
+            <div class="tabs-content">
+                <!-- 상품정보 탭 -->
+                <div class="tab-content active" id="detail">
+                    <div class="product-description">
+                        <h2>상품 상세설명</h2>
+                        <div class="description-image">
+                            <img src="https://via.placeholder.com/800x1200/FFE082/333?text=상품+상세설명+이미지" alt="상품 상세">
+                        </div>
+                        <button class="btn-more-desc">상품설명 더보기</button>
+                    </div>
+
+                    <div class="product-specification">
+                        <h2>상품 정보 고시</h2>
+                        <table class="spec-table">
+                            <tr>
+                                <th>포장단위별 용량(중량)</th>
+                                <td>5KG</td>
+                            </tr>
+                            <tr>
+                                <th>포장단위별 수량</th>
+                                <td>상품페이지 참고</td>
+                            </tr>
+                            <tr>
+                                <th>포장단위별 크기</th>
+                                <td>중과 (S-M)</td>
+                            </tr>
+                            <tr>
+                                <th>생산자</th>
+                                <td>상품페이지 참고</td>
+                            </tr>
+                            <tr>
+                                <th>원산지</th>
+                                <td>제주도</td>
+                            </tr>
+                            <tr>
+                                <th>제조연월일</th>
+                                <td>상품페이지 참고</td>
+                            </tr>
+                            <tr>
+                                <th>유통기한 또는 품질유지기한</th>
+                                <td>상품페이지 참고</td>
+                            </tr>
+                            <tr>
+                                <th>관련법상 표시사항</th>
+                                <td>상품페이지 참고</td>
+                            </tr>
+                            <tr>
+                                <th>상품구성</th>
+                                <td>상품페이지 참고</td>
+                            </tr>
+                            <tr>
+                                <th>보관방법 또는 취급방법</th>
+                                <td>상품페이지 참고</td>
+                            </tr>
+                            <tr>
+                                <th>소비자상담 관련 전화번호</th>
+                                <td>상품페이지 참고</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 사용후기 탭 -->
+                <div class="tab-content" id="review">
+                    <div class="review-header">
+                        <h2>사용후기</h2>
+                        <button class="btn-write"><i class="fas fa-pen"></i> 사용후기 쓰기</button>
+                    </div>
+                    <div class="empty-state">
+                        <i class="far fa-comment-dots"></i>
+                        <p>사용후기가 없습니다.</p>
+                    </div>
+                    <div class="review-footer">
+                        <a href="#" class="btn-view-all">전체보기</a>
+                    </div>
+                </div>
+
+                <!-- 상품문의 탭 -->
+                <div class="tab-content" id="qna">
+                    <div class="qna-header">
+                        <h2>상품문의</h2>
+                        <button class="btn-write"><i class="fas fa-pen"></i> 상품문의 쓰기</button>
+                    </div>
+                    <div class="empty-state">
+                        <i class="far fa-question-circle"></i>
+                        <p>상품문의가 없습니다.</p>
+                    </div>
+                    <div class="qna-footer">
+                        <a href="#" class="btn-view-all">전체보기</a>
+                    </div>
+                </div>
+
+                <!-- 배송/교환 탭 -->
+                <div class="tab-content" id="shipping">
+                    <div class="shipping-info-box">
+                        <h3><i class="fas fa-truck"></i> 배송 안내</h3>
+                        <p>구매가 확정되면 배송이 시작됩니다.</p>
+                    </div>
+                    <div class="exchange-info-box">
+                        <h3><i class="fas fa-exchange-alt"></i> 교환/반품 안내</h3>
+                        <p>교환/반품 안내 입력전입니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 관련 상품 -->
+    <section class="related-products">
+        <div class="container">
+            <h2>제주도 노지 조생귤 5kg 상품의 관련상품이에요</h2>
+            <div class="empty-related">
+                <i class="fas fa-box-open"></i>
+                <h3>관련 상품이 없습니다.</h3>
+                <p>현재 이용 가능한 관련 상품이 없습니다. 새로운 상품이 추가될 때까지 기다려 주세요.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 하단 구매 바 (고정) -->
+    <div class="fixed-bottom-bar">
+        <div class="container">
+            <div class="bottom-bar-content">
+                <button class="btn-home"><i class="fas fa-home"></i> 홈으로</button>
+                <button class="btn-wishlist"><i class="far fa-heart"></i> 관심상품</button>
+                <button class="btn-buy-fixed"><i class="fas fa-bolt"></i> 바로구매</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 푸터 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-top">
+                <ul class="footer-links">
+                    <li><a href="#">회사소개</a></li>
+                    <li><a href="#">서비스이용약관</a></li>
+                    <li><a href="#"><strong>개인정보처리방침</strong></a></li>
+                </ul>
+            </div>
+            <div class="footer-content">
+                <div class="footer-info">
+                    <h3>고객센터 정보</h3>
+                    <ul>
+                        <li>1670-4519</li>
+                        <li>평일 오전 9:00 ~ 오후 6:00</li>
+                        <li>점심 오후 12:00 ~ 오후 1:00</li>
+                        <li>토/일/공휴일 휴무</li>
+                    </ul>
+                </div>
+                <div class="footer-info">
+                    <h3>결제 정보</h3>
+                    <ul>
+                        <li>하나은행 670-910020-22804 (주)딩펫씨큐리티</li>
+                        <li>평일 오전 9:00 ~ 오후 6:00</li>
+                    </ul>
+                </div>
+                <div class="footer-info">
+                    <h3>배송 정보</h3>
+                    <ul>
+                        <li>구매가 확정 되면 배송이 시작됩니다.</li>
+                    </ul>
+                </div>
+                <div class="footer-info">
+                    <h3>QUICK</h3>
+                    <ul>
+                        <li><a href="#">공지사항</a></li>
+                        <li><a href="#">이벤트</a></li>
+                        <li><a href="#">FAQ</a></li>
+                        <li><a href="#">1:1문의</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="company-info">
+                    <div class="logo-footer">
+                        <h2>10쇼핑게임</h2>
+                        <div class="app-links">
+                            <a href="#" class="app-btn"><i class="fab fa-apple"></i> 앱스토어</a>
+                            <a href="#" class="app-btn"><i class="fab fa-google-play"></i> 플레이스토어</a>
+                        </div>
+                    </div>
+                    <p>
+                        회사명 (주)딩펫씨큐리티 주소 대전시 유성구 동서대로125 국립 한밭대학교 s9동 101호 사업자 등록번호 768-88-03514<br>
+                        대표 송건회 전화 1670-4519 팩스 044-862-0069 통신판매업신고번호 제2025-대전유성-0691호<br>
+                        개인정보 보호책임자 송건회 부가통신사업신고번호 12345호
+                    </p>
+                </div>
+                <p class="copyright">Copyright © (주)딩펫씨큐리티. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 오늘 본 상품 퀵메뉴 -->
+    <div class="today-viewed">
+        <button class="toggle-viewed" id="toggleViewed">
+            <i class="fas fa-clock"></i>
+            <span class="count">1</span>
+        </button>
+    </div>
+
+    <!-- 오늘 본 상품 사이드 패널 -->
+    <div class="viewed-panel" id="viewedPanel">
+        <div class="viewed-panel-overlay"></div>
+        <div class="viewed-panel-content">
+            <div class="viewed-panel-header">
+                <button class="viewed-panel-close" id="viewedPanelClose">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h3>오늘본상품 <span class="viewed-count-badge" id="viewedCountBadge">1</span></h3>
+            </div>
+            <div class="viewed-panel-body">
+                <div class="viewed-list" id="viewedList">
+                    <div class="viewed-item">
+                        <img src="https://via.placeholder.com/80x80/FFE082/333?text=귤" alt="제주도 노지 조생귤">
+                        <div class="viewed-item-info">
+                            <p>닥터포밸런스 견활력 애견영양간식</p>
+                            <span class="price">54,900원</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="viewed-panel-footer">
+                <button class="btn-clear-all" id="btnClearAll">전체삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 장바구니 모달 -->
+    <div class="cart-modal" id="cartModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-check-circle"></i>
+                <p>장바구니에 상품이 정상적으로 담겼습니다.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-continue" id="continueBtn">쇼핑계속하기</button>
+                <button class="btn-go-cart" id="goCartBtn">장바구니 이동</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script src="js/product-detail.js?v=3"></script>
+</body>
+</html>
+

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>검색 결과 - 10쇼핑게임</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css?v=23">
+    <link rel="stylesheet" href="css/search-results.css?v=3">
+</head>
+<body>
+    <!-- 공지 배너 -->
+    <div class="notice-banner" id="noticeBanner">
+        <div class="container">
+            <p>판매자의 수익금을 구매자와 함께 나누는 '10쇼핑게임' 은 회원전용 쇼핑몰입니다.</p>
+        </div>
+        <div class="banner-close-area">
+            <button class="close-banner" id="closeBanner" aria-label="배너 닫기">
+                <i class="fas fa-times"></i>
+            </button>
+            <span class="close-today" id="closeToday">오늘 하루 그만보기</span>
+        </div>
+    </div>
+
+    <!-- 상단 유틸 메뉴 -->
+    <div class="top-bar">
+        <div class="container">
+            <ul class="top-menu">
+                <li><a href="#"><i class="fas fa-shopping-bag"></i> 주문내역</a></li>
+                <li><a href="#"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                <li><a href="#"><i class="fas fa-comment"></i> 1:1문의</a></li>
+                <li><a href="#"><i class="fas fa-star"></i> 사용후기</a></li>
+                <li><a href="#"><i class="fas fa-keyboard"></i> 상품문의</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <!-- 로고 -->
+                <div class="logo">
+                    <a href="index.html">
+                        <h1>10쇼핑게임</h1>
+                    </a>
+                </div>
+
+                <!-- 검색창 -->
+                <div class="search-bar">
+                    <form id="searchForm" onsubmit="return handleSearch(event)">
+                        <input type="text" id="searchInput" placeholder="검색어를 입력해주세요" required>
+                        <button type="submit"><i class="fas fa-search"></i></button>
+                    </form>
+                </div>
+
+                <!-- 사용자 메뉴 -->
+                <div class="user-menu">
+                    <a href="#" class="search-btn"><i class="fas fa-search"></i> 검색</a>
+                    <a href="#"><i class="fas fa-user"></i> 로그인</a>
+                    <a href="#" class="signup-btn">
+                        <i class="fas fa-user-plus"></i> 회원가입
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 네비게이션 -->
+    <nav class="navbar">
+        <div class="container">
+            <button class="category-btn" id="categoryBtn">
+                <i class="fas fa-bars"></i> 전체카테고리
+            </button>
+            <ul class="main-nav">
+                <li><a href="products-list.html?type=hit"><i class="fas fa-fire"></i> 히트상품</a></li>
+                <li><a href="products-list.html?type=recommend"><i class="fas fa-thumbs-up"></i> 추천상품</a></li>
+                <li><a href="products-list.html?type=new">🅝 최신상품</a></li>
+                <li><a href="products-list.html?type=popular"><i class="fas fa-heart"></i> 인기상품</a></li>
+            </ul>
+
+            <!-- 인기 검색어 -->
+            <div class="popular-search">
+                <div class="keyword-header">
+                    <span class="current-keyword" id="currentKeyword">
+                        <span class="rank">1</span>
+                        <span class="text">고양이사료</span>
+                    </span>
+                    <button class="toggle-btn" id="keywordToggle">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="popular-keywords" id="popularKeywords">
+                    <ul>
+                        <li data-rank="1"><span class="rank">1</span> 고양이사료</li>
+                        <li data-rank="2"><span class="rank">2</span> 500g</li>
+                        <li data-rank="3"><span class="rank">3</span> 건채담</li>
+                        <li data-rank="4"><span class="rank">4</span> 열무</li>
+                        <li data-rank="5"><span class="rank">5</span> 아비가일</li>
+                        <li data-rank="6"><span class="rank">6</span> 열무김치</li>
+                        <li data-rank="7"><span class="rank">7</span> VDG</li>
+                        <li data-rank="8"><span class="rank">8</span> 어성초</li>
+                        <li data-rank="9"><span class="rank">9</span> -1</li>
+                        <li data-rank="10"><span class="rank">10</span> 알파벳초콜릿</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 카테고리 사이드바 -->
+    <div class="category-sidebar" id="categorySidebar">
+        <div class="sidebar-header">
+            <h2>전체카테고리</h2>
+            <button class="close-btn" id="closeSidebar">&times;</button>
+        </div>
+        <div class="sidebar-content">
+            <div class="user-quick">
+                <a href="#"><i class="fas fa-sign-in-alt"></i> 로그인</a>
+                <a href="#"><i class="fas fa-user-plus"></i> 회원가입</a>
+            </div>
+            <ul class="category-list">
+                <li class="has-submenu">
+                    <a href="#"><i class="fas fa-paw"></i> 반려동물</a>
+                    <ul class="submenu">
+                        <li><a href="#">강아지</a>
+                            <ul>
+                                <li><a href="#">사료</a></li>
+                                <li><a href="#">간식</a></li>
+                                <li><a href="#">용품</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="#">고양이</a>
+                            <ul>
+                                <li><a href="#">사료</a></li>
+                                <li><a href="#">간식</a></li>
+                                <li><a href="#">용품</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li><a href="#"><i class="fas fa-utensils"></i> 식품</a></li>
+                <li><a href="#"><i class="fas fa-pills"></i> 건강보조식품</a></li>
+                <li><a href="#"><i class="fas fa-spray-can"></i> 화장품</a></li>
+                <li><a href="#"><i class="fas fa-home"></i> 생활용품</a></li>
+                <li><a href="#"><i class="fas fa-plug"></i> 가전제품</a></li>
+                <li><a href="#"><i class="fas fa-gift"></i> 선물용품</a></li>
+                <li class="has-submenu">
+                    <a href="#"><i class="fas fa-ticket-alt"></i> e-쿠폰</a>
+                    <ul class="submenu">
+                        <li><a href="#">커피/음료</a></li>
+                        <li><a href="#">치킨/피자</a></li>
+                        <li><a href="#">베이커리</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="sidebar-info">
+                <div class="customer-service">
+                    <h3>고객센터</h3>
+                    <p class="phone">1670-4519</p>
+                    <ul>
+                        <li>평일 오전 9:00 ~ 오후 6:00</li>
+                        <li>점심 오후 12:00 ~ 오후 1:00</li>
+                        <li>토/일/공휴일 휴무</li>
+                    </ul>
+                </div>
+                <ul class="quick-links">
+                    <li><a href="#"><i class="fas fa-bullhorn"></i> 공지사항</a></li>
+                    <li><a href="#"><i class="fas fa-question"></i> 자주묻는질문</a></li>
+                    <li><a href="#"><i class="fas fa-user-circle"></i> 마이페이지</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검색 결과 -->
+    <section class="search-results-section">
+        <div class="container">
+            <!-- 검색 정보 -->
+            <div class="search-info">
+                <h1><span class="keyword" id="searchKeyword">조생골</span> 검색 결과</h1>
+            </div>
+
+            <!-- 필터 및 정렬 -->
+            <div class="filter-bar">
+                <div class="filter-left">
+                    <button class="filter-toggle" id="filterToggle">
+                        <i class="fas fa-filter"></i> 필터
+                    </button>
+                    <span class="total-count">총 <strong id="totalCount">1</strong>개 상품</span>
+                </div>
+                <div class="filter-right">
+                    <select id="sortSelect">
+                        <option value="recommend">판매많은순</option>
+                        <option value="latest">최신순</option>
+                        <option value="price-low">낮은가격순</option>
+                        <option value="price-high">높은가격순</option>
+                        <option value="rating">평점높은순</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 필터 패널 -->
+            <div class="search-content">
+                <!-- 사이드바 필터 -->
+                <aside class="filter-sidebar" id="filterSidebar">
+                    <div class="filter-group">
+                        <h3>상품정보</h3>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" checked>
+                            <span>상품명</span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" checked>
+                            <span>상품설명</span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" checked>
+                            <span>기본설명</span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" checked>
+                            <span>상품코드</span>
+                        </label>
+                    </div>
+
+                    <div class="filter-group">
+                        <h3>가격</h3>
+                        <div class="price-inputs">
+                            <input type="number" placeholder="최소금액" id="minPrice">
+                            <span>~</span>
+                            <input type="number" placeholder="최대금액" id="maxPrice">
+                        </div>
+                        <button class="apply-btn">검색</button>
+                    </div>
+
+                    <div class="filter-group">
+                        <h3>카테고리</h3>
+                        <div class="category-list">
+                            <a href="#">전체보도 (1)</a>
+                            <a href="#">식품 (1)</a>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- 상품 목록 -->
+                <div class="products-area">
+                    <div class="product-grid" id="searchProductGrid">
+                        <!-- 상품들이 JavaScript로 렌더링됩니다 -->
+                    </div>
+
+                    <!-- 검색 결과 없음 -->
+                    <div class="no-results" id="noResults" style="display: none;">
+                        <i class="fas fa-search"></i>
+                        <h3>검색 결과가 없습니다</h3>
+                        <p>다른 검색어를 입력해보세요.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 푸터 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>10쇼핑게임</h3>
+                    <p>판매자의 수익금을 구매자와 함께 나누는 회원전용 쇼핑몰</p>
+                </div>
+                <div class="footer-section">
+                    <h4>고객센터</h4>
+                    <p>평일 09:00 - 18:00</p>
+                    <p>주말 및 공휴일 휴무</p>
+                </div>
+                <div class="footer-section">
+                    <h4>바로가기</h4>
+                    <a href="#">회사소개</a>
+                    <a href="#">이용약관</a>
+                    <a href="#">개인정보처리방침</a>
+                    <a href="admin/index.html" class="admin-link">관리자</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 10쇼핑게임. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 오늘 본 상품 퀵메뉴 -->
+    <div class="today-viewed">
+        <button class="toggle-viewed" id="toggleViewed">
+            <i class="fas fa-clock"></i>
+            <span class="count">0</span>
+        </button>
+    </div>
+
+    <!-- 오늘 본 상품 사이드 패널 -->
+    <div class="viewed-panel" id="viewedPanel">
+        <div class="viewed-panel-overlay"></div>
+        <div class="viewed-panel-content">
+            <div class="viewed-panel-header">
+                <button class="viewed-panel-close" id="viewedPanelClose">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h3>오늘본상품 <span class="viewed-count-badge" id="viewedCountBadge">0</span></h3>
+            </div>
+            <div class="viewed-panel-body">
+                <div class="viewed-list" id="viewedList">
+                    <p class="empty-message">오늘 본 상품이 없습니다.</p>
+                </div>
+            </div>
+            <div class="viewed-panel-footer">
+                <button class="btn-clear-all" id="btnClearAll">전체삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js?v=1000"></script>
+    <script src="js/search-results.js?v=1100"></script>
+</body>
+</html>
+

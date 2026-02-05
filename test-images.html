@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 30px 0;
+        }
+        .test-section h2 {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .image-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            background: #fff;
+        }
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+        .image-card p {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #333;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ 이미지 로드 테스트</h1>
+        
+        <div class="test-section">
+            <h2>히트상품 이미지</h2>
+            <div class="image-grid" id="hitImages"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>추천상품 이미지</h2>
+            <div class="image-grid" id="recommendImages"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>최신상품 이미지</h2>
+            <div class="image-grid" id="newImages"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>인기상품 이미지</h2>
+            <div class="image-grid" id="popularImages"></div>
+        </div>
+    </div>
+
+    <script>
+        const productsData = {
+            hit: [
+                { title: '제주도 노지 조생귤 5kg', image: 'https://placehold.co/300x300/FFA726/FFF?text=제주귤&font=nanum-gothic' },
+                { title: '이앤위즈 원홀 무전원 우드스피커', image: 'https://placehold.co/300x300/78909C/FFF?text=스피커&font=nanum-gothic' },
+                { title: '시치미쓱 프리미엄 데일리물티슈', image: 'https://placehold.co/300x300/81C784/FFF?text=물티슈&font=nanum-gothic' },
+                { title: '셀비엔 괄사 마사지 리프팅 앰플', image: 'https://placehold.co/300x300/FF8A80/FFF?text=앰플&font=nanum-gothic' },
+                { title: '셀비엔 블래미쉬 크림 기미세트', image: 'https://placehold.co/300x300/FFB74D/FFF?text=크림세트&font=nanum-gothic' },
+                { title: '감홍사과 산지직송 꿀사과', image: 'https://placehold.co/300x300/EF5350/FFF?text=사과&font=nanum-gothic' },
+                { title: '롯데 에어프라이어 7L', image: 'https://placehold.co/300x300/4FC3F7/FFF?text=에어프라이어&font=nanum-gothic' },
+                { title: '정관장 홍삼보윤정 데일리스틱', image: 'https://placehold.co/300x300/A1887F/FFF?text=홍삼&font=nanum-gothic' }
+            ],
+            recommend: [
+                { title: '페티피 드라이룸 강아지집', image: 'https://placehold.co/300x300/BA68C8/FFF?text=강아지집&font=nanum-gothic' },
+                { title: '닥터포밸런스 견활력 애견영양간식', image: 'https://placehold.co/300x300/FFD54F/333?text=영양간식&font=nanum-gothic' },
+                { title: '꿈꾸는 미니가습기', image: 'https://placehold.co/300x300/64B5F6/FFF?text=가습기&font=nanum-gothic' },
+                { title: '극세사 양털 입는 무릎담요', image: 'https://placehold.co/300x300/4DB6AC/FFF?text=담요&font=nanum-gothic' },
+                { title: '클립 자바라 스탠드', image: 'https://placehold.co/300x300/FFB300/FFF?text=스탠드&font=nanum-gothic' }
+            ],
+            new: [
+                { title: '홈스타일 미니멀 고밀도 러그', image: 'https://placehold.co/300x300/8BC34A/FFF?text=러그&font=nanum-gothic' },
+                { title: '쿠션 목베개 인형', image: 'https://placehold.co/300x300/CDDC39/333?text=목베개&font=nanum-gothic' },
+                { title: '자이리톨 대추방울토마토', image: 'https://placehold.co/300x300/FF5252/FFF?text=토마토&font=nanum-gothic' },
+                { title: '네추럴라이즈 밀크씨슬', image: 'https://placehold.co/300x300/4CAF50/FFF?text=밀크씨슬&font=nanum-gothic' }
+            ],
+            popular: [
+                { title: '더담은 일키로 오리윙', image: 'https://placehold.co/300x300/AB47BC/FFF?text=오리윙&font=nanum-gothic' },
+                { title: '더담은 일키로 고구마치킨', image: 'https://placehold.co/300x300/8E24AA/FFF?text=고구마치킨&font=nanum-gothic' },
+                { title: '1000피스 직소퍼즐', image: 'https://placehold.co/300x300/7E57C2/FFF?text=퍼즐&font=nanum-gothic' },
+                { title: '셀비엔 블래미쉬 크림 기미세트', image: 'https://placehold.co/300x300/FFB74D/FFF?text=크림세트&font=nanum-gothic' }
+            ]
+        };
+
+        function renderTestImages(type, containerId) {
+            const container = document.getElementById(containerId);
+            const products = productsData[type];
+            
+            container.innerHTML = products.map((product, index) => `
+                <div class="image-card">
+                    <img src="${product.image}" 
+                         alt="${product.title}"
+                         onload="this.nextElementSibling.classList.add('success'); this.nextElementSibling.innerHTML = '✅ 로드 성공';"
+                         onerror="this.nextElementSibling.classList.add('error'); this.nextElementSibling.innerHTML = '❌ 로드 실패';">
+                    <div class="status"></div>
+                    <p><strong>${index}번:</strong> ${product.title}</p>
+                    <p style="font-size: 11px; color: #999; word-break: break-all;">${product.image}</p>
+                </div>
+            `).join('');
+        }
+
+        renderTestImages('hit', 'hitImages');
+        renderTestImages('recommend', 'recommendImages');
+        renderTestImages('new', 'newImages');
+        renderTestImages('popular', 'popularImages');
+    </script>
+</body>
+</html>
+

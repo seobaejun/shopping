@@ -1,0 +1,557 @@
+/* 상품 목록 페이지 전용 스타일 */
+
+/* 페이지 헤더 */
+.page-header {
+    text-align: center;
+    padding: 40px 0 30px;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 30px;
+}
+
+.page-header h1 {
+    font-size: 36px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.page-header h1 i {
+    color: var(--primary-color);
+}
+
+.page-header p {
+    font-size: 18px;
+    color: var(--text-light);
+}
+
+/* 리스트 컨트롤 */
+.list-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 30px;
+}
+
+.result-count {
+    font-size: 16px;
+    color: var(--text-light);
+}
+
+.result-count strong {
+    color: var(--primary-color);
+    font-size: 18px;
+}
+
+.controls-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* 보기 타입 버튼 */
+.view-type {
+    display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.view-btn {
+    padding: 10px 20px;
+    background: var(--bg-white);
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+}
+
+.view-btn:not(:last-child) {
+    border-right: 1px solid var(--border-color);
+}
+
+.view-btn:hover {
+    background: var(--bg-light);
+}
+
+.view-btn.active {
+    background: var(--primary-color);
+    color: var(--text-dark);
+}
+
+/* 정렬 선택 */
+.sort-select {
+    padding: 10px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* 상품 그리드 */
+.products-list-section {
+    padding: 40px 0 80px;
+    min-height: 600px;
+}
+
+.product-grid {
+    margin-bottom: 50px;
+}
+
+/* 그리드 뷰 */
+.product-grid.grid-view {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+}
+
+/* 리스트 뷰 */
+.product-grid.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.product-grid.list-view .product-card {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 25px;
+    align-items: start;
+}
+
+.product-grid.list-view .product-image {
+    height: 250px;
+}
+
+.product-grid.list-view .product-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    padding: 10px 0;
+}
+
+.product-grid.list-view .product-title {
+    font-size: 20px;
+    margin-bottom: 15px;
+}
+
+.product-grid.list-view .product-description {
+    display: block;
+    color: var(--text-light);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 15px 0;
+}
+
+.product-grid.list-view .product-footer {
+    margin-top: auto;
+}
+
+/* 그리드 뷰용 상품 설명 */
+.product-grid.grid-view .product-description {
+    display: none;
+}
+
+/* 그리드 뷰에서 옵션과 텍스트 스타일 (style.css 상속) */
+.product-grid.grid-view .product-option {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 10px;
+    min-height: 20px;
+    height: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.product-grid.grid-view .product-title {
+    font-size: 17px;
+    font-weight: 500;
+    margin-bottom: 10px;
+    height: 51px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.5;
+}
+
+.product-grid.grid-view .product-support {
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-bottom: 15px;
+    font-size: 17px;
+}
+
+/* 페이지네이션 */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 50px;
+}
+
+.page-btn {
+    padding: 10px 20px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-white);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 5px;
+}
+
+.page-num {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-white);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.page-num:hover {
+    background: var(--bg-light);
+}
+
+.page-num.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-dark);
+}
+
+/* 빈 상태 */
+.empty-products {
+    text-align: center;
+    padding: 100px 20px;
+}
+
+.empty-products i {
+    font-size: 80px;
+    color: var(--text-light);
+    opacity: 0.3;
+    margin-bottom: 30px;
+}
+
+.empty-products h3 {
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.empty-products p {
+    font-size: 16px;
+    color: var(--text-light);
+    margin-bottom: 30px;
+}
+
+.empty-products .btn-home {
+    display: inline-block;
+    padding: 15px 40px;
+    background: var(--primary-color);
+    color: var(--text-dark);
+    border-radius: 25px;
+    font-weight: bold;
+    transition: var(--transition);
+}
+
+.empty-products .btn-home:hover {
+    background: var(--secondary-color);
+}
+
+/* 로딩 애니메이션 */
+.loading-spinner {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--bg-light);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-spinner p {
+    color: var(--text-light);
+    font-size: 16px;
+}
+
+/* 인기 검색어 (네비게이션 바) */
+.popular-search {
+    position: relative;
+    margin-left: auto;
+}
+
+#searchToggle {
+    padding: 8px 15px;
+    background: var(--bg-light);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#searchToggle:hover {
+    background: var(--border-color);
+}
+
+.popular-keywords {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    min-width: 200px;
+    display: none;
+    z-index: 100;
+}
+
+.popular-keywords.active {
+    display: block;
+}
+
+.popular-keywords h4 {
+    font-size: 14px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.popular-keywords ul {
+    list-style: none;
+}
+
+.popular-keywords li {
+    padding: 8px 0;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: var(--transition);
+}
+
+.popular-keywords li:hover {
+    color: var(--primary-color);
+}
+
+.popular-keywords li span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: var(--primary-color);
+    color: var(--text-dark);
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 1200px) {
+    .product-grid.grid-view {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 25px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .page-header h1 {
+        font-size: 30px;
+    }
+
+    .product-grid.grid-view {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    .product-grid.list-view .product-card {
+        grid-template-columns: 200px 1fr;
+        gap: 20px;
+    }
+
+    .product-grid.list-view .product-image {
+        height: 200px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        padding: 30px 0 20px;
+    }
+
+    .page-header h1 {
+        font-size: 24px;
+    }
+
+    .page-header p {
+        font-size: 16px;
+    }
+
+    .list-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .result-count {
+        text-align: center;
+    }
+
+    .controls-right {
+        justify-content: space-between;
+    }
+
+    .product-grid.grid-view {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .product-grid.list-view .product-card {
+        grid-template-columns: 1fr;
+    }
+
+    .product-grid.list-view .product-image {
+        height: auto;
+    }
+
+    .pagination {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .page-numbers {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    .page-num {
+        width: 35px;
+        height: 35px;
+        font-size: 13px;
+    }
+
+    .page-btn {
+        padding: 8px 15px;
+        font-size: 13px;
+    }
+
+    .popular-keywords {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+@media (max-width: 480px) {
+    .page-header h1 {
+        font-size: 20px;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .page-header p {
+        font-size: 14px;
+    }
+
+    .view-type {
+        flex: 1;
+    }
+
+    .view-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    .sort-select {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .product-grid.grid-view {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .page-numbers {
+        gap: 3px;
+    }
+
+    .page-num {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    /* 모바일에서 하단 네비게이션 공간 확보 */
+    body {
+        padding-bottom: 80px;
+    }
+}
+
+/* 상품 타입별 색상 */
+.page-header[data-type="hit"] h1 i {
+    color: #FF6B6B;
+}
+
+.page-header[data-type="recommend"] h1 i {
+    color: #4ECDC4;
+}
+
+.page-header[data-type="new"] h1 i {
+    color: #95E1D3;
+}
+
+.page-header[data-type="popular"] h1 i {
+    color: #F38181;
+}
+
