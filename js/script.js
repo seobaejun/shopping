@@ -771,27 +771,50 @@ async function loadProductsFromFirestore() {
                 image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image'
             };
 
-            // 분류에 따라 배치
-            const displayCategory = product.displayCategory || 'all';
+            // 분류에 따라 배치 (배열 처리)
+            const displayCategories = Array.isArray(product.displayCategory) 
+                ? product.displayCategory 
+                : [product.displayCategory || 'all'];
             
-            if (displayCategory === 'all' || displayCategory === 'hit') {
-                productItem.badge.push('hit');
-                firestoreProducts.hit.push(productItem);
-            }
-            if (displayCategory === 'all' || displayCategory === 'recommend') {
-                productItem.badge.push('recommend');
-                firestoreProducts.recommend.push(productItem);
-            }
-            if (displayCategory === 'all' || displayCategory === 'new') {
-                productItem.badge.push('new');
-                firestoreProducts.new.push(productItem);
-            }
-            if (displayCategory === 'all' || displayCategory === 'popular') {
-                productItem.badge.push('popular');
-                firestoreProducts.popular.push(productItem);
-            }
+            // 각 분류에 상품 추가
+            displayCategories.forEach(category => {
+                if (category === 'all' || category === 'hit') {
+                    if (!productItem.badge.includes('hit')) {
+                        productItem.badge.push('hit');
+                    }
+                    if (!firestoreProducts.hit.find(p => p.id === productItem.id)) {
+                        firestoreProducts.hit.push({...productItem});
+                    }
+                }
+                if (category === 'all' || category === 'recommend') {
+                    if (!productItem.badge.includes('recommend')) {
+                        productItem.badge.push('recommend');
+                    }
+                    if (!firestoreProducts.recommend.find(p => p.id === productItem.id)) {
+                        firestoreProducts.recommend.push({...productItem});
+                    }
+                }
+                if (category === 'all' || category === 'new') {
+                    if (!productItem.badge.includes('new')) {
+                        productItem.badge.push('new');
+                    }
+                    if (!firestoreProducts.new.find(p => p.id === productItem.id)) {
+                        firestoreProducts.new.push({...productItem});
+                    }
+                }
+                if (category === 'all' || category === 'popular') {
+                    if (!productItem.badge.includes('popular')) {
+                        productItem.badge.push('popular');
+                    }
+                    if (!firestoreProducts.popular.find(p => p.id === productItem.id)) {
+                        firestoreProducts.popular.push({...productItem});
+                    }
+                }
+            });
 
-            firestoreProducts.all.push(productItem);
+            if (!firestoreProducts.all.find(p => p.id === productItem.id)) {
+                firestoreProducts.all.push(productItem);
+            }
         });
 
         // 기존 데이터를 Firestore 데이터로 교체

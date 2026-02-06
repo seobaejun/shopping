@@ -1388,10 +1388,13 @@ async function registerProduct(event) {
             }
         }
         
+        // 분류 체크박스 값 수집 (배열)
+        const displayCategories = formData.getAll('displayCategory');
+        
         // 숫자 필드 변환
         const productData = {
             name: data.productName,
-            displayCategory: data.displayCategory || 'all', // 분류 추가
+            displayCategory: displayCategories.length > 0 ? displayCategories : ['all'], // 분류 배열로 저장
             category: data.category,
             price: parseInt(data.salePrice) || 0,
             stock: parseInt(data.stock) || 0,

@@ -1664,15 +1664,30 @@
                                     <label>상품명 <span class="required">*</span></label>
                                     <input type="text" class="form-control" name="productName" placeholder="상품명을 입력하세요" required>
                                 </div>
-                                <div class="form-group">
-                                    <label>분류 <span class="required">*</span></label>
-                                    <select class="form-control" name="displayCategory" required>
-                                        <option value="all">전체</option>
-                                        <option value="hit">히트</option>
-                                        <option value="recommend">추천</option>
-                                        <option value="new">최신</option>
-                                        <option value="popular">인기</option>
-                                    </select>
+                                <div class="form-group full-width">
+                                    <label>분류 <span class="required">*</span> <small style="color: #666; font-weight: normal;">(중복 선택 가능)</small></label>
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="displayCategory" value="all" checked>
+                                            <span>전체</span>
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="displayCategory" value="hit">
+                                            <span>히트</span>
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="displayCategory" value="recommend">
+                                            <span>추천</span>
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="displayCategory" value="new">
+                                            <span>최신</span>
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="displayCategory" value="popular">
+                                            <span>인기</span>
+                                        </label>
+                                    </div>
                                 </div>
                                 <div class="form-group">
                                     <label>카테고리 <span class="required">*</span></label>
@@ -2081,15 +2096,30 @@
                                 <label>상품명 <span class="required">*</span></label>
                                 <input type="text" class="form-control" id="editProductName" required>
                             </div>
-                            <div class="form-group">
-                                <label>분류 <span class="required">*</span></label>
-                                <select class="form-control" id="editProductDisplayCategory" required>
-                                    <option value="all">전체</option>
-                                    <option value="hit">히트</option>
-                                    <option value="recommend">추천</option>
-                                    <option value="new">최신</option>
-                                    <option value="popular">인기</option>
-                                </select>
+                            <div class="form-group full-width">
+                                <label>분류 <span class="required">*</span> <small style="color: #666; font-weight: normal;">(중복 선택 가능)</small></label>
+                                <div class="checkbox-group" id="editDisplayCategoryCheckboxes">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="editDisplayCategory" value="all">
+                                        <span>전체</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="editDisplayCategory" value="hit">
+                                        <span>히트</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="editDisplayCategory" value="recommend">
+                                        <span>추천</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="editDisplayCategory" value="new">
+                                        <span>최신</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="editDisplayCategory" value="popular">
+                                        <span>인기</span>
+                                    </label>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label>카테고리 <span class="required">*</span></label>

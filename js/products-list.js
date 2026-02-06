@@ -313,10 +313,14 @@ async function loadProducts() {
                 
                 productsSnapshot.forEach(doc => {
                     const product = doc.data();
-                    const displayCategory = product.displayCategory || 'all';
+                    
+                    // 분류 배열 처리
+                    const displayCategories = Array.isArray(product.displayCategory) 
+                        ? product.displayCategory 
+                        : [product.displayCategory || 'all'];
                     
                     // 현재 페이지 타입과 일치하는 상품만 필터링
-                    if (displayCategory === 'all' || displayCategory === currentType) {
+                    if (displayCategories.includes('all') || displayCategories.includes(currentType)) {
                         firestoreProducts.push({
                             id: doc.id,
                             title: product.name,

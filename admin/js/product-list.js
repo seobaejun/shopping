@@ -425,7 +425,16 @@ async function openEditProductModal(productId) {
         // 기본 정보
         document.getElementById('editProductId').value = product.id;
         document.getElementById('editProductName').value = product.name || '';
-        document.getElementById('editProductDisplayCategory').value = product.displayCategory || 'all';
+        
+        // 분류 체크박스 설정 (배열 처리)
+        const displayCategories = Array.isArray(product.displayCategory) 
+            ? product.displayCategory 
+            : [product.displayCategory || 'all'];
+        
+        document.querySelectorAll('#editDisplayCategoryCheckboxes input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = displayCategories.includes(checkbox.value);
+        });
+        
         document.getElementById('editProductCategory').value = product.category || '';
         document.getElementById('editProductBrand').value = product.brand || '';
         document.getElementById('editProductShortDesc').value = product.shortDesc || '';
@@ -553,7 +562,11 @@ async function saveEditProduct() {
     
     // 기본 정보
     const name = document.getElementById('editProductName').value.trim();
-    const displayCategory = document.getElementById('editProductDisplayCategory').value;
+    
+    // 분류 체크박스 값 수집 (배열)
+    const displayCategoryCheckboxes = document.querySelectorAll('#editDisplayCategoryCheckboxes input[type="checkbox"]:checked');
+    const displayCategory = Array.from(displayCategoryCheckboxes).map(cb => cb.value);
+    
     const category = document.getElementById('editProductCategory').value;
     const brand = document.getElementById('editProductBrand').value.trim();
     const shortDesc = document.getElementById('editProductShortDesc').value.trim();
