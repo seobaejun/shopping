@@ -808,14 +808,211 @@ async function loadProductsFromFirestore() {
     }
 }
 
+// 카테고리 메뉴 동적 로드
+async function loadCategoriesMenu() {
+    try {
+        if (!firebase || !firebase.firestore) {
+            console.log('Firebase가 아직 초기화되지 않았습니다.');
+            return;
+        }
+
+        const db = firebase.firestore();
+        
+        // 모든 카테고리 가져오기 (클라이언트에서 필터링)
+        const snapshot = await db.collection('categories').get();
+
+        const categories = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            // isHidden이 true가 아닌 카테고리만 추가
+            if (data.isHidden !== true) {
+                categories.push({
+                    id: doc.id,
+                    ...data
+                });
+            }
+        });
+
+        // sortOrder로 정렬
+        categories.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+        console.log('✅ 카테고리 로드 완료:', categories.length, '개');
+        console.log('카테고리 데이터:', categories);
+
+        // 카테고리 트리 구조 생성
+        const categoryTree = buildCategoryTree(categories);
+        
+        console.log('✅ 카테고리 트리 생성 완료:', categoryTree);
+        
+        // HTML 렌더링
+        const categoryList = document.getElementById('categoryList');
+        if (categoryList) {
+            categoryList.innerHTML = renderCategoryMenu(categoryTree);
+            console.log('✅ 카테고리 메뉴 렌더링 완료');
+        }
+
+    } catch (error) {
+        console.error('❌ 카테고리 로드 오류:', error);
+        console.error('오류 상세:', error.message, error.stack);
+        // 오류 발생 시 빈 상태 표시
+        const categoryList = document.getElementById('categoryList');
+        if (categoryList) {
+            categoryList.innerHTML = '<li><a href="#">카테고리 로드 중 오류가 발생했습니다.</a></li>';
+        }
+    }
+}
+
+// 카테고리 트리 구조 생성
+function buildCategoryTree(categories) {
+    const level1 = categories.filter(cat => cat.level === 1 && !cat.parentId);
+    
+    return level1.map(cat1 => {
+        const level2 = categories.filter(cat => cat.level === 2 && cat.parentId === cat1.id);
+        
+        return {
+            ...cat1,
+            children: level2.map(cat2 => {
+                const level3 = categories.filter(cat => cat.level === 3 && cat.parentId === cat2.id);
+                return {
+                    ...cat2,
+                    children: level3
+                };
+            })
+        };
+    });
+}
+
+// 카테고리 메뉴 HTML 렌더링
+function renderCategoryMenu(categoryTree) {
+    if (!categoryTree || categoryTree.length === 0) {
+        return '<li><a href="#">등록된 카테고리가 없습니다.</a></li>';
+    }
+
+    let html = '';
+    
+    categoryTree.forEach(cat1 => {
+        const hasChildren = cat1.children && cat1.children.length > 0;
+        
+        html += `<li${hasChildren ? ' class="has-submenu"' : ''}>`;
+        
+        if (hasChildren) {
+            // 하위 카테고리가 있으면 클릭으로 펼치기
+            html += `<a href="#" onclick="toggleSubmenu(event, this)">${cat1.name}</a>`;
+        } else {
+            // 하위 카테고리가 없으면 링크로 이동
+            html += `<a href="products-list.html?category=${cat1.id}">${cat1.name}</a>`;
+        }
+        
+        if (hasChildren) {
+            html += '<ul class="submenu">';
+            
+            cat1.children.forEach(cat2 => {
+                const hasGrandChildren = cat2.children && cat2.children.length > 0;
+                
+                html += `<li${hasGrandChildren ? ' class="has-submenu"' : ''}>`;
+                
+                if (hasGrandChildren) {
+                    // 3차 카테고리가 있으면 클릭으로 펼치기
+                    html += `<a href="#" onclick="toggleSubmenu(event, this)">${cat2.name}</a>`;
+                } else {
+                    // 3차 카테고리가 없으면 링크로 이동
+                    html += `<a href="products-list.html?category=${cat2.id}">${cat2.name}</a>`;
+                }
+                
+                if (hasGrandChildren) {
+                    html += '<ul class="submenu">';
+                    cat2.children.forEach(cat3 => {
+                        html += `<li><a href="products-list.html?category=${cat3.id}">${cat3.name}</a></li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                html += '</li>';
+            });
+            
+            html += '</ul>';
+        }
+        
+        html += '</li>';
+    });
+    
+    return html;
+}
+
+// 서브메뉴 토글 함수
+function toggleSubmenu(event, element) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const parentLi = element.parentElement;
+    const isActive = parentLi.classList.contains('active');
+    
+    // 같은 레벨의 다른 메뉴 닫기
+    const siblings = Array.from(parentLi.parentElement.children);
+    siblings.forEach(sibling => {
+        if (sibling !== parentLi) {
+            sibling.classList.remove('active');
+            // 하위 메뉴도 모두 닫기
+            const subMenus = sibling.querySelectorAll('.has-submenu');
+            subMenus.forEach(sub => sub.classList.remove('active'));
+        }
+    });
+    
+    // 현재 메뉴 토글
+    if (isActive) {
+        parentLi.classList.remove('active');
+        // 하위 메뉴도 모두 닫기
+        const subMenus = parentLi.querySelectorAll('.has-submenu');
+        subMenus.forEach(sub => sub.classList.remove('active'));
+    } else {
+        parentLi.classList.add('active');
+    }
+}
+
+// 전역 함수로 노출
+window.toggleSubmenu = toggleSubmenu;
+
+// Firebase 초기화 대기 함수
+function waitForFirebase() {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 50; // 5초
+        
+        const checkFirebase = setInterval(() => {
+            attempts++;
+            
+            if (window.firebase && firebase.firestore) {
+                clearInterval(checkFirebase);
+                console.log('✅ Firebase 초기화 완료');
+                resolve();
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkFirebase);
+                console.error('❌ Firebase 초기화 시간 초과');
+                reject(new Error('Firebase 초기화 실패'));
+            }
+        }, 100);
+    });
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
         init();
-        // Firebase 초기화 후 상품 로드
-        setTimeout(loadProductsFromFirestore, 1000);
+        // Firebase 초기화 대기 후 상품 및 카테고리 로드
+        try {
+            await waitForFirebase();
+            await loadCategoriesMenu();
+            await loadProductsFromFirestore();
+        } catch (error) {
+            console.error('초기화 오류:', error);
+        }
     });
 } else {
     init();
-    setTimeout(loadProductsFromFirestore, 1000);
+    waitForFirebase().then(async () => {
+        await loadCategoriesMenu();
+        await loadProductsFromFirestore();
+    }).catch(error => {
+        console.error('초기화 오류:', error);
+    });
 }
 

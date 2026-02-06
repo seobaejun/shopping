@@ -600,6 +600,131 @@ function initEventListeners() {
     }
 }
 
+// 카테고리 메뉴 로드 (script.js의 함수 재사용)
+async function loadCategoriesMenu() {
+    try {
+        if (!firebase || !firebase.firestore) {
+            console.log('Firebase가 아직 초기화되지 않았습니다.');
+            return;
+        }
+
+        const db = firebase.firestore();
+        const snapshot = await db.collection('categories').get();
+
+        const categories = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.isHidden !== true) {
+                categories.push({
+                    id: doc.id,
+                    ...data
+                });
+            }
+        });
+
+        categories.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+        const categoryTree = buildCategoryTree(categories);
+        const categoryList = document.getElementById('categoryList');
+        if (categoryList) {
+            categoryList.innerHTML = renderCategoryMenu(categoryTree);
+        }
+    } catch (error) {
+        console.error('❌ 카테고리 로드 오류:', error);
+    }
+}
+
+function buildCategoryTree(categories) {
+    const level1 = categories.filter(cat => cat.level === 1 && !cat.parentId);
+    return level1.map(cat1 => {
+        const level2 = categories.filter(cat => cat.level === 2 && cat.parentId === cat1.id);
+        return {
+            ...cat1,
+            children: level2.map(cat2 => {
+                const level3 = categories.filter(cat => cat.level === 3 && cat.parentId === cat2.id);
+                return {
+                    ...cat2,
+                    children: level3
+                };
+            })
+        };
+    });
+}
+
+function renderCategoryMenu(categoryTree) {
+    if (!categoryTree || categoryTree.length === 0) {
+        return '<li><a href="#">등록된 카테고리가 없습니다.</a></li>';
+    }
+
+    let html = '';
+    categoryTree.forEach(cat1 => {
+        const hasChildren = cat1.children && cat1.children.length > 0;
+        html += `<li${hasChildren ? ' class="has-submenu"' : ''}>`;
+        
+        if (hasChildren) {
+            html += `<a href="#" onclick="toggleSubmenu(event, this)">${cat1.name}</a>`;
+        } else {
+            html += `<a href="products-list.html?category=${cat1.id}">${cat1.name}</a>`;
+        }
+        
+        if (hasChildren) {
+            html += '<ul class="submenu">';
+            cat1.children.forEach(cat2 => {
+                const hasGrandChildren = cat2.children && cat2.children.length > 0;
+                html += `<li${hasGrandChildren ? ' class="has-submenu"' : ''}>`;
+                
+                if (hasGrandChildren) {
+                    html += `<a href="#" onclick="toggleSubmenu(event, this)">${cat2.name}</a>`;
+                } else {
+                    html += `<a href="products-list.html?category=${cat2.id}">${cat2.name}</a>`;
+                }
+                
+                if (hasGrandChildren) {
+                    html += '<ul class="submenu">';
+                    cat2.children.forEach(cat3 => {
+                        html += `<li><a href="products-list.html?category=${cat3.id}">${cat3.name}</a></li>`;
+                    });
+                    html += '</ul>';
+                }
+                html += '</li>';
+            });
+            html += '</ul>';
+        }
+        html += '</li>';
+    });
+    return html;
+}
+
+function toggleSubmenu(event, element) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const parentLi = element.parentElement;
+    const isActive = parentLi.classList.contains('active');
+    
+    const siblings = Array.from(parentLi.parentElement.children);
+    siblings.forEach(sibling => {
+        if (sibling !== parentLi) {
+            sibling.classList.remove('active');
+            const subMenus = sibling.querySelectorAll('.has-submenu');
+            subMenus.forEach(sub => sub.classList.remove('active'));
+        }
+    });
+    
+    if (isActive) {
+        parentLi.classList.remove('active');
+        const subMenus = parentLi.querySelectorAll('.has-submenu');
+        subMenus.forEach(sub => sub.classList.remove('active'));
+    } else {
+        parentLi.classList.add('active');
+    }
+}
+
+window.toggleSubmenu = toggleSubmenu;
+
 // 초기화
-document.addEventListener('DOMContentLoaded', initPage);
+document.addEventListener('DOMContentLoaded', () => {
+    initPage();
+    setTimeout(loadCategoriesMenu, 1000);
+});
 

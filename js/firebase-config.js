@@ -10,14 +10,23 @@ const firebaseConfig = {
   measurementId: "G-B7V6HK8Z7X"
 };
 
-// Firebase 초기화 (필요한 경우)
-// import { initializeApp } from "firebase/app";
-// import { getAnalytics } from "firebase/analytics";
-// 
-// const app = initializeApp(firebaseConfig);
-// const analytics = getAnalytics(app);
-// 
-// export { app, analytics };
+// Firebase 초기화 (브라우저 환경)
+if (typeof firebase !== 'undefined') {
+  try {
+    // Firebase App 초기화
+    firebase.initializeApp(firebaseConfig);
+    console.log('✅ Firebase App 초기화 완료');
+  } catch (error) {
+    // 이미 초기화된 경우 무시
+    if (error.code !== 'app/duplicate-app') {
+      console.error('❌ Firebase 초기화 오류:', error);
+    } else {
+      console.log('✅ Firebase App 이미 초기화됨');
+    }
+  }
+} else {
+  console.warn('⚠️ Firebase SDK가 로드되지 않았습니다.');
+}
 
 // 일반 JavaScript 환경에서 사용할 수 있도록 export
 if (typeof module !== 'undefined' && module.exports) {
