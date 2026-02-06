@@ -731,9 +731,91 @@ function init() {
 }
 
 // DOM 로드 완료 시 실행
+// Firestore에서 상품 가져오기
+async function loadProductsFromFirestore() {
+    try {
+        // Firebase가 초기화될 때까지 대기
+        if (typeof firebase === 'undefined' || !firebase.firestore) {
+            console.log('Firebase가 아직 초기화되지 않았습니다. 기본 데이터를 사용합니다.');
+            return;
+        }
+
+        const db = firebase.firestore();
+        const productsSnapshot = await db.collection('products')
+            .where('status', '==', 'sale')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        if (productsSnapshot.empty) {
+            console.log('Firestore에 상품이 없습니다. 기본 데이터를 사용합니다.');
+            return;
+        }
+
+        // Firestore 데이터를 기존 형식으로 변환
+        const firestoreProducts = {
+            hit: [],
+            recommend: [],
+            new: [],
+            popular: [],
+            all: []
+        };
+
+        productsSnapshot.forEach(doc => {
+            const product = doc.data();
+            const productItem = {
+                id: doc.id,
+                title: product.name,
+                option: product.shortDesc || '',
+                support: `${(product.price * (product.supportRate || 5) / 100).toLocaleString()}원`,
+                badge: [],
+                image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image'
+            };
+
+            // 분류에 따라 배치
+            const displayCategory = product.displayCategory || 'all';
+            
+            if (displayCategory === 'all' || displayCategory === 'hit') {
+                productItem.badge.push('hit');
+                firestoreProducts.hit.push(productItem);
+            }
+            if (displayCategory === 'all' || displayCategory === 'recommend') {
+                productItem.badge.push('recommend');
+                firestoreProducts.recommend.push(productItem);
+            }
+            if (displayCategory === 'all' || displayCategory === 'new') {
+                productItem.badge.push('new');
+                firestoreProducts.new.push(productItem);
+            }
+            if (displayCategory === 'all' || displayCategory === 'popular') {
+                productItem.badge.push('popular');
+                firestoreProducts.popular.push(productItem);
+            }
+
+            firestoreProducts.all.push(productItem);
+        });
+
+        // 기존 데이터를 Firestore 데이터로 교체
+        Object.assign(productsData, firestoreProducts);
+        
+        console.log('✅ Firestore에서 상품 데이터를 성공적으로 불러왔습니다:', firestoreProducts);
+
+        // 상품 렌더링 다시 실행
+        renderProducts();
+
+    } catch (error) {
+        console.error('❌ Firestore 상품 로드 오류:', error);
+        console.log('기본 데이터를 사용합니다.');
+    }
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+        // Firebase 초기화 후 상품 로드
+        setTimeout(loadProductsFromFirestore, 1000);
+    });
 } else {
     init();
+    setTimeout(loadProductsFromFirestore, 1000);
 }
 

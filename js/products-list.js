@@ -294,13 +294,59 @@ function updatePageInfo() {
 }
 
 // 상품 로드
-function loadProducts() {
+async function loadProducts() {
     // 로딩 표시
     showLoading();
     
-    // 실제로는 서버에서 데이터를 가져오지만, 여기서는 더미 데이터 사용
-    setTimeout(() => {
-        currentProducts = PRODUCTS_DATA[currentType] || [];
+    try {
+        // Firebase가 초기화될 때까지 대기
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+            const db = firebase.firestore();
+            const productsSnapshot = await db.collection('products')
+                .where('status', '==', 'sale')
+                .orderBy('createdAt', 'desc')
+                .get();
+
+            if (!productsSnapshot.empty) {
+                // Firestore 데이터를 기존 형식으로 변환
+                const firestoreProducts = [];
+                
+                productsSnapshot.forEach(doc => {
+                    const product = doc.data();
+                    const displayCategory = product.displayCategory || 'all';
+                    
+                    // 현재 페이지 타입과 일치하는 상품만 필터링
+                    if (displayCategory === 'all' || displayCategory === currentType) {
+                        firestoreProducts.push({
+                            id: doc.id,
+                            title: product.name,
+                            option: product.shortDesc || '',
+                            support: `${(product.price * (product.supportRate || 5) / 100).toLocaleString()}원`,
+                            rating: 0,
+                            image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                            description: product.description || product.shortDesc || ''
+                        });
+                    }
+                });
+                
+                if (firestoreProducts.length > 0) {
+                    currentProducts = firestoreProducts;
+                    console.log('✅ Firestore에서 상품 로드 성공:', currentProducts.length);
+                } else {
+                    // 해당 타입의 상품이 없으면 기본 데이터 사용
+                    currentProducts = PRODUCTS_DATA[currentType] || [];
+                    console.log('ℹ️ 해당 타입의 Firestore 상품이 없어 기본 데이터 사용');
+                }
+            } else {
+                // Firestore에 상품이 없으면 기본 데이터 사용
+                currentProducts = PRODUCTS_DATA[currentType] || [];
+                console.log('ℹ️ Firestore에 상품이 없어 기본 데이터 사용');
+            }
+        } else {
+            // Firebase가 초기화되지 않았으면 기본 데이터 사용
+            currentProducts = PRODUCTS_DATA[currentType] || [];
+            console.log('ℹ️ Firebase 미초기화, 기본 데이터 사용');
+        }
         
         console.log('Loaded Products:', currentProducts);
         console.log('Products Count:', currentProducts.length);
@@ -316,7 +362,23 @@ function loadProducts() {
         
         // 총 개수 업데이트
         listElements.totalCount.textContent = currentProducts.length;
-    }, 500);
+    } catch (error) {
+        console.error('❌ 상품 로드 오류:', error);
+        // 오류 발생 시 기본 데이터 사용
+        currentProducts = PRODUCTS_DATA[currentType] || [];
+        
+        // 정렬 적용
+        sortProducts();
+        
+        // 상품 렌더링
+        renderProducts();
+        
+        // 페이지네이션 업데이트
+        updatePagination();
+        
+        // 총 개수 업데이트
+        listElements.totalCount.textContent = currentProducts.length;
+    }
 }
 
 // 로딩 표시

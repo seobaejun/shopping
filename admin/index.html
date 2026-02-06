@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>10쇼핑게임 관리자</title>
-    <link rel="stylesheet" href="css/admin.css?v=20260206-1300">
+    <link rel="stylesheet" href="css/admin.css?v=20260206-1500">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -886,17 +886,49 @@
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary" onclick="searchProducts()">검색</button>
-                        <button class="btn btn-default" onclick="resetProductSearch()">초기화</button>
+                        <button class="btn btn-primary" id="searchProductsBtn">검색</button>
+                        <button class="btn btn-default" id="resetProductSearchBtn">초기화</button>
                         <button class="btn btn-secondary" onclick="navigateToPage('product-register')">
                             <i class="fas fa-plus"></i> 상품 등록
                         </button>
                     </div>
                 </div>
 
-                <!-- 상품 목록 -->
+                <!-- 검색 결과 영역 (검색 후에만 표시) -->
+                <div id="productSearchResultsContainer" class="search-results-container" style="display: block; margin-top: 20px; margin-bottom: 30px;">
+                    <div class="page-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #4A5FC1;">
+                        <h3 style="font-size: 18px; margin: 0; color: #333;">검색 결과: <strong id="searchProductCount" style="color: #4A5FC1; font-size: 20px;">0</strong>개</h3>
+                    </div>
+                    <!-- 검색 결과 테이블 -->
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">번호</th>
+                                    <th style="width: 100px;">이미지</th>
+                                    <th>상품명</th>
+                                    <th style="width: 100px;">카테고리</th>
+                                    <th style="width: 100px;">판매가</th>
+                                    <th style="width: 80px;">재고</th>
+                                    <th style="width: 100px;">상태</th>
+                                    <th style="width: 120px;">등록일</th>
+                                    <th style="width: 150px;">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productSearchResultsBody">
+                                <tr><td colspan="9" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 전체 상품 목록 (검색 결과 아래) -->
+                <div style="margin-top: 30px;">
+                    <div class="page-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #4A5FC1;">
+                        <h3 style="font-size: 18px; margin: 0; color: #333;">전체 상품 목록: <strong id="totalProductCount" style="color: #4A5FC1; font-size: 20px;">0</strong>개</h3>
+                    </div>
+                </div>
                 <div class="table-container">
-                    <p class="info-text">총 <strong id="productCount">12</strong>개의 상품이 등록되어 있습니다.</p>
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -915,15 +947,6 @@
                             <!-- JavaScript로 동적 생성 -->
                         </tbody>
                     </table>
-                </div>
-
-                <!-- 페이지네이션 -->
-                <div class="pagination">
-                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
-                    <button class="page-num active">1</button>
-                    <button class="page-num">2</button>
-                    <button class="page-num">3</button>
-                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
 
@@ -1590,7 +1613,7 @@
                                 <div class="form-group">
                                     <label>대표 이미지 <span class="required">*</span></label>
                                     <div class="image-upload-box">
-                                        <input type="file" id="mainImage" accept="image/*" onchange="previewImage(event, 'mainImagePreview')" hidden>
+                                        <input type="file" id="mainImage" name="mainImage" accept="image/*" onchange="previewMainImage(event)" hidden>
                                         <label for="mainImage" class="upload-label">
                                             <div id="mainImagePreview" class="image-preview">
                                                 <i class="fas fa-cloud-upload-alt fa-3x"></i>
@@ -1602,44 +1625,32 @@
                                 </div>
                                 
                                 <div class="form-group">
-                                    <label>추가 이미지 (최대 4장)</label>
-                                    <div class="additional-images">
-                                        <div class="image-upload-box small">
-                                            <input type="file" id="addImage1" accept="image/*" onchange="previewImage(event, 'addImagePreview1')" hidden>
-                                            <label for="addImage1" class="upload-label">
-                                                <div id="addImagePreview1" class="image-preview">
-                                                    <i class="fas fa-plus"></i>
-                                                </div>
-                                            </label>
+                                    <label>상세 이미지</label>
+                                    <div id="detailImagesContainer" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                                        <!-- 초기 업로드 박스 -->
+                                        <div class="detail-image-upload" data-image-id="0">
+                                            <div class="image-upload-box small">
+                                                <input type="file" id="detailImage0" name="detailImages[]" accept="image/*" onchange="previewDetailImage(event, 0)" hidden>
+                                                <label for="detailImage0" class="upload-label">
+                                                    <div id="detailImagePreview0" class="image-preview">
+                                                        <i class="fas fa-plus"></i>
+                                                    </div>
+                                                </label>
+                                            </div>
                                         </div>
-                                        <div class="image-upload-box small">
-                                            <input type="file" id="addImage2" accept="image/*" onchange="previewImage(event, 'addImagePreview2')" hidden>
-                                            <label for="addImage2" class="upload-label">
-                                                <div id="addImagePreview2" class="image-preview">
-                                                    <i class="fas fa-plus"></i>
-                                                </div>
-                                            </label>
-                                        </div>
-                                        <div class="image-upload-box small">
-                                            <input type="file" id="addImage3" accept="image/*" onchange="previewImage(event, 'addImagePreview3')" hidden>
-                                            <label for="addImage3" class="upload-label">
-                                                <div id="addImagePreview3" class="image-preview">
-                                                    <i class="fas fa-plus"></i>
-                                                </div>
-                                            </label>
-                                        </div>
-                                        <div class="image-upload-box small">
-                                            <input type="file" id="addImage4" accept="image/*" onchange="previewImage(event, 'addImagePreview4')" hidden>
-                                            <label for="addImage4" class="upload-label">
-                                                <div id="addImagePreview4" class="image-preview">
-                                                    <i class="fas fa-plus"></i>
-                                                </div>
-                                            </label>
+                                        <!-- 추가/삭제 버튼 -->
+                                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="addDetailImageUpload()" style="width: 120px; height: 36px;">
+                                                <i class="fas fa-plus"></i> 이미지 추가
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="removeLastDetailImageUpload()" style="width: 120px; height: 36px;">
+                                                <i class="fas fa-minus"></i> 이미지 삭제
+                                            </button>
                                         </div>
                                     </div>
                                     <p class="form-help-text">
                                         <i class="fas fa-info-circle"></i> 
-                                        현재는 플레이스홀더 이미지가 표시됩니다. 이미지를 업로드하시면 실제 상품 이미지로 변경됩니다.
+                                        상세 이미지를 업로드하세요. + 버튼으로 여러 장 추가 가능합니다.
                                     </p>
                                 </div>
                             </div>
@@ -1649,9 +1660,19 @@
                         <div class="form-section">
                             <h3><i class="fas fa-info-circle"></i> 기본 정보</h3>
                             <div class="form-grid-2">
-                                <div class="form-group full-width">
+                                <div class="form-group">
                                     <label>상품명 <span class="required">*</span></label>
                                     <input type="text" class="form-control" name="productName" placeholder="상품명을 입력하세요" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>분류 <span class="required">*</span></label>
+                                    <select class="form-control" name="displayCategory" required>
+                                        <option value="all">전체</option>
+                                        <option value="hit">히트</option>
+                                        <option value="recommend">추천</option>
+                                        <option value="new">최신</option>
+                                        <option value="popular">인기</option>
+                                    </select>
                                 </div>
                                 <div class="form-group">
                                     <label>카테고리 <span class="required">*</span></label>
@@ -1729,8 +1750,28 @@
                         <div class="form-section">
                             <h3><i class="fas fa-align-left"></i> 상세 설명</h3>
                             <div class="form-group full-width">
-                                <label>상품 상세 설명</label>
-                                <textarea class="form-control" name="description" rows="10" placeholder="상품에 대한 상세한 설명을 입력하세요"></textarea>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <label style="margin: 0;">상품 상세 정보</label>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addDetailRow()">
+                                        <i class="fas fa-plus"></i> 항목 추가
+                                    </button>
+                                </div>
+                                <div id="detailRowsContainer">
+                                    <!-- 초기 행 -->
+                                    <div class="detail-row" data-row-id="0">
+                                        <div class="detail-row-inputs">
+                                            <div class="form-group" style="flex: 1; margin: 0;">
+                                                <input type="text" class="form-control" name="detailTitle[]" placeholder="항목명 (예: 표장단위별 용량)">
+                                            </div>
+                                            <div class="form-group" style="flex: 1; margin: 0;">
+                                                <input type="text" class="form-control" name="detailContent[]" placeholder="내용 (예: 5KG)">
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="removeDetailRow(0)" style="flex-shrink: 0;">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1806,122 +1847,34 @@
                 </div>
 
                 <div class="category-container">
-                    <div class="category-grid">
-                        <!-- 카테고리 목록 -->
-                        <div class="category-list-panel">
-                            <div class="panel-header">
-                                <h3><i class="fas fa-list"></i> 카테고리 목록</h3>
-                                <button class="btn btn-primary btn-sm" onclick="showAddCategoryForm()">
-                                    <i class="fas fa-plus"></i> 추가
-                                </button>
-                            </div>
-                            <div class="category-tree">
-                                <div class="category-item" data-id="1">
-                                    <div class="category-info">
-                                        <i class="fas fa-coffee"></i>
-                                        <span class="category-name">커피/음료</span>
-                                        <span class="category-count">(45)</span>
-                                    </div>
-                                    <div class="category-actions">
-                                        <button class="btn-icon btn-edit" onclick="editCategory(1)"><i class="fas fa-edit"></i></button>
-                                        <button class="btn-icon btn-delete" onclick="deleteCategory(1)"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                </div>
-                                <div class="category-item" data-id="2">
-                                    <div class="category-info">
-                                        <i class="fas fa-utensils"></i>
-                                        <span class="category-name">식품</span>
-                                        <span class="category-count">(32)</span>
-                                    </div>
-                                    <div class="category-actions">
-                                        <button class="btn-icon btn-edit" onclick="editCategory(2)"><i class="fas fa-edit"></i></button>
-                                        <button class="btn-icon btn-delete" onclick="deleteCategory(2)"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                </div>
-                                <div class="category-item" data-id="3">
-                                    <div class="category-info">
-                                        <i class="fas fa-spa"></i>
-                                        <span class="category-name">뷰티</span>
-                                        <span class="category-count">(28)</span>
-                                    </div>
-                                    <div class="category-actions">
-                                        <button class="btn-icon btn-edit" onclick="editCategory(3)"><i class="fas fa-edit"></i></button>
-                                        <button class="btn-icon btn-delete" onclick="deleteCategory(3)"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                </div>
-                                <div class="category-item" data-id="4">
-                                    <div class="category-info">
-                                        <i class="fas fa-home"></i>
-                                        <span class="category-name">생활용품</span>
-                                        <span class="category-count">(56)</span>
-                                    </div>
-                                    <div class="category-actions">
-                                        <button class="btn-icon btn-edit" onclick="editCategory(4)"><i class="fas fa-edit"></i></button>
-                                        <button class="btn-icon btn-delete" onclick="deleteCategory(4)"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                </div>
-                                <div class="category-item" data-id="5">
-                                    <div class="category-info">
-                                        <i class="fas fa-tshirt"></i>
-                                        <span class="category-name">패션</span>
-                                        <span class="category-count">(23)</span>
-                                    </div>
-                                    <div class="category-actions">
-                                        <button class="btn-icon btn-edit" onclick="editCategory(5)"><i class="fas fa-edit"></i></button>
-                                        <button class="btn-icon btn-delete" onclick="deleteCategory(5)"><i class="fas fa-trash"></i></button>
-                                    </div>
+                    <!-- 카테고리 목록 (왼쪽 영역만) -->
+                    <div class="category-list-panel-full">
+                        <div class="panel-header">
+                            <h3><i class="fas fa-list"></i> 카테고리 목록</h3>
+                            <button class="btn btn-primary btn-sm" onclick="toggleAddCategoryForm(null, 1)">
+                                <i class="fas fa-plus"></i> 추가
+                            </button>
+                        </div>
+                        
+                        <!-- 카테고리 추가 폼 (접혀있음) -->
+                        <div class="category-add-form" id="categoryAddForm" style="display: none;">
+                            <div class="form-content">
+                                <input type="text" id="newCategoryName" class="form-control" placeholder="카테고리명을 입력하세요" />
+                                <input type="hidden" id="newCategoryParentId" value="" />
+                                <input type="hidden" id="newCategoryLevel" value="1" />
+                                <div class="form-buttons">
+                                    <button class="btn btn-primary btn-sm" onclick="saveCategoryFromForm()">
+                                        <i class="fas fa-check"></i> 저장
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="closeAddCategoryForm()">
+                                        <i class="fas fa-times"></i> 취소
+                                    </button>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- 카테고리 등록/수정 폼 -->
-                        <div class="category-form-panel">
-                            <div class="panel-header">
-                                <h3><i class="fas fa-edit"></i> 카테고리 등록/수정</h3>
-                            </div>
-                            <div class="panel-content">
-                                <form id="categoryForm" onsubmit="saveCategory(event)">
-                                    <div class="form-group">
-                                        <label>카테고리명 <span class="required">*</span></label>
-                                        <input type="text" class="form-control" name="categoryName" placeholder="카테고리명 입력" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>아이콘 선택</label>
-                                        <div class="icon-selector">
-                                            <button type="button" class="icon-btn active" data-icon="coffee"><i class="fas fa-coffee"></i></button>
-                                            <button type="button" class="icon-btn" data-icon="utensils"><i class="fas fa-utensils"></i></button>
-                                            <button type="button" class="icon-btn" data-icon="spa"><i class="fas fa-spa"></i></button>
-                                            <button type="button" class="icon-btn" data-icon="home"><i class="fas fa-home"></i></button>
-                                            <button type="button" class="icon-btn" data-icon="tshirt"><i class="fas fa-tshirt"></i></button>
-                                            <button type="button" class="icon-btn" data-icon="gift"><i class="fas fa-gift"></i></button>
-                                            <button type="button" class="icon-btn" data-icon="book"><i class="fas fa-book"></i></button>
-                                            <button type="button" class="icon-btn" data-icon="gamepad"><i class="fas fa-gamepad"></i></button>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>정렬 순서</label>
-                                        <input type="number" class="form-control" name="sortOrder" placeholder="1" value="1">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>설명</label>
-                                        <textarea class="form-control" name="description" rows="3" placeholder="카테고리 설명"></textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="checkbox-label">
-                                            <input type="checkbox" name="isActive" checked>
-                                            <span>활성화</span>
-                                        </label>
-                                    </div>
-                                    <div class="form-actions">
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="fas fa-save"></i> 저장
-                                        </button>
-                                        <button type="button" class="btn btn-default" onclick="resetCategoryForm()">
-                                            <i class="fas fa-undo"></i> 초기화
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
+                        
+                        <div class="category-tree" id="categoryTree">
+                            <!-- JavaScript로 동적 렌더링 -->
                         </div>
                     </div>
                 </div>
@@ -2058,27 +2011,45 @@
                                 script4_6.onload = () => {
                                     console.log('✅ member-purchase.js 로드 완료');
                                     
-                                    // auto-lottery.js 로드
+                                    // product-list.js 로드
                                     const script4_7 = document.createElement('script');
-                                    script4_7.src = 'js/auto-lottery.js';
-                                    script4_7.onload = () => {
-                                        console.log('✅ auto-lottery.js 로드 완료');
-                                        
-                                        // auto-lottery.js 로드 후 admin.js 로드
-                                        const script5 = document.createElement('script');
-                                        script5.src = 'js/admin.js';
-                                        script5.onload = () => {
-                                            console.log('✅ admin.js 로드 완료 - 네비게이션 초기화 실행');
-                                            // admin.js가 로드된 후 초기화 함수 호출
-                                            if (typeof initAdminPage === 'function') {
-                                                setTimeout(initAdminPage, 100);
-                                            } else {
-                                                console.error('❌ initAdminPage 함수를 찾을 수 없습니다!');
-                                            }
-                                        };
-                                        document.body.appendChild(script5);
-                                    };
+                                    script4_7.src = `js/product-list.js?v=${new Date().getTime()}`;
                                     document.body.appendChild(script4_7);
+                                    
+                                    script4_7.onload = () => {
+                                        console.log('✅ product-list.js 로드 완료');
+                                        
+                                        // category-manage.js 로드
+                                        const script4_7_1 = document.createElement('script');
+                                        script4_7_1.src = `js/category-manage.js?v=${new Date().getTime()}`;
+                                        document.body.appendChild(script4_7_1);
+                                        
+                                        script4_7_1.onload = () => {
+                                            console.log('✅ category-manage.js 로드 완료');
+                                        };
+                                        
+                                        // auto-lottery.js 로드
+                                        const script4_8 = document.createElement('script');
+                                        script4_8.src = 'js/auto-lottery.js';
+                                        script4_8.onload = () => {
+                                            console.log('✅ auto-lottery.js 로드 완료');
+                                            
+                                            // auto-lottery.js 로드 후 admin.js 로드
+                                            const script5 = document.createElement('script');
+                                            script5.src = 'js/admin.js';
+                                            script5.onload = () => {
+                                                console.log('✅ admin.js 로드 완료 - 네비게이션 초기화 실행');
+                                                // admin.js가 로드된 후 초기화 함수 호출
+                                                if (typeof initAdminPage === 'function') {
+                                                    setTimeout(initAdminPage, 100);
+                                                } else {
+                                                    console.error('❌ initAdminPage 함수를 찾을 수 없습니다!');
+                                                }
+                                            };
+                                            document.body.appendChild(script5);
+                                        };
+                                        document.body.appendChild(script4_8);
+                                    };
                                 };
                             };
                         };
@@ -2091,6 +2062,215 @@
         });
     </script>
     
+    <!-- 상품 정보 수정 모달 -->
+    <div id="editProductModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 1000px; max-height: 90vh;">
+            <div class="modal-header">
+                <h3>상품 정보 수정</h3>
+                <button class="modal-close" onclick="closeEditProductModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: calc(90vh - 140px); overflow-y: auto;">
+                <form id="editProductForm">
+                    <input type="hidden" id="editProductId">
+                    
+                    <!-- 기본 정보 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-info-circle"></i> 기본 정보</h3>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>상품명 <span class="required">*</span></label>
+                                <input type="text" class="form-control" id="editProductName" required>
+                            </div>
+                            <div class="form-group">
+                                <label>분류 <span class="required">*</span></label>
+                                <select class="form-control" id="editProductDisplayCategory" required>
+                                    <option value="all">전체</option>
+                                    <option value="hit">히트</option>
+                                    <option value="recommend">추천</option>
+                                    <option value="new">최신</option>
+                                    <option value="popular">인기</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>카테고리 <span class="required">*</span></label>
+                                <select class="form-control" id="editProductCategory" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="coffee">커피/음료</option>
+                                    <option value="food">식품</option>
+                                    <option value="beauty">뷰티</option>
+                                    <option value="life">생활용품</option>
+                                    <option value="fashion">패션</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>브랜드</label>
+                                <input type="text" class="form-control" id="editProductBrand">
+                            </div>
+                            <div class="form-group full-width">
+                                <label>상품 설명 (간단)</label>
+                                <input type="text" class="form-control" id="editProductShortDesc">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 가격 정보 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-won-sign"></i> 가격 정보</h3>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>정가 <span class="required">*</span></label>
+                                <input type="number" class="form-control" id="editProductOriginalPrice" required min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>판매가 <span class="required">*</span></label>
+                                <input type="number" class="form-control" id="editProductPrice" required min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>할인율 (%)</label>
+                                <input type="number" class="form-control" id="editProductDiscountRate" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>지원금 비율 (%)</label>
+                                <input type="number" class="form-control" id="editProductSupportRate" min="0" max="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 재고 및 옵션 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-boxes"></i> 재고 및 옵션</h3>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>재고 수량 <span class="required">*</span></label>
+                                <input type="number" class="form-control" id="editProductStock" required min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>최소 구매 수량</label>
+                                <input type="number" class="form-control" id="editProductMinOrder" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>최대 구매 수량</label>
+                                <input type="number" class="form-control" id="editProductMaxOrder" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>상품 상태 <span class="required">*</span></label>
+                                <select class="form-control" id="editProductStatus" required>
+                                    <option value="sale">판매중</option>
+                                    <option value="soldout">품절</option>
+                                    <option value="hidden">숨김</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 상세 설명 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-align-left"></i> 상세 설명</h3>
+                        <div class="form-group full-width">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <label style="margin: 0;">상품 상세 정보</label>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="addEditDetailRow()">
+                                    <i class="fas fa-plus"></i> 항목 추가
+                                </button>
+                            </div>
+                            <div id="editDetailRowsContainer">
+                                <!-- JavaScript로 동적 생성 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 배송 정보 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-truck"></i> 배송 정보</h3>
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>배송비</label>
+                                <input type="number" class="form-control" id="editProductDeliveryFee" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>배송 방법</label>
+                                <select class="form-control" id="editProductDeliveryMethod">
+                                    <option value="parcel">택배배송</option>
+                                    <option value="direct">직접배송</option>
+                                    <option value="quick">퀵배송</option>
+                                    <option value="digital">디지털상품</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>배송 예정일</label>
+                                <input type="text" class="form-control" id="editProductDeliveryDays" placeholder="예: 2-3일">
+                            </div>
+                            <div class="form-group">
+                                <label>무료배송 기준금액</label>
+                                <input type="number" class="form-control" id="editProductFreeDeliveryAmount" min="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 추가 설정 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-cog"></i> 추가 설정</h3>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="editProductIsNew">
+                                <span>신상품</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="editProductIsBest">
+                                <span>베스트상품</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="editProductIsRecommended">
+                                <span>추천상품</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 이미지 -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-image"></i> 이미지</h3>
+                        <div class="form-group">
+                            <label>대표 이미지 <span class="required">*</span></label>
+                            <div class="image-upload-box">
+                                <input type="file" id="editMainImage" accept="image/*" onchange="previewEditMainImage(event)" hidden>
+                                <label for="editMainImage" class="upload-label">
+                                    <div id="editMainImagePreview" class="image-preview">
+                                        <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                                        <p>클릭하여 이미지 업로드</p>
+                                        <small>권장 크기: 600x600px (JPG, PNG)</small>
+                                    </div>
+                                </label>
+                            </div>
+                            <input type="hidden" id="editProductMainImageUrl">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>상세 이미지</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                                <div id="editDetailImagesContainer" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                    <!-- JavaScript로 동적 생성 -->
+                                </div>
+                                <!-- 추가/삭제 버튼 -->
+                                <div style="display: flex; flex-direction: column; gap: 5px;">
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addEditDetailImageUpload()" style="width: 120px; height: 36px;">
+                                        <i class="fas fa-plus"></i> 이미지 추가
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="removeLastEditDetailImageUpload()" style="width: 120px; height: 36px;">
+                                        <i class="fas fa-minus"></i> 이미지 삭제
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditProductModal()">취소</button>
+                <button class="btn btn-primary" onclick="saveEditProduct()">수정하기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 회원 정보 수정 모달 -->
     <div id="editMemberModal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 600px;">
