@@ -1054,63 +1054,83 @@
                 <div class="search-panel">
                     <div class="search-row">
                         <div class="form-group">
-                            <label>이름</label>
-                            <input type="text" class="form-control" id="purchaseName" placeholder="이름 입력">
+                            <label>아이디 또는 이름</label>
+                            <input type="text" class="form-control" id="purchaseSearchKeyword" placeholder="아이디 또는 이름 입력">
                         </div>
                         <div class="form-group">
                             <label>시작일</label>
-                            <input type="date" class="form-control" id="purchaseStartDate" value="2025-12-04">
+                            <input type="date" class="form-control" id="purchaseStartDate">
                         </div>
                         <div class="form-group">
                             <label>종료일</label>
-                            <input type="date" class="form-control" id="purchaseEndDate" value="2026-02-02">
+                            <input type="date" class="form-control" id="purchaseEndDate">
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary" onclick="searchPurchase()">검색</button>
-                        <button class="btn btn-default" onclick="resetPurchase()">취소</button>
+                        <button class="btn btn-primary" id="searchPurchaseBtn">검색</button>
+                        <button class="btn btn-default" id="resetPurchaseBtn">초기화</button>
                     </div>
                 </div>
 
-                <!-- 누계 정보 -->
-                <div class="stats-panel">
-                    <h3>누계 정보</h3>
-                    <table class="stats-table">
-                        <thead>
-                            <tr>
-                                <th>누계</th>
-                                <th>구매총금액</th>
-                                <th>지원금</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>0</td>
-                                <td>0</td>
-                                <td>0</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <!-- 검색 결과 영역 (검색 후 표시) -->
+                <div id="purchaseResultsContainer" style="display: none; margin-top: 30px;">
+                    <!-- 회원 정보 카드 -->
+                    <div class="member-info-card" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #4A5FC1; padding-bottom: 10px;">회원 정보</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            <div>
+                                <span style="color: #666; font-size: 13px;">아이디:</span>
+                                <strong id="memberInfoUserId" style="display: block; margin-top: 5px; font-size: 15px;"></strong>
+                            </div>
+                            <div>
+                                <span style="color: #666; font-size: 13px;">이름:</span>
+                                <strong id="memberInfoName" style="display: block; margin-top: 5px; font-size: 15px;"></strong>
+                            </div>
+                            <div>
+                                <span style="color: #666; font-size: 13px;">전화번호:</span>
+                                <strong id="memberInfoPhone" style="display: block; margin-top: 5px; font-size: 15px;"></strong>
+                            </div>
+                        </div>
+                    </div>
 
-                <!-- 구매 내역 테이블 -->
-                <div class="table-container">
-                    <p class="empty-message">총 0 명의 회원이 검색되었습니다.</p>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>번호</th>
-                                <th>이름</th>
-                                <th>날짜</th>
-                                <th>구매상품</th>
-                                <th>상품가격</th>
-                                <th>지원금</th>
-                            </tr>
-                        </thead>
-                        <tbody id="purchaseTableBody">
-                            <!-- JavaScript로 동적 생성 -->
-                        </tbody>
-                    </table>
+                    <!-- 누계 정보 -->
+                    <div class="stats-panel" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #4A5FC1; padding-bottom: 10px;">누계 정보</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="color: #666; font-size: 13px; margin-bottom: 8px;">구매 건수</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #4A5FC1;"><span id="totalPurchaseCount">0</span>건</div>
+                            </div>
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="color: #666; font-size: 13px; margin-bottom: 8px;">구매 총금액</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #28a745;"><span id="totalPurchaseAmount">0</span>원</div>
+                            </div>
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="color: #666; font-size: 13px; margin-bottom: 8px;">누적 지원금</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #dc3545;"><span id="totalSupportAmount">0</span>원</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 구매 내역 테이블 -->
+                    <div class="table-container" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #4A5FC1; padding-bottom: 10px;">구매 상세 내역</h3>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>번호</th>
+                                    <th>구매일시</th>
+                                    <th>상품명</th>
+                                    <th>상품가격</th>
+                                    <th>지원금</th>
+                                    <th>상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="purchaseDetailBody">
+                                <!-- JavaScript로 동적 생성 -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             <!-- 구매요청 및 승인대기 페이지 -->
@@ -2030,27 +2050,36 @@
                             document.body.appendChild(script4_5);
                             
                             script4_5.onload = () => {
-                                // auto-lottery.js 로드
+                                // member-purchase.js 로드
                                 const script4_6 = document.createElement('script');
-                                script4_6.src = 'js/auto-lottery.js';
-                                script4_6.onload = () => {
-                                    console.log('✅ auto-lottery.js 로드 완료');
-                                    
-                                    // auto-lottery.js 로드 후 admin.js 로드
-                                    const script5 = document.createElement('script');
-                                    script5.src = 'js/admin.js';
-                                    script5.onload = () => {
-                                        console.log('✅ admin.js 로드 완료 - 네비게이션 초기화 실행');
-                                        // admin.js가 로드된 후 초기화 함수 호출
-                                        if (typeof initAdminPage === 'function') {
-                                            setTimeout(initAdminPage, 100);
-                                        } else {
-                                            console.error('❌ initAdminPage 함수를 찾을 수 없습니다!');
-                                        }
-                                    };
-                                    document.body.appendChild(script5);
-                                };
+                                script4_6.src = `js/member-purchase.js?v=${new Date().getTime()}`;
                                 document.body.appendChild(script4_6);
+                                
+                                script4_6.onload = () => {
+                                    console.log('✅ member-purchase.js 로드 완료');
+                                    
+                                    // auto-lottery.js 로드
+                                    const script4_7 = document.createElement('script');
+                                    script4_7.src = 'js/auto-lottery.js';
+                                    script4_7.onload = () => {
+                                        console.log('✅ auto-lottery.js 로드 완료');
+                                        
+                                        // auto-lottery.js 로드 후 admin.js 로드
+                                        const script5 = document.createElement('script');
+                                        script5.src = 'js/admin.js';
+                                        script5.onload = () => {
+                                            console.log('✅ admin.js 로드 완료 - 네비게이션 초기화 실행');
+                                            // admin.js가 로드된 후 초기화 함수 호출
+                                            if (typeof initAdminPage === 'function') {
+                                                setTimeout(initAdminPage, 100);
+                                            } else {
+                                                console.error('❌ initAdminPage 함수를 찾을 수 없습니다!');
+                                            }
+                                        };
+                                        document.body.appendChild(script5);
+                                    };
+                                    document.body.appendChild(script4_7);
+                                };
                             };
                         };
                     };
