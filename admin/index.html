@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>10쇼핑게임 관리자</title>
-    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/admin.css?v=20260206-1300">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -984,7 +984,6 @@
                                     <th>주소</th>
                                     <th>계좌번호</th>
                                     <th>추천인</th>
-                                    <th>MD코드</th>
                                     <th>구매금액</th>
                                     <th>지원금/누적</th>
                                     <th>상태</th>
@@ -992,7 +991,7 @@
                                 </tr>
                             </thead>
                             <tbody id="searchResultsBody">
-                                <tr><td colspan="13" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
+                                <tr><td colspan="12" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1020,7 +1019,6 @@
                                 <th>주소</th>
                                 <th>계좌번호</th>
                                 <th>추천인</th>
-                                <th>MD코드</th>
                                 <th>구매금액</th>
                                 <th>지원금/누적</th>
                                 <th>상태</th>
@@ -1042,57 +1040,6 @@
                     <button class="page-num">4</button>
                     <button class="page-num">5</button>
                     <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                </div>
-            </div>
-
-            <!-- 회원조회 페이지 -->
-            <div id="member-search" class="content-page">
-                <div class="page-header">
-                    <h2>회원조회</h2>
-                    <p class="page-description">회원 정보를 조회하고 관리합니다.</p>
-                </div>
-
-                <!-- 검색 필터 -->
-                <div class="search-panel">
-                    <div class="search-row">
-                        <div class="form-group">
-                            <label>아이디</label>
-                            <input type="text" class="form-control" id="searchId" placeholder="아이디 입력">
-                        </div>
-                        <div class="form-group">
-                            <label>이름</label>
-                            <input type="text" class="form-control" id="searchName" placeholder="이름 입력">
-                        </div>
-                        <div class="form-group">
-                            <label>전화번호</label>
-                            <input type="text" class="form-control" id="searchPhone" placeholder="전화번호 입력">
-                        </div>
-                    </div>
-                    <div class="search-actions">
-                        <button class="btn btn-primary" onclick="searchMembers()">검색</button>
-                        <button class="btn btn-default" onclick="resetSearch()">초기화</button>
-                    </div>
-                </div>
-
-                <!-- 회원 테이블 -->
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>번호</th>
-                                <th>아이디</th>
-                                <th>이름</th>
-                                <th>전화번호</th>
-                                <th>가입날짜</th>
-                                <th>추천인</th>
-                                <th>상태</th>
-                                <th>관리</th>
-                            </tr>
-                        </thead>
-                        <tbody id="memberSearchBody">
-                            <!-- JavaScript로 동적 생성 -->
-                        </tbody>
-                    </table>
                 </div>
             </div>
 
@@ -2079,7 +2026,7 @@
                         
                         script4.onload = () => {
                             const script4_5 = document.createElement('script');
-                            script4_5.src = 'js/member-search.js';
+                            script4_5.src = `js/member-search.js?v=${new Date().getTime()}`;
                             document.body.appendChild(script4_5);
                             
                             script4_5.onload = () => {
@@ -2114,6 +2061,74 @@
             alert('Firebase SDK를 로드할 수 없습니다. 네트워크 연결을 확인하세요.');
         });
     </script>
+    
+    <!-- 회원 정보 수정 모달 -->
+    <div id="editMemberModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>회원 정보 수정</h3>
+                <button class="modal-close" onclick="closeEditMemberModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editMemberForm">
+                    <input type="hidden" id="editMemberId">
+                    
+                    <div class="form-group">
+                        <label>아이디 (수정 불가)</label>
+                        <input type="text" class="form-control" id="editMemberUserId" readonly style="background: #f0f0f0;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>이름 <span style="color: red;">*</span></label>
+                        <input type="text" class="form-control" id="editMemberName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>전화번호 <span style="color: red;">*</span></label>
+                        <input type="text" class="form-control" id="editMemberPhone" required placeholder="010-1234-5678">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>우편번호</label>
+                        <input type="text" class="form-control" id="editMemberPostcode">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>주소</label>
+                        <input type="text" class="form-control" id="editMemberAddress">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>상세주소</label>
+                        <input type="text" class="form-control" id="editMemberDetailAddress">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>추천인 코드</label>
+                        <input type="text" class="form-control" id="editMemberReferralCode">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>계좌번호 (마이페이지에서 입력 가능)</label>
+                        <input type="text" class="form-control" id="editMemberAccountNumber" readonly style="background: #f0f0f0;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>상태</label>
+                        <select class="form-control" id="editMemberStatus">
+                            <option value="정상">정상</option>
+                            <option value="대기">대기</option>
+                            <option value="정지">정지</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditMemberModal()">취소</button>
+                <button class="btn btn-primary" onclick="saveEditMember()">저장</button>
+            </div>
+        </div>
+    </div>
     
 </body>
 </html>

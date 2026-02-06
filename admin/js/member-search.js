@@ -1,4 +1,34 @@
 // 회원조회 페이지 관리 (기본환경설정과 동일한 패턴)
+console.log('🔵🔵🔵 member-search.js 로드됨 - 버전: 2026-02-06-12:55');
+
+// 디버깅 함수 - 콘솔에서 직접 호출 가능
+window.debugMemberTable = function() {
+    console.log('=== 회원 테이블 디버깅 ===');
+    console.log('memberTableBody:', document.getElementById('memberTableBody'));
+    console.log('searchResultsBody:', document.getElementById('searchResultsBody'));
+    console.log('allMembersData:', window.allMembersData?.length || 0);
+    console.log('changeMemberStatus:', typeof window.changeMemberStatus);
+    console.log('editMemberInfo:', typeof window.editMemberInfo);
+    console.log('deleteMemberInfo:', typeof window.deleteMemberInfo);
+    
+    // 테이블 내용 확인
+    const tbody = document.getElementById('memberTableBody');
+    if (tbody) {
+        console.log('테이블 행 수:', tbody.children.length);
+        console.log('첫 번째 행 HTML:', tbody.children[0]?.innerHTML);
+    }
+};
+
+// 강제 리렌더링 함수
+window.forceReloadMembers = async function() {
+    console.log('🔵 강제 리렌더링 시작...');
+    if (window.loadAllMembers) {
+        await window.loadAllMembers();
+        console.log('✅ 강제 리렌더링 완료');
+    } else {
+        console.error('❌ loadAllMembers 함수를 찾을 수 없습니다');
+    }
+};
 
 // Firebase 초기화 대기 함수 (settings.js와 동일)
 async function waitForFirebaseAdmin(maxWait = 10000) {
@@ -83,7 +113,7 @@ async function loadAllMembers() {
         
         const tbody = document.getElementById('memberTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
         
         throw error;
@@ -224,7 +254,7 @@ async function searchMemberInfo() {
         
         const tbody = document.getElementById('searchResultsBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
         
         alert('회원 검색 중 오류가 발생했습니다: ' + error.message);
@@ -268,7 +298,7 @@ function renderSearchResultsTable(membersToRender) {
     
     if (!membersToRender || membersToRender.length === 0) {
         console.warn('⚠️ 렌더링할 데이터가 없습니다.');
-        tbody.innerHTML = '<tr><td colspan="13" class="empty-message">검색 결과가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">검색 결과가 없습니다.</td></tr>';
         
         // 페이지네이션 초기화
         const paginationEl = document.getElementById('searchResultsPagination');
@@ -326,7 +356,6 @@ function renderSearchResultsTable(membersToRender) {
         
         // 상태
         const status = member.status || '정상';
-        const statusClass = status === '정상' ? 'badge-success' : 'badge-danger';
         
         // 마스킹
         const maskedPhone = phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '';
@@ -342,10 +371,15 @@ function renderSearchResultsTable(membersToRender) {
                 <td>${escapeHtml(address)}</td>
                 <td>${escapeHtml(member.accountNumber || '')}</td>
                 <td>${escapeHtml(referralCode)}</td>
-                <td>${escapeHtml(member.mdCode || '')}</td>
                 <td>${(member.purchaseAmount || 0).toLocaleString()}</td>
                 <td>${(member.supportAmount || 0).toLocaleString()} / ${(member.accumulatedSupport || 0).toLocaleString()}</td>
-                <td><span class="badge ${statusClass}">${escapeHtml(status)}</span></td>
+                <td>
+                    <select class="status-select" onchange="changeMemberStatus('${member.id || memberId}', this.value)">
+                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
+                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
+                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
+                    </select>
+                </td>
                 <td>
                     <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
                         <i class="fas fa-edit"></i>
@@ -367,7 +401,7 @@ function renderSearchResultsTable(membersToRender) {
     
     if (!tableHTML || tableHTML.trim() === '') {
         console.error('❌ 테이블 HTML이 비어있습니다!');
-        tbody.innerHTML = '<tr><td colspan="13" class="empty-message">테이블 생성 오류가 발생했습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">테이블 생성 오류가 발생했습니다.</td></tr>';
         return;
     }
     
@@ -407,7 +441,7 @@ function renderMemberTable(membersToRender) {
     }
     
     if (!membersToRender || membersToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" class="empty-message">검색 결과가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">검색 결과가 없습니다.</td></tr>';
         
         // 페이지네이션 초기화
         const paginationEl = document.getElementById('memberPagination');
@@ -463,7 +497,6 @@ function renderMemberTable(membersToRender) {
         
         // 상태
         const status = member.status || '정상';
-        const statusClass = status === '정상' ? 'badge-success' : 'badge-danger';
         
         // 마스킹
         const maskedPhone = phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '';
@@ -479,10 +512,15 @@ function renderMemberTable(membersToRender) {
                 <td>${escapeHtml(address)}</td>
                 <td>${escapeHtml(member.accountNumber || '')}</td>
                 <td>${escapeHtml(referralCode)}</td>
-                <td>${escapeHtml(member.mdCode || '')}</td>
                 <td>${(member.purchaseAmount || 0).toLocaleString()}</td>
                 <td>${(member.supportAmount || 0).toLocaleString()} / ${(member.accumulatedSupport || 0).toLocaleString()}</td>
-                <td><span class="badge ${statusClass}">${escapeHtml(status)}</span></td>
+                <td>
+                    <select class="status-select" onchange="changeMemberStatus('${member.id || memberId}', this.value)">
+                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
+                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
+                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
+                    </select>
+                </td>
                 <td>
                     <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
                         <i class="fas fa-edit"></i>
@@ -677,18 +715,197 @@ async function loadAllMembers() {
         
         const tbody = document.getElementById('memberTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
         
         throw error;
     }
 }
 
+// 회원 상태 변경 함수
+window.changeMemberStatus = async function(memberId, newStatus) {
+    try {
+        console.log(`🔵 회원 상태 변경 함수 호출됨: ${memberId} -> ${newStatus}`);
+        
+        if (!confirm(`회원 상태를 "${newStatus}"로 변경하시겠습니까?`)) {
+            // 취소하면 페이지 새로고침하여 원래 상태로 복원
+            console.log('사용자가 취소함');
+            await loadAllMembers();
+            return;
+        }
+        
+        console.log('Firebase Admin 초기화 대기 중...');
+        // Firebase Admin 초기화 대기
+        const firebaseAdmin = await waitForFirebaseAdmin();
+        console.log('Firebase Admin 초기화 완료');
+        
+        // Firestore에서 회원 상태 업데이트
+        console.log(`Firestore 업데이트 시작: ${memberId}, status: ${newStatus}`);
+        await firebaseAdmin.memberService.updateMember(memberId, { status: newStatus });
+        
+        console.log('✅ 회원 상태 변경 완료');
+        alert('회원 상태가 변경되었습니다.');
+        
+        // 데이터 새로고침
+        console.log('데이터 새로고침 중...');
+        await loadAllMembers();
+        
+    } catch (error) {
+        console.error('❌ 회원 상태 변경 오류:', error);
+        alert('회원 상태 변경 중 오류가 발생했습니다: ' + error.message);
+        
+        // 오류 발생 시에도 데이터 새로고침
+        await loadAllMembers();
+    }
+};
+
+// 회원 정보 수정 함수
+window.editMemberInfo = async function(memberId) {
+    try {
+        console.log(`🔵 회원 정보 수정 함수 호출됨: ${memberId}`);
+        
+        // Firebase Admin 초기화 대기
+        const firebaseAdmin = await waitForFirebaseAdmin();
+        
+        // 회원 정보 가져오기
+        const members = await firebaseAdmin.memberService.getMembers();
+        const member = members.find(m => (m.id || m.userId) === memberId);
+        
+        if (!member) {
+            alert('회원 정보를 찾을 수 없습니다.');
+            return;
+        }
+        
+        // 모달 폼에 데이터 채우기
+        document.getElementById('editMemberId').value = member.id || member.userId || '';
+        document.getElementById('editMemberUserId').value = member.userId || member.id || '';
+        document.getElementById('editMemberName').value = member.name || '';
+        document.getElementById('editMemberPhone').value = member.phone || '';
+        document.getElementById('editMemberPostcode').value = member.postcode || '';
+        document.getElementById('editMemberAddress').value = member.address || '';
+        document.getElementById('editMemberDetailAddress').value = member.detailAddress || '';
+        document.getElementById('editMemberAccountNumber').value = member.accountNumber || '';
+        document.getElementById('editMemberReferralCode').value = member.referralCode || member.recommender || '';
+        document.getElementById('editMemberStatus').value = member.status || '정상';
+        
+        // 모달 표시
+        const modal = document.getElementById('editMemberModal');
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+        
+    } catch (error) {
+        console.error('❌ 회원 정보 수정 오류:', error);
+        alert('회원 정보를 불러오는 중 오류가 발생했습니다: ' + error.message);
+    }
+};
+
+// 모달 닫기 함수
+window.closeEditMemberModal = function() {
+    const modal = document.getElementById('editMemberModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+};
+
+// 회원 정보 저장 함수
+window.saveEditMember = async function() {
+    try {
+        const memberId = document.getElementById('editMemberId').value;
+        const name = document.getElementById('editMemberName').value.trim();
+        const phone = document.getElementById('editMemberPhone').value.trim();
+        
+        // 필수 입력 확인
+        if (!name) {
+            alert('이름을 입력해주세요.');
+            document.getElementById('editMemberName').focus();
+            return;
+        }
+        
+        if (!phone) {
+            alert('전화번호를 입력해주세요.');
+            document.getElementById('editMemberPhone').focus();
+            return;
+        }
+        
+        // 업데이트할 데이터 (계좌번호와 MD코드는 제외)
+        const updateData = {
+            name: name,
+            phone: phone,
+            postcode: document.getElementById('editMemberPostcode').value.trim(),
+            address: document.getElementById('editMemberAddress').value.trim(),
+            detailAddress: document.getElementById('editMemberDetailAddress').value.trim(),
+            referralCode: document.getElementById('editMemberReferralCode').value.trim(),
+            status: document.getElementById('editMemberStatus').value
+        };
+        
+        console.log('업데이트 데이터:', updateData);
+        
+        // Firebase Admin 초기화 대기
+        const firebaseAdmin = await waitForFirebaseAdmin();
+        
+        // Firestore 업데이트
+        await firebaseAdmin.memberService.updateMember(memberId, updateData);
+        
+        console.log('✅ 회원 정보 수정 완료');
+        alert('회원 정보가 수정되었습니다.');
+        
+        // 모달 닫기
+        closeEditMemberModal();
+        
+        // 데이터 새로고침
+        await loadAllMembers();
+        
+    } catch (error) {
+        console.error('❌ 회원 정보 저장 오류:', error);
+        alert('회원 정보 저장 중 오류가 발생했습니다: ' + error.message);
+    }
+};
+
+// 회원 삭제 함수
+window.deleteMemberInfo = async function(memberId) {
+    try {
+        console.log(`🔵 회원 삭제 함수 호출됨: ${memberId}`);
+        
+        if (!confirm('정말로 이 회원을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+            return;
+        }
+        
+        // 한 번 더 확인
+        if (!confirm('정말로 삭제하시겠습니까?')) {
+            return;
+        }
+        
+        // Firebase Admin 초기화 대기
+        const firebaseAdmin = await waitForFirebaseAdmin();
+        
+        // Firestore에서 회원 삭제
+        await firebaseAdmin.memberService.deleteMember(memberId);
+        
+        console.log('✅ 회원 삭제 완료');
+        alert('회원이 삭제되었습니다.');
+        
+        // 데이터 새로고침
+        await loadAllMembers();
+        
+    } catch (error) {
+        console.error('❌ 회원 삭제 오류:', error);
+        alert('회원 삭제 중 오류가 발생했습니다: ' + error.message);
+    }
+};
+
 // 전역으로 export
 window.loadAllMembers = loadAllMembers;
 window.searchMemberInfo = searchMemberInfo;
 window.resetMemberSearch = resetMemberSearch;
 window.exportMembersToExcel = exportMembersToExcel;
+
+// 함수들이 전역에 등록되었는지 확인
+console.log('✅ 회원 관리 함수 전역 등록 완료:', {
+    changeMemberStatus: typeof window.changeMemberStatus,
+    editMemberInfo: typeof window.editMemberInfo,
+    deleteMemberInfo: typeof window.deleteMemberInfo
+});
 
 // 페이지 로드 시 자동 초기화 (member-search 페이지가 활성화되어 있으면 즉시 로드)
 (function() {

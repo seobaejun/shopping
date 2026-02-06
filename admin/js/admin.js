@@ -16,6 +16,14 @@ async function switchToPage(targetPage, clickedLink = null) {
     
     console.log('페이지 전환 시작:', targetPage);
     
+    // 현재 페이지를 localStorage에 저장
+    try {
+        localStorage.setItem('adminCurrentPage', targetPage);
+        console.log('현재 페이지 저장됨:', targetPage);
+    } catch (error) {
+        console.warn('localStorage 저장 실패:', error);
+    }
+    
     // contentPages가 없으면 다시 초기화
     if (!contentPages || contentPages.length === 0) {
         contentPages = document.querySelectorAll('.content-page');
@@ -116,7 +124,7 @@ async function loadPageData(pageId) {
             // 테이블 초기화
             const memberTableBody = document.getElementById('memberTableBody');
             if (memberTableBody) {
-                memberTableBody.innerHTML = '<tr><td colspan="13" class="empty-message">데이터를 불러오는 중...</td></tr>';
+                memberTableBody.innerHTML = '<tr><td colspan="12" class="empty-message">데이터를 불러오는 중...</td></tr>';
                 console.log('✅ 테이블 초기화 완료');
             } else {
                 console.error('❌ memberTableBody를 찾을 수 없습니다!');
@@ -145,14 +153,14 @@ async function loadPageData(pageId) {
                     console.error('❌❌❌ 회원조회 페이지 로드 오류:', error);
                     console.error('오류 스택:', error.stack);
                     if (memberTableBody) {
-                        memberTableBody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+                        memberTableBody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
                     }
                 }
             } else {
                 console.error('❌❌❌ loadAllMembers 함수를 찾을 수 없습니다! (대기 후에도 없음)');
                 console.error('window 객체 확인:', Object.keys(window).filter(k => k.includes('load') || k.includes('member')));
                 if (memberTableBody) {
-                    memberTableBody.innerHTML = '<tr><td colspan="13" class="empty-message">loadAllMembers 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.</td></tr>';
+                    memberTableBody.innerHTML = '<tr><td colspan="12" class="empty-message">loadAllMembers 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.</td></tr>';
                 }
             }
             break;
@@ -304,7 +312,7 @@ async function loadAllMembers() {
             console.error('❌ Firebase Admin을 찾을 수 없습니다.');
             const tbody = document.getElementById('memberTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">Firebase가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="empty-message">Firebase가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.</td></tr>';
             }
             return;
         }
@@ -320,7 +328,7 @@ async function loadAllMembers() {
             console.error('❌ DB 초기화 실패!');
             const tbody = document.getElementById('memberTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">Firebase DB 초기화에 실패했습니다. 콘솔에서 testFirestoreMembers()를 실행해보세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="empty-message">Firebase DB 초기화에 실패했습니다. 콘솔에서 testFirestoreMembers()를 실행해보세요.</td></tr>';
             }
             return;
         }
@@ -332,7 +340,7 @@ async function loadAllMembers() {
             console.log('window.firebaseAdmin:', window.firebaseAdmin);
             const tbody = document.getElementById('memberTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">memberService를 찾을 수 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="empty-message">memberService를 찾을 수 없습니다.</td></tr>';
             }
             return;
         }
@@ -436,7 +444,7 @@ async function loadAllMembers() {
         
         const tbody = document.getElementById('memberTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
     }
 }
@@ -562,7 +570,7 @@ function renderMemberInfoTable(data = null) {
         console.log('membersToRender 값:', membersToRender);
         console.log('membersToRender 타입:', typeof membersToRender);
         console.log('Firestore Console에서 members 컬렉션에 데이터가 있는지 확인하세요.');
-        tbody.innerHTML = '<tr><td colspan="13" class="empty-message">등록된 회원이 없습니다. Firestore Console에서 members 컬렉션을 확인하세요.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">등록된 회원이 없습니다. Firestore Console에서 members 컬렉션을 확인하세요.</td></tr>';
         renderMemberPagination(0);
         return;
     }
@@ -610,9 +618,6 @@ function renderMemberInfoTable(data = null) {
         // 추천인 코드 (referralCode 우선)
         const referralCode = member.referralCode || member.recommender || '';
         
-        // MD코드 (현재는 없음, 추후 추가 가능)
-        const mdCode = member.mdCode || '';
-        
         // 구매금액 (현재는 없음, 추후 추가 가능)
         const purchaseAmount = member.purchaseAmount || 0;
         
@@ -622,7 +627,6 @@ function renderMemberInfoTable(data = null) {
         
         // 상태
         const status = member.status || '정상';
-        const statusClass = status === '정상' ? 'badge-success' : 'badge-danger';
         
         // 전화번호 마스킹 (뒷자리 4자리)
         const maskedPhone = phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '';
@@ -640,10 +644,15 @@ function renderMemberInfoTable(data = null) {
                 <td>${escapeHtml(address)}</td>
                 <td>${escapeHtml(accountNumber)}</td>
                 <td>${escapeHtml(referralCode)}</td>
-                <td>${escapeHtml(mdCode)}</td>
                 <td>${purchaseAmount.toLocaleString()}</td>
                 <td>${supportAmount.toLocaleString()} / ${accumulatedSupport.toLocaleString()}</td>
-                <td><span class="badge ${statusClass}">${escapeHtml(status)}</span></td>
+                <td>
+                    <select class="status-select" onchange="changeMemberStatus('${member.id || memberId}', this.value)">
+                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
+                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
+                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
+                    </select>
+                </td>
                 <td>
                     <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
                         <i class="fas fa-edit"></i>
@@ -665,7 +674,7 @@ function renderMemberInfoTable(data = null) {
     } catch (error) {
         console.error('❌ 테이블 렌더링 중 오류:', error);
         console.error('오류 상세:', error.message, error.stack);
-        tbody.innerHTML = `<tr><td colspan="13" class="empty-message">테이블 렌더링 오류: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" class="empty-message">테이블 렌더링 오류: ${error.message}</td></tr>`;
     }
 }
 
@@ -730,46 +739,12 @@ function changeMemberPage(page) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 회원 수정
-async function editMemberInfo(memberId) {
-    try {
-        const members = await window.firebaseAdmin.memberService.getMembers();
-        const member = members.find(m => m.id === memberId || m.userId === memberId);
-        
-        if (member) {
-            alert(`${memberId} 회원 정보 수정 기능은 추후 구현 예정입니다.`);
-            // TODO: 수정 모달 구현
-        } else {
-            alert(`${memberId} 회원을 찾을 수 없습니다.`);
-        }
-    } catch (error) {
-        console.error('회원 수정 오류:', error);
-        alert('회원 정보 수정 중 오류가 발생했습니다.');
-    }
-}
-
-// 회원 삭제
-async function deleteMemberInfo(memberId) {
-    if (!confirm('회원을 삭제하시겠습니까?')) {
-        return;
-    }
-    
-    try {
-        await window.firebaseAdmin.memberService.deleteMember(memberId);
-        alert('삭제되었습니다.');
-        await loadAllMembers(); // 목록 새로고침
-    } catch (error) {
-        console.error('회원 삭제 오류:', error);
-        alert('회원 삭제 중 오류가 발생했습니다: ' + error.message);
-    }
-}
-
 // 전역 함수로 export (member-search.js의 함수를 사용)
 // window.searchMemberInfo는 member-search.js에서 export됨
 // window.resetMemberSearch는 member-search.js에서 export됨
+// window.editMemberInfo는 member-search.js에서 export됨
+// window.deleteMemberInfo는 member-search.js에서 export됨
 window.changeMemberPage = changeMemberPage;
-window.editMemberInfo = editMemberInfo;
-window.deleteMemberInfo = deleteMemberInfo;
 
 function renderMemberTable(data) {
     const tbody = document.getElementById('memberSearchBody');
@@ -989,14 +964,14 @@ function navigateToPage(pageId) {
 // 상품 데이터 (샘플)
 // ============================================
 const PRODUCT_DATA = [
-    { id: 1, name: '메가커피 모바일금액권 3만원', category: 'coffee', price: 30000, stock: 999, status: 'sale', image: 'https://via.placeholder.com/80/FF6B6B/FFFFFF?text=커피', date: '2026-01-15' },
-    { id: 2, name: '스타벅스 아메리카노 Tall', category: 'coffee', price: 4500, stock: 999, status: 'sale', image: 'https://via.placeholder.com/80/4ECDC4/FFFFFF?text=스벅', date: '2026-01-18' },
-    { id: 3, name: '배스킨라빈스 파인트 아이스크림', category: 'food', price: 15000, stock: 50, status: 'sale', image: 'https://via.placeholder.com/80/FFD93D/000000?text=아이스크림', date: '2026-01-20' },
-    { id: 4, name: 'CU 편의점 모바일상품권 1만원', category: 'life', price: 10000, stock: 999, status: 'sale', image: 'https://via.placeholder.com/80/6BCB77/FFFFFF?text=CU', date: '2026-01-22' },
-    { id: 5, name: 'GS25 모바일상품권 1만원', category: 'life', price: 10000, stock: 999, status: 'sale', image: 'https://via.placeholder.com/80/4D96FF/FFFFFF?text=GS25', date: '2026-01-25' },
-    { id: 6, name: '설화수 윤조에센스 60ml', category: 'beauty', price: 85000, stock: 20, status: 'sale', image: 'https://via.placeholder.com/80/FF6BA9/FFFFFF?text=뷰티', date: '2026-01-28' },
-    { id: 7, name: '나이키 에어포스 운동화', category: 'fashion', price: 129000, stock: 0, status: 'soldout', image: 'https://via.placeholder.com/80/95E1D3/000000?text=신발', date: '2026-02-01' },
-    { id: 8, name: '다이슨 헤어드라이어', category: 'beauty', price: 450000, stock: 5, status: 'sale', image: 'https://via.placeholder.com/80/F38181/FFFFFF?text=가전', date: '2026-02-02' },
+    { id: 1, name: '메가커피 모바일금액권 3만원', category: 'coffee', price: 30000, stock: 999, status: 'sale', image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23FF6B6B" width="80" height="80"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="14"%3E커피%3C/text%3E%3C/svg%3E', date: '2026-01-15' },
+    { id: 2, name: '스타벅스 아메리카노 Tall', category: 'coffee', price: 4500, stock: 999, status: 'sale', image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%234ECDC4" width="80" height="80"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="14"%3E스벅%3C/text%3E%3C/svg%3E', date: '2026-01-18' },
+    { id: 3, name: '배스킨라빈스 파인트 아이스크림', category: 'food', price: 15000, stock: 50, status: 'sale', image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23FFD93D" width="80" height="80"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="black" font-size="12"%3E아이스크림%3C/text%3E%3C/svg%3E', date: '2026-01-20' },
+    { id: 4, name: 'CU 편의점 모바일상품권 1만원', category: 'life', price: 10000, stock: 999, status: 'sale', image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%236BCB77" width="80" height="80"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="14"%3ECU%3C/text%3E%3C/svg%3E', date: '2026-01-22' },
+    { id: 5, name: 'GS25 모바일상품권 1만원', category: 'life', price: 10000, stock: 999, status: 'sale', image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%234D96FF" width="80" height="80"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="14"%3EGS25%3C/text%3E%3C/svg%3E', date: '2026-01-25' },
+    { id: 6, name: '설화수 윤조에센스 60ml', category: 'beauty', price: 85000, stock: 20, status: 'sale', image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23FF6BA9" width="80" height="80"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="14"%3E뷰티%3C/text%3E%3C/svg%3E', date: '2026-01-28' },
+    { id: 7, name: '나이키 에어포스 운동화', category: 'fashion', price: 129000, stock: 0, status: 'soldout', image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%2395E1D3" width="80" height="80"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="black" font-size="14"%3E신발%3C/text%3E%3C/svg%3E', date: '2026-02-01' },
+    { id: 8, name: '다이슨 헤어드라이어', category: 'beauty', price: 450000, stock: 5, status: 'sale', image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23F38181" width="80" height="80"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="14"%3E가전%3C/text%3E%3C/svg%3E', date: '2026-02-02' },
 ];
 
 // ============================================
@@ -1081,7 +1056,7 @@ function renderProductTable(data) {
     tbody.innerHTML = data.map((product, index) => {
         const productId = product.id || `product-${index}`;
         const name = product.name || '';
-        const image = product.image || 'https://via.placeholder.com/50';
+        const image = product.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="50" height="50"%3E%3Crect fill="%23cccccc" width="50" height="50"/%3E%3C/svg%3E';
         const category = categoryMap[product.category] || product.category || '';
         const price = product.price || 0;
         const stock = product.stock || 0;
@@ -2039,6 +2014,25 @@ function initAdminPage() {
     }
     
     console.log('✅ 모든 네비게이션 이벤트 등록 완료');
+    
+    // localStorage에서 마지막 페이지 복원
+    let savedPage = null;
+    try {
+        savedPage = localStorage.getItem('adminCurrentPage');
+        console.log('저장된 페이지:', savedPage);
+    } catch (error) {
+        console.warn('localStorage 읽기 실패:', error);
+    }
+    
+    // 저장된 페이지가 있으면 복원
+    if (savedPage && document.getElementById(savedPage)) {
+        console.log('🔵 저장된 페이지로 복원:', savedPage);
+        setTimeout(() => {
+            switchToPage(savedPage);
+        }, 300);
+    } else {
+        console.log('🔵 기본 페이지(dashboard) 사용');
+    }
     
     // 초기 데이터 렌더링
     try {
