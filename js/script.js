@@ -298,29 +298,99 @@ function initCategorySidebar() {
     });
 }
 
-// 인기 검색어 데이터
-const POPULAR_KEYWORDS = [
-    { rank: 1, text: '고양이사료' },
-    { rank: 2, text: '500g' },
-    { rank: 3, text: '건채담' },
-    { rank: 4, text: '열무' },
-    { rank: 5, text: '아비가일' },
-    { rank: 6, text: '열무김치' },
-    { rank: 7, text: 'VDG' },
-    { rank: 8, text: '어성초' },
-    { rank: 9, text: '-1' },
-    { rank: 10, text: '--' }
-];
+// 인기 검색어 데이터 (Firestore에서 실시간 로드)
+let POPULAR_KEYWORDS = [];
 
 let currentKeywordIndex = 0;
 let keywordRotationInterval;
 
+// 검색어 로그 저장
+async function saveSearchLog(keyword) {
+    if (!keyword || keyword.trim() === '') return;
+    
+    try {
+        if (typeof firebase === 'undefined' || !firebase.firestore) {
+            console.warn('Firebase가 초기화되지 않아 검색 로그를 저장할 수 없습니다.');
+            return;
+        }
+        
+        const db = firebase.firestore();
+        await db.collection('searchLogs').add({
+            keyword: keyword.trim(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            createdAt: new Date()
+        });
+        
+        console.log('✅ 검색어 저장:', keyword);
+    } catch (error) {
+        console.error('❌ 검색어 저장 오류:', error);
+    }
+}
+
+// 최근 7일간 인기 검색어 가져오기
+async function loadPopularKeywords() {
+    try {
+        if (typeof firebase === 'undefined' || !firebase.firestore) {
+            console.warn('Firebase가 초기화되지 않았습니다.');
+            return [];
+        }
+        
+        const db = firebase.firestore();
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        // 최근 7일간의 검색 로그 가져오기
+        const snapshot = await db.collection('searchLogs')
+            .where('createdAt', '>=', sevenDaysAgo)
+            .get();
+        
+        // 검색어별 빈도 계산
+        const keywordCount = {};
+        snapshot.forEach(doc => {
+            const keyword = doc.data().keyword;
+            if (keyword) {
+                keywordCount[keyword] = (keywordCount[keyword] || 0) + 1;
+            }
+        });
+        
+        // 빈도순으로 정렬하여 상위 10개 추출
+        const sortedKeywords = Object.entries(keywordCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([text, count], index) => ({
+                rank: index + 1,
+                text: text,
+                count: count
+            }));
+        
+        console.log('✅ 인기 검색어 로드:', sortedKeywords.length, '개');
+        return sortedKeywords;
+        
+    } catch (error) {
+        console.error('❌ 인기 검색어 로드 오류:', error);
+        return [];
+    }
+}
+
 // 인기 검색어 토글
-function initSearchToggle() {
+async function initSearchToggle() {
     const keywordHeader = document.querySelector('.keyword-header');
     const keywordToggle = document.getElementById('keywordToggle');
     const popularKeywords = document.getElementById('popularKeywords');
     const currentKeyword = document.getElementById('currentKeyword');
+    
+    // 인기 검색어 로드
+    POPULAR_KEYWORDS = await loadPopularKeywords();
+    
+    // 인기 검색어 목록 업데이트
+    if (popularKeywords && POPULAR_KEYWORDS.length > 0) {
+        const keywordList = popularKeywords.querySelector('ul');
+        if (keywordList) {
+            keywordList.innerHTML = POPULAR_KEYWORDS.map(kw => 
+                `<li><span class="rank">${kw.rank}</span> ${kw.text}</li>`
+            ).join('');
+        }
+    }
     
     // 토글 버튼 클릭
     if (keywordHeader && keywordToggle) {
@@ -338,17 +408,17 @@ function initSearchToggle() {
     }
     
     // 검색어 클릭 시 검색
-    const keywordItems = document.querySelectorAll('.popular-keywords li');
-    keywordItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const text = item.textContent.replace(/^\d+\s*/, '').trim();
+    popularKeywords.addEventListener('click', (e) => {
+        const li = e.target.closest('li');
+        if (li) {
+            const text = li.textContent.replace(/^\d+\s*/, '').trim();
             performSearch(text);
-        });
+        }
     });
     
     // 외부 클릭 시 닫기
     document.addEventListener('click', (e) => {
-        if (!keywordHeader.contains(e.target) && !popularKeywords.contains(e.target)) {
+        if (keywordHeader && !keywordHeader.contains(e.target) && !popularKeywords.contains(e.target)) {
             popularKeywords.classList.remove('active');
             keywordToggle.classList.remove('active');
             if (!keywordRotationInterval) {
@@ -363,7 +433,10 @@ function initSearchToggle() {
 
 // 키워드 자동 슬라이드 시작
 function startKeywordRotation() {
+    if (POPULAR_KEYWORDS.length === 0) return;
+    
     stopKeywordRotation();
+    updateCurrentKeyword();
     keywordRotationInterval = setInterval(() => {
         currentKeywordIndex = (currentKeywordIndex + 1) % POPULAR_KEYWORDS.length;
         updateCurrentKeyword();
@@ -393,6 +466,8 @@ function updateCurrentKeyword() {
 // 검색 실행
 function performSearch(keyword) {
     console.log('검색:', keyword);
+    // 검색어 로그 저장
+    saveSearchLog(keyword);
     // 검색 결과 페이지로 이동
     window.location.href = `search-results.html?q=${encodeURIComponent(keyword)}`;
 }
@@ -404,6 +479,8 @@ function handleSearch(event) {
     const keyword = searchInput.value.trim();
     
     if (keyword) {
+        // 검색어 로그 저장
+        saveSearchLog(keyword);
         // 검색 결과 페이지로 이동
         window.location.href = `search-results.html?q=${encodeURIComponent(keyword)}`;
     }
