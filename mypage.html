@@ -52,33 +52,91 @@
     <!-- 마이페이지 컨테이너 -->
     <main class="mypage-container">
         <div class="container">
+            <!-- 상단 배너 -->
+            <div class="mypage-header">
+                <h2>마이페이지 ✨</h2>
+            </div>
+
+            <!-- 쇼핑지원금 안내 배너 -->
+            <div class="support-notice">
+                쇼핑지원금은 당일 입금 됩니다.
+            </div>
+
             <div class="mypage-wrapper">
-                <!-- 사이드바 -->
+                <!-- 왼쪽 사이드바 -->
                 <aside class="mypage-sidebar">
-                    <div class="user-info-card">
-                        <div class="user-avatar">
-                            <i class="fas fa-user-circle"></i>
+                    <!-- 사용자 정보 -->
+                    <div class="user-info-section">
+                        <div class="user-greeting">
+                            안녕하세요 ❤️ <strong id="userName">어린왕자</strong>님
                         </div>
-                        <h3 class="user-name" id="userName">사용자님</h3>
-                        <p class="user-id" id="userId">user_id</p>
+                        <button class="btn-info-edit">정보수정</button>
+                        <div class="user-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-envelope"></i>
+                                <span>쪽지</span>
+                                <strong>0</strong>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-bookmark"></i>
+                                <span>스크랩</span>
+                                <strong>0</strong>
+                            </div>
+                        </div>
                     </div>
 
+                    <!-- 쇼핑지원금 정보 -->
+                    <div class="support-info-section">
+                        <div class="support-row">
+                            <span>쇼핑지원금</span>
+                            <strong id="currentSupport">0원</strong>
+                        </div>
+                        <div class="support-row">
+                            <span>누적 쇼핑지원금</span>
+                            <strong id="totalSupport">0원</strong>
+                        </div>
+                    </div>
+
+                    <!-- 네비게이션 메뉴 -->
                     <nav class="mypage-nav">
-                        <div class="nav-section">
-                            <h4>쇼핑 정보</h4>
+                        <div class="nav-group">
+                            <h4>나의 쇼핑 정보</h4>
                             <ul>
-                                <li><a href="#" class="nav-item active" onclick="showSection('orders'); return false;"><i class="fas fa-shopping-bag"></i> 주문내역</a></li>
-                                <li><a href="#" class="nav-item" onclick="showSection('wishlist'); return false;"><i class="fas fa-heart"></i> 찜한상품</a></li>
-                                <li><a href="#" class="nav-item" onclick="showSection('coupons'); return false;"><i class="fas fa-ticket-alt"></i> 쿠폰</a></li>
-                                <li><a href="#" class="nav-item" onclick="showSection('points'); return false;"><i class="fas fa-coins"></i> 지원금내역</a></li>
+                                <li><a href="#" onclick="showSection('orders'); return false;">주문/배송조회 내역</a></li>
+                                <li><a href="#" onclick="showSection('wishlist'); return false;">위시/관심상품 내역</a></li>
+                                <li><a href="#" onclick="showSection('support'); return false;">쇼핑지원금 내역</a></li>
                             </ul>
                         </div>
-                        <div class="nav-section">
-                            <h4>회원 정보</h4>
+                        <div class="nav-group">
+                            <h4>혜택관리</h4>
                             <ul>
-                                <li><a href="#" class="nav-item" onclick="showSection('profile'); return false;"><i class="fas fa-user-edit"></i> 회원정보수정</a></li>
-                                <li><a href="#" class="nav-item" onclick="showSection('password'); return false;"><i class="fas fa-key"></i> 비밀번호변경</a></li>
-                                <li><a href="#" class="nav-item" onclick="showSection('withdraw'); return false;"><i class="fas fa-user-times"></i> 회원탈퇴</a></li>
+                                <li><a href="#" onclick="showSection('coupons'); return false;">주첨결과 내역</a></li>
+                                <li><a href="#" onclick="showSection('points'); return false;">소평지원금 내역</a></li>
+                            </ul>
+                        </div>
+                        <div class="nav-group">
+                            <h4>활동정보</h4>
+                            <ul>
+                                <li><a href="#" onclick="showSection('reviews'); return false;">나의 1:1문의</a></li>
+                                <li><a href="#" onclick="showSection('qna'); return false;">나의 상품후기</a></li>
+                                <li><a href="#" onclick="showSection('inquiry'); return false;">나의 상품문의</a></li>
+                            </ul>
+                        </div>
+                        <div class="nav-group">
+                            <h4>회원정보</h4>
+                            <ul>
+                                <li><a href="#" onclick="showSection('profile'); return false;">회원정보 수정</a></li>
+                                <li><a href="#" onclick="showSection('marketing'); return false;">마케팅 수신동의</a></li>
+                                <li><a href="#" onclick="showSection('address'); return false;">배송지 관리</a></li>
+                                <li><a href="#" onclick="showSection('password'); return false;">회원탈퇴</a></li>
+                            </ul>
+                        </div>
+                        <div class="nav-group">
+                            <h4>공지</h4>
+                            <ul>
+                                <li><a href="#" onclick="showSection('notice'); return false;">공지사항</a></li>
+                                <li><a href="#" onclick="showSection('events'); return false;">이벤트</a></li>
+                                <li><a href="#" onclick="showSection('faq'); return false;">자주묻는질문</a></li>
                             </ul>
                         </div>
                     </nav>
@@ -86,115 +144,50 @@
 
                 <!-- 메인 컨텐츠 -->
                 <div class="mypage-content">
-                    <!-- 주문내역 -->
-                    <section id="orders-section" class="content-section active">
-                        <h2 class="section-title">주문내역</h2>
-                        <div class="empty-state">
-                            <i class="fas fa-shopping-bag"></i>
-                            <p>주문 내역이 없습니다.</p>
+                    <!-- 주문/배송조회 -->
+                    <div class="content-section">
+                        <div class="section-title">
+                            <h3>주문/배송조회</h3>
+                            <a href="#" class="link-more">전체보기</a>
                         </div>
-                    </section>
-
-                    <!-- 찜한상품 -->
-                    <section id="wishlist-section" class="content-section">
-                        <h2 class="section-title">찜한상품</h2>
-                        <div class="empty-state">
-                            <i class="fas fa-heart"></i>
-                            <p>찜한 상품이 없습니다.</p>
+                        <div class="order-steps">
+                            <div class="step-item">
+                                <div class="step-number">0</div>
+                                <div class="step-name">주문</div>
+                            </div>
+                            <i class="fas fa-chevron-right step-arrow"></i>
+                            <div class="step-item">
+                                <div class="step-number">0</div>
+                                <div class="step-name">입금</div>
+                            </div>
+                            <i class="fas fa-chevron-right step-arrow"></i>
+                            <div class="step-item">
+                                <div class="step-number">0</div>
+                                <div class="step-name">준비</div>
+                            </div>
+                            <i class="fas fa-chevron-right step-arrow"></i>
+                            <div class="step-item">
+                                <div class="step-number">0</div>
+                                <div class="step-name">배송</div>
+                            </div>
+                            <i class="fas fa-chevron-right step-arrow"></i>
+                            <div class="step-item">
+                                <div class="step-number">0</div>
+                                <div class="step-name">완료</div>
+                            </div>
                         </div>
-                    </section>
+                    </div>
 
-                    <!-- 쿠폰 -->
-                    <section id="coupons-section" class="content-section">
-                        <h2 class="section-title">쿠폰</h2>
-                        <div class="empty-state">
-                            <i class="fas fa-ticket-alt"></i>
-                            <p>보유한 쿠폰이 없습니다.</p>
+                    <!-- 공지사항 -->
+                    <div class="content-section">
+                        <div class="section-title">
+                            <h3>공지사항</h3>
+                            <a href="#" class="link-more">전체보기</a>
                         </div>
-                    </section>
-
-                    <!-- 지원금내역 -->
-                    <section id="points-section" class="content-section">
-                        <h2 class="section-title">지원금내역</h2>
-                        <div class="empty-state">
-                            <i class="fas fa-coins"></i>
-                            <p>지원금 내역이 없습니다.</p>
+                        <div class="notice-empty">
+                            등록된 공지사항이 없습니다.
                         </div>
-                    </section>
-
-                    <!-- 회원정보수정 -->
-                    <section id="profile-section" class="content-section">
-                        <h2 class="section-title">회원정보수정</h2>
-                        <form class="profile-form" id="profileForm">
-                            <div class="form-group">
-                                <label>아이디</label>
-                                <input type="text" id="profileUserId" class="form-control" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label>이름</label>
-                                <input type="text" id="profileName" class="form-control" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label>이메일</label>
-                                <input type="email" id="profileEmail" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label>휴대폰번호</label>
-                                <input type="tel" id="profilePhone" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label>주소</label>
-                                <div class="address-group">
-                                    <input type="text" id="profilePostcode" class="form-control" placeholder="우편번호" readonly>
-                                    <button type="button" class="btn-address" onclick="searchAddress()">주소검색</button>
-                                </div>
-                                <input type="text" id="profileAddress" class="form-control" placeholder="주소" readonly>
-                                <input type="text" id="profileDetailAddress" class="form-control" placeholder="상세주소">
-                            </div>
-                            <div class="form-group">
-                                <label>계좌번호</label>
-                                <input type="text" id="profileAccount" class="form-control" placeholder="지원금 수령 계좌번호">
-                            </div>
-                            <button type="submit" class="btn-submit">정보수정</button>
-                        </form>
-                    </section>
-
-                    <!-- 비밀번호변경 -->
-                    <section id="password-section" class="content-section">
-                        <h2 class="section-title">비밀번호변경</h2>
-                        <form class="password-form" id="passwordForm">
-                            <div class="form-group">
-                                <label>현재 비밀번호</label>
-                                <input type="password" id="currentPassword" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label>새 비밀번호</label>
-                                <input type="password" id="newPassword" class="form-control" required>
-                                <p class="form-help">영문, 숫자, 특수문자 조합 8자 이상</p>
-                            </div>
-                            <div class="form-group">
-                                <label>새 비밀번호 확인</label>
-                                <input type="password" id="newPasswordConfirm" class="form-control" required>
-                                <p class="form-help error-message" id="passwordError" style="display:none;">비밀번호가 일치하지 않습니다.</p>
-                            </div>
-                            <button type="submit" class="btn-submit">비밀번호 변경</button>
-                        </form>
-                    </section>
-
-                    <!-- 회원탈퇴 -->
-                    <section id="withdraw-section" class="content-section">
-                        <h2 class="section-title">회원탈퇴</h2>
-                        <div class="withdraw-notice">
-                            <h3>회원탈퇴 안내</h3>
-                            <ul>
-                                <li>회원탈퇴 시 모든 회원정보가 삭제됩니다.</li>
-                                <li>탈퇴 후에는 회원정보를 복구할 수 없습니다.</li>
-                                <li>진행 중인 주문이 있는 경우 탈퇴가 제한될 수 있습니다.</li>
-                                <li>보유하신 쿠폰 및 지원금은 모두 소멸됩니다.</li>
-                            </ul>
-                        </div>
-                        <button type="button" class="btn-withdraw" onclick="withdrawMember()">회원탈퇴</button>
-                    </section>
+                    </div>
                 </div>
             </div>
         </div>
@@ -263,12 +256,15 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     
-    <!-- 다음 우편번호 API -->
-    <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+    <!-- Firebase 초기화 -->
+    <script src="js/firebase-init.js"></script>
     
-    <script src="js/script.js?v=23"></script>
-    <script src="js/mypage.js"></script>
+    <!-- 메인 스크립트 (로그인 상태 관리 포함) -->
+    <script src="js/script.js?v=24"></script>
+    
+    <!-- 마이페이지 스크립트 -->
+    <script src="js/mypage.js?v=2"></script>
 </body>
 </html>
-
