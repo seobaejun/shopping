@@ -2462,7 +2462,14 @@ window.addEventListener('load', () => {
 
 // 전역 함수 노출
 window.loadCategoriesForProduct = loadCategoriesForProduct;
+window.registerProduct = registerProduct;
+window.previewMainImage = previewMainImage;
+window.previewDetailImage = previewDetailImage;
+window.addDetailImageUpload = addDetailImageUpload;
+window.removeLastDetailImageUpload = removeLastDetailImageUpload;
+window.addDetailRow = addDetailRow;
+window.removeDetailRow = removeDetailRow;
+window.fileToBase64 = fileToBase64;
 
 // 초기화
 console.log('10쇼핑게임 관리자 페이지 로드 완료');
-

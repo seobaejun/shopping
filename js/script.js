@@ -472,7 +472,8 @@ function createProductCard(product, index, type) {
         `<span class="badge ${badge}">${badgeLabels[badge]}</span>`
     ).join('');
     
-    const productId = `${type}_${index}`;
+    // Firestore ID 사용
+    const productId = product.id;
 
     return `
         <div class="product-card">
@@ -741,15 +742,33 @@ async function loadProductsFromFirestore() {
         }
 
         const db = firebase.firestore();
-        const productsSnapshot = await db.collection('products')
-            .where('status', '==', 'sale')
-            .orderBy('createdAt', 'desc')
-            .get();
+        
+        // where와 orderBy를 함께 사용하면 인덱스가 필요하므로 분리
+        const productsSnapshot = await db.collection('products').get();
 
         if (productsSnapshot.empty) {
             console.log('Firestore에 상품이 없습니다. 기본 데이터를 사용합니다.');
             return;
         }
+        
+        // 클라이언트에서 필터링 및 정렬
+        const allProducts = [];
+        productsSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.status === 'sale') {
+                allProducts.push({
+                    id: doc.id,
+                    ...data
+                });
+            }
+        });
+        
+        // createdAt으로 정렬 (최신순)
+        allProducts.sort((a, b) => {
+            const aTime = a.createdAt?.toMillis() || 0;
+            const bTime = b.createdAt?.toMillis() || 0;
+            return bTime - aTime;
+        });
 
         // Firestore 데이터를 기존 형식으로 변환
         const firestoreProducts = {
@@ -760,10 +779,10 @@ async function loadProductsFromFirestore() {
             all: []
         };
 
-        productsSnapshot.forEach(doc => {
-            const product = doc.data();
+        allProducts.forEach(productDoc => {
+            const product = productDoc;
             const productItem = {
-                id: doc.id,
+                id: product.id,
                 title: product.name,
                 option: product.shortDesc || '',
                 support: `${(product.price * (product.supportRate || 5) / 100).toLocaleString()}원`,

@@ -1,206 +1,5 @@
 // 상품 목록 페이지 JavaScript
 
-// 상품 데이터 (실제로는 서버에서 가져올 데이터)
-const PRODUCTS_DATA = {
-    hit: [
-        {
-            id: '1763960055',
-            title: '제주도 노지 조생귤 5kg',
-            option: '중과 (S-M)',
-            support: '2,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/FFE082/333?text=제주+조생귤',
-            description: '제주도에서 직송하는 신선한 조생귤입니다. 달콤하고 과즙이 풍부합니다.'
-        },
-        {
-            id: '1761873848',
-            title: '이앤위즈 원홀 무전원 우드스피커',
-            option: '',
-            support: '2,500원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/8B7355/fff?text=우드스피커',
-            description: '전원 없이 사용 가능한 친환경 우드 스피커입니다.'
-        },
-        {
-            id: '1761726997',
-            title: '시치미쓱 프리미엄 데일리물티슈 100매 * 10팩',
-            option: '',
-            support: '3,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/E3F2FD/333?text=물티슈',
-            description: '부드럽고 두꺼운 프리미엄 물티슈 대용량 구성입니다.'
-        },
-        {
-            id: '1761203471',
-            title: '셀비엔 괄사 마사지 리프팅 앰플 스틱 15ml',
-            option: '',
-            support: '3,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/FFE5E5/333?text=괄사+앰플',
-            description: '집에서 간편하게 괄사 마사지를 즐길 수 있는 리프팅 앰플 스틱입니다.'
-        },
-        {
-            id: '1761202305',
-            title: '셀비엔 블래미쉬 크림 & 블랙스팟 패치 기미세트',
-            option: '',
-            support: '5,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/FFF3E0/333?text=기미+세트',
-            description: '기미와 잡티 관리를 위한 올인원 세트입니다.'
-        },
-        {
-            id: '1760950239',
-            title: '감홍사과 산지직송 고당도 문경 꿀사과 가정용 3kg',
-            option: '가정용 못난이 / 중과 10-13과',
-            support: '5,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/FFCDD2/333?text=꿀사과',
-            description: '산지에서 직송하는 달콤한 꿀사과입니다.'
-        },
-        {
-            id: '100001517',
-            title: '롯데 스퀘어 다이얼 에어프라이어 7L 민트',
-            option: '',
-            support: '10,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/B2DFDB/333?text=에어프라이어',
-            description: '대용량 7L 에어프라이어로 온 가족이 함께 즐기세요.'
-        },
-        {
-            id: '1000001487',
-            title: '정관장 홍삼보윤정 데일리스틱 10ml x 30포',
-            option: '',
-            support: '8,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/D7CCC8/333?text=홍삼',
-            description: '매일 간편하게 즐기는 프리미엄 홍삼 스틱입니다.'
-        }
-    ],
-    recommend: [
-        {
-            id: '1762142001',
-            title: '프리미엄 유기농 현미 5kg',
-            option: '',
-            support: '4,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/F5F5DC/333?text=유기농+현미',
-            description: '건강한 식단을 위한 유기농 현미입니다.'
-        },
-        {
-            id: '1762142002',
-            title: '천연 허브 비누 세트',
-            option: '3종 세트',
-            support: '2,500원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/E8F5E9/333?text=허브+비누',
-            description: '피부에 자극이 적은 천연 허브 비누 세트입니다.'
-        },
-        {
-            id: '1762142003',
-            title: '스테인레스 보온병 500ml',
-            option: '블랙/화이트',
-            support: '3,500원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/ECEFF1/333?text=보온병',
-            description: '24시간 보온 보냉이 가능한 프리미엄 보온병입니다.'
-        },
-        {
-            id: '1762142004',
-            title: '국산 김 선물세트',
-            option: '50g x 10봉',
-            support: '6,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/C8E6C9/333?text=김+세트',
-            description: '신선한 국산 김으로 만든 프리미엄 선물세트입니다.'
-        }
-    ],
-    new: [
-        {
-            id: '1763950001',
-            title: '2026 신상 무선 블루투스 이어폰',
-            option: '화이트/블랙',
-            support: '7,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/E1F5FE/333?text=블루투스+이어폰',
-            description: '최신 노이즈 캔슬링 기능이 탑재된 프리미엄 이어폰입니다.'
-        },
-        {
-            id: '1763950002',
-            title: 'LED 무드등 스피커',
-            option: '',
-            support: '5,500원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/FFF9C4/333?text=무드등',
-            description: '조명과 스피커가 결합된 감성 인테리어 아이템입니다.'
-        },
-        {
-            id: '1763950003',
-            title: '프리미엄 차량용 방향제',
-            option: '3종',
-            support: '2,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/E0F2F1/333?text=방향제',
-            description: '차량 내부를 상쾌하게 유지하는 고급 방향제입니다.'
-        },
-        {
-            id: '1763950004',
-            title: '스마트 체중계',
-            option: '',
-            support: '8,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/F3E5F5/333?text=체중계',
-            description: '앱과 연동되는 스마트 체중계로 건강을 관리하세요.'
-        }
-    ],
-    popular: [
-        {
-            id: '1763453356',
-            title: '더담은 일키로 오리윙 1kg',
-            option: '',
-            support: '2,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/FFE0B2/333?text=오리윙',
-            description: '바삭하고 맛있는 오리윙 대용량 구성입니다.'
-        },
-        {
-            id: '1763453022',
-            title: '더담은 일키로 고구마치킨 1kg',
-            option: '',
-            support: '2,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/FFD54F/333?text=고구마치킨',
-            description: '달콤한 고구마와 바삭한 치킨의 환상 조합입니다.'
-        },
-        {
-            id: '1762849137',
-            title: '1000피스 직소퍼즐 모네의 정원',
-            option: '',
-            support: '3,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/C5E1A5/333?text=퍼즐',
-            description: '집중력 향상에 좋은 프리미엄 직소퍼즐입니다.'
-        },
-        {
-            id: '1761202305_2',
-            title: '셀비엔 블래미쉬 크림 & 블랙스팟 패치 기미세트',
-            option: '',
-            support: '5,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/FFF3E0/333?text=기미+세트',
-            description: '기미와 잡티 관리를 위한 올인원 세트입니다.'
-        },
-        {
-            id: '1763000001',
-            title: '국산 꿀 선물세트',
-            option: '1kg x 2병',
-            support: '10,000원',
-            rating: 0,
-            image: 'https://via.placeholder.com/300x300/FFF8E1/333?text=꿀+세트',
-            description: '100% 국산 순수 꿀로 만든 프리미엄 선물세트입니다.'
-        }
-    ]
-};
-
 // 페이지 설정
 const PAGE_CONFIG = {
     hit: {
@@ -263,7 +62,6 @@ function initPage() {
     currentType = getUrlParameter('type');
     
     console.log('Current Type:', currentType);
-    console.log('Available Products:', PRODUCTS_DATA[currentType]);
     
     // 페이지 정보 업데이트
     updatePageInfo();
@@ -302,18 +100,34 @@ async function loadProducts() {
         // Firebase가 초기화될 때까지 대기
         if (typeof firebase !== 'undefined' && firebase.firestore) {
             const db = firebase.firestore();
-            const productsSnapshot = await db.collection('products')
-                .where('status', '==', 'sale')
-                .orderBy('createdAt', 'desc')
-                .get();
+            
+            // where와 orderBy를 함께 사용하면 인덱스가 필요하므로 분리
+            const productsSnapshot = await db.collection('products').get();
 
             if (!productsSnapshot.empty) {
+                // 클라이언트에서 필터링 및 정렬
+                const allProducts = [];
+                productsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.status === 'sale') {
+                        allProducts.push({
+                            id: doc.id,
+                            ...data
+                        });
+                    }
+                });
+                
+                // createdAt으로 정렬 (최신순)
+                allProducts.sort((a, b) => {
+                    const aTime = a.createdAt?.toMillis() || 0;
+                    const bTime = b.createdAt?.toMillis() || 0;
+                    return bTime - aTime;
+                });
+                
                 // Firestore 데이터를 기존 형식으로 변환
                 const firestoreProducts = [];
                 
-                productsSnapshot.forEach(doc => {
-                    const product = doc.data();
-                    
+                allProducts.forEach(product => {
                     // 분류 배열 처리
                     const displayCategories = Array.isArray(product.displayCategory) 
                         ? product.displayCategory 
@@ -322,7 +136,7 @@ async function loadProducts() {
                     // 현재 페이지 타입과 일치하는 상품만 필터링
                     if (displayCategories.includes('all') || displayCategories.includes(currentType)) {
                         firestoreProducts.push({
-                            id: doc.id,
+                            id: product.id,
                             title: product.name,
                             option: product.shortDesc || '',
                             support: `${(product.price * (product.supportRate || 5) / 100).toLocaleString()}원`,
@@ -455,7 +269,8 @@ function createProductCard(product, index) {
         popular: '인기'
     };
     
-    const productId = `${currentType}_${index}`;
+    // Firestore ID 사용
+    const productId = product.id;
     
     return `
         <div class="product-card">

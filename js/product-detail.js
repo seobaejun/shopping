@@ -1,88 +1,68 @@
 // 상품 상세 페이지 전용 JavaScript
 
-// 모든 상품 데이터 (script.js와 동일)
-const allProductsData = {
-    hit: [
-        { title: '제주도 노지 조생귤 5kg', option: '중과 (S-M)', price: 28000, image: 'https://placehold.co/600x600/FFA726/FFF?text=제주귤&font=nanum-gothic' },
-        { title: '이앤위즈 원홀 무전원 우드스피커', option: '', price: 35000, image: 'https://placehold.co/600x600/78909C/FFF?text=스피커&font=nanum-gothic' },
-        { title: '시치미쓱 프리미엄 데일리물티슈 100매 * 10팩', option: '', price: 18000, image: 'https://placehold.co/600x600/81C784/FFF?text=물티슈&font=nanum-gothic' },
-        { title: '셀비엔 괄사 마사지 리프팅 앰플 스틱 15ml', option: '', price: 25000, image: 'https://placehold.co/600x600/FF8A80/FFF?text=앰플&font=nanum-gothic' },
-        { title: '셀비엔 블래미쉬 크림 & 블랙스팟 패치 기미세트', option: '', price: 42000, image: 'https://placehold.co/600x600/FFB74D/FFF?text=크림세트&font=nanum-gothic' },
-        { title: '감홍사과 산지직송 고당도 문경 꿀사과 가정용 3kg', option: '가정용 못난이', price: 32000, image: 'https://placehold.co/600x600/EF5350/FFF?text=사과&font=nanum-gothic' },
-        { title: '롯데 스퀘어 다이얼 에어프라이어 7L 민트', option: '', price: 89000, image: 'https://placehold.co/600x600/4FC3F7/FFF?text=에어프라이어&font=nanum-gothic' },
-        { title: '정관장 홍삼보윤정 데일리스틱 10ml x 30포', option: '', price: 65000, image: 'https://placehold.co/600x600/A1887F/FFF?text=홍삼&font=nanum-gothic' }
-    ],
-    recommend: [
-        { title: '페티피 드라이룸 강아지집 자동온도조절 난방 살균', option: '', price: 150000, image: 'https://placehold.co/600x600/BA68C8/FFF?text=강아지집&font=nanum-gothic' },
-        { title: '닥터포밸런스 견활력 애견영양간식', option: '30개입', price: 25000, image: 'https://placehold.co/600x600/FFD54F/333?text=영양간식&font=nanum-gothic' },
-        { title: '꿈꾸는 미니가습기 화이트 핑크 랜덤', option: '', price: 15000, image: 'https://placehold.co/600x600/64B5F6/FFF?text=가습기&font=nanum-gothic' },
-        { title: '극세사 양털 입는 무릎담요 블루', option: '', price: 12000, image: 'https://placehold.co/600x600/4DB6AC/FFF?text=담요&font=nanum-gothic' },
-        { title: '클립 자바라 스탠드 화이트(전구색)', option: '', price: 18000, image: 'https://placehold.co/600x600/FFB300/FFF?text=스탠드&font=nanum-gothic' },
-        { title: '닥터유 단백질바 50gx12ea', option: '', price: 24000, image: 'https://placehold.co/600x600/E91E63/FFF?text=단백질바&font=nanum-gothic' },
-        { title: '키밍 스카치 스포츠 암밴드 그레이', option: '', price: 9000, image: 'https://placehold.co/600x600/9C27B0/FFF?text=암밴드&font=nanum-gothic' },
-        { title: '넛츠앤 오너 31호 525베리 데일리 하루너츠 선물세트', option: '', price: 35000, image: 'https://placehold.co/600x600/FF5722/FFF?text=선물세트&font=nanum-gothic' }
-    ],
-    new: [
-        { title: '홈스타일 미니멀 고밀도 러그 카펫 140x200', option: '', price: 45000, image: 'https://placehold.co/600x600/8BC34A/FFF?text=러그&font=nanum-gothic' },
-        { title: '쿠션 목베개 인형 옐로우고양이', option: '', price: 8000, image: 'https://placehold.co/600x600/CDDC39/333?text=목베개&font=nanum-gothic' },
-        { title: '자이리톨 대추방울토마토 1kg', option: '', price: 12000, image: 'https://placehold.co/600x600/FF5252/FFF?text=토마토&font=nanum-gothic' },
-        { title: '네추럴라이즈 간건강 활력 밀크씨슬 800mg x 180정', option: '', price: 28000, image: 'https://placehold.co/600x600/4CAF50/FFF?text=밀크씨슬&font=nanum-gothic' },
-        { title: '네추럴라이즈 비타민C & 아연 꾸미 150g', option: '', price: 22000, image: 'https://placehold.co/600x600/FFC107/333?text=비타민C&font=nanum-gothic' },
-        { title: '네추럴라이즈 칼슘 & 비타민D 꾸미 150g', option: '', price: 22000, image: 'https://placehold.co/600x600/FF9800/FFF?text=칼슘&font=nanum-gothic' },
-        { title: '네추럴라이즈 멀티비타민 꾸미 150g', option: '', price: 22000, image: 'https://placehold.co/600x600/FF6F00/FFF?text=멀티비타민&font=nanum-gothic' },
-        { title: '뮤토 소프트 자카드 블랭킷', option: '', price: 38000, image: 'https://placehold.co/600x600/42A5F5/FFF?text=블랭킷&font=nanum-gothic' },
-        { title: '[타가] 아토 크림밤 50ml', option: '', price: 15000, image: 'https://placehold.co/600x600/26C6DA/FFF?text=크림밤&font=nanum-gothic' }
-    ],
-    popular: [
-        { title: '더담은 일키로 오리윙 1kg', option: '', price: 22000, image: 'https://placehold.co/600x600/AB47BC/FFF?text=오리윙&font=nanum-gothic' },
-        { title: '더담은 일키로 고구마치킨 1kg', option: '', price: 22000, image: 'https://placehold.co/600x600/8E24AA/FFF?text=고구마치킨&font=nanum-gothic' },
-        { title: '1000피스 직소퍼즐 모네의 정원', option: '', price: 15000, image: 'https://placehold.co/600x600/7E57C2/FFF?text=퍼즐&font=nanum-gothic' },
-        { title: '셀비엔 블래미쉬 크림 & 블랙스팟 패치 기미세트', option: '', price: 42000, image: 'https://placehold.co/600x600/FFB74D/FFF?text=크림세트&font=nanum-gothic' },
-        { title: '독스플레이 펫TV 펫캠', option: '', price: 280000, image: 'https://placehold.co/600x600/5C6BC0/FFF?text=펫캠&font=nanum-gothic' },
-        { title: '정관장 홍삼본정 데일리스틱 10ml x 30포', option: '', price: 68000, image: 'https://placehold.co/600x600/8D6E63/FFF?text=홍삼본정&font=nanum-gothic' },
-        { title: '포천이동갈비 1.1kg 꽃갈비 (6대)', option: '', price: 45000, image: 'https://placehold.co/600x600/D32F2F/FFF?text=갈비&font=nanum-gothic' },
-        { title: '과일 큐브 치즈 8가지맛 24구 80g x 2ea', option: '', price: 18000, image: 'https://placehold.co/600x600/FDD835/333?text=치즈&font=nanum-gothic' }
-    ]
-};
-
-// URL에서 상품 ID 가져오기
-function getProductFromUrl() {
+// URL에서 상품 ID 가져오기 및 Firestore에서 로드
+async function getProductFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
     const productId = urlParams.get('id');
     
-    if (productId) {
-        const [type, index] = productId.split('_');
-        const productList = allProductsData[type];
-        
-        if (productList && productList[index]) {
-            const product = productList[index];
-            return {
-                id: productId,
-                name: product.title,
-                option: product.option,
-                price: product.price,
-                image: product.image
-            };
+    console.log('📌 URL 상품 ID:', productId);
+    
+    if (productId && typeof firebase !== 'undefined' && firebase.firestore) {
+        try {
+            const db = firebase.firestore();
+            const doc = await db.collection('products').doc(productId).get();
+            
+            if (doc.exists) {
+                const product = doc.data();
+                console.log('✅ Firestore에서 상품 로드:', product);
+                
+                return {
+                    id: doc.id,
+                    name: product.name,
+                    option: product.shortDesc || '',
+                    price: product.price || 0,
+                    originalPrice: product.originalPrice || 0,
+                    image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/600x600/E0E0E0/999?text=No+Image',
+                    detailImages: product.detailImageUrls || [],
+                    description: product.description || '',
+                    details: product.details || [],
+                    category: product.category || '',
+                    brand: product.brand || '',
+                    stock: product.stock || 0,
+                    supportRate: product.supportRate || 5
+                };
+            } else {
+                console.warn('⚠️ Firestore에 해당 상품이 없습니다:', productId);
+            }
+        } catch (error) {
+            console.error('❌ Firestore에서 상품 로드 오류:', error);
         }
     }
     
     // 기본값 (첫 번째 상품)
     return {
-        id: 'hit_0',
-        name: '제주도 노지 조생귤 5kg',
-        option: '중과 (S-M)',
-        price: 28000,
-        image: 'https://placehold.co/600x600/FFA726/FFF?text=제주귤+5kg&font=nanum-gothic'
+        id: 'default',
+        name: '상품을 불러올 수 없습니다',
+        option: '',
+        price: 0,
+        originalPrice: 0,
+        image: 'https://placehold.co/600x600/E0E0E0/999?text=No+Product',
+        detailImages: [],
+        description: '',
+        details: [],
+        category: '',
+        brand: '',
+        stock: 0,
+        supportRate: 5
     };
 }
 
-// 상품 정보
-const PRODUCT_INFO = getProductFromUrl();
+// 상품 정보 (비동기로 로드)
+let PRODUCT_INFO = null;
 
 // DOM 요소
 const productDetailElements = {
     mainImage: document.getElementById('mainImage'),
-    thumbnails: document.querySelectorAll('.thumbnail-images img'),
     productOption: document.getElementById('productOption'),
     selectedOptions: document.getElementById('selectedOptions'),
     totalPrice: document.getElementById('totalPrice'),
@@ -90,21 +70,15 @@ const productDetailElements = {
     continueBtn: document.getElementById('continueBtn'),
     goCartBtn: document.getElementById('goCartBtn'),
     tabBtns: document.querySelectorAll('.tab-btn'),
-    tabContents: document.querySelectorAll('.tab-content')
+    tabContents: document.querySelectorAll('.tab-content'),
+    categoryTag: document.getElementById('categoryTag'),
+    supportAmount: document.getElementById('supportAmount'),
+    productInfoTable: document.getElementById('productInfoTable')
 };
 
-// 썸네일 이미지 클릭 이벤트
+// 썸네일 이미지 클릭 이벤트 (제거됨 - 더이상 썸네일 없음)
 function initThumbnailClick() {
-    productDetailElements.thumbnails.forEach((thumbnail, index) => {
-        thumbnail.addEventListener('click', () => {
-            // 활성 상태 변경
-            productDetailElements.thumbnails.forEach(t => t.classList.remove('active'));
-            thumbnail.classList.add('active');
-            
-            // 메인 이미지 변경
-            productDetailElements.mainImage.src = thumbnail.src.replace('100x100', '600x600');
-        });
-    });
+    // 썸네일 기능 제거
 }
 
 // 옵션 선택
@@ -586,6 +560,11 @@ function addToTodayViewed(product) {
 
 // 페이지 정보 업데이트
 function updatePageInfo() {
+    if (!PRODUCT_INFO) {
+        console.error('❌ PRODUCT_INFO가 없습니다!');
+        return;
+    }
+    
     console.log('🔄 상품 정보 업데이트:', PRODUCT_INFO);
     
     // 상품명 업데이트 (제목)
@@ -598,14 +577,34 @@ function updatePageInfo() {
     // 부제목(옵션) 업데이트
     const productSubtitle = document.getElementById('productSubtitle');
     if (productSubtitle) {
-        productSubtitle.textContent = PRODUCT_INFO.option || '단일 상품';
+        productSubtitle.textContent = PRODUCT_INFO.option || PRODUCT_INFO.description || '';
         console.log('✅ 부제목 업데이트:', PRODUCT_INFO.option);
+    }
+    
+    // 카테고리 태그 업데이트
+    const categoryTag = productDetailElements.categoryTag;
+    if (categoryTag) {
+        categoryTag.innerHTML = `<i class="fas fa-tag"></i> ${PRODUCT_INFO.category || '카테고리'}`;
+        console.log('✅ 카테고리 업데이트:', PRODUCT_INFO.category);
+    }
+    
+    // 쇼핑지원금 업데이트
+    const supportAmount = productDetailElements.supportAmount;
+    if (supportAmount) {
+        const support = Math.floor(PRODUCT_INFO.price * (PRODUCT_INFO.supportRate / 100));
+        supportAmount.textContent = support.toLocaleString() + '원';
+        console.log('✅ 지원금 업데이트:', support);
     }
     
     // 브레드크럼 업데이트
     const breadcrumbProduct = document.querySelector('.breadcrumb li:last-child');
     if (breadcrumbProduct) {
         breadcrumbProduct.textContent = PRODUCT_INFO.name;
+    }
+    
+    const breadcrumbCategory = document.querySelector('.breadcrumb li:nth-child(3) a');
+    if (breadcrumbCategory) {
+        breadcrumbCategory.textContent = PRODUCT_INFO.category || '카테고리';
     }
     
     // 메인 이미지 업데이트
@@ -616,20 +615,30 @@ function updatePageInfo() {
         console.log('✅ 메인 이미지 업데이트:', PRODUCT_INFO.image);
     }
     
-    // 썸네일 이미지 업데이트
-    const thumbnails = productDetailElements.thumbnails;
-    if (thumbnails.length > 0) {
-        const thumbnailImage = PRODUCT_INFO.image.replace('600x600', '100x100');
+    // 상품 정보 고시 테이블 업데이트
+    const productInfoTable = productDetailElements.productInfoTable;
+    if (productInfoTable && PRODUCT_INFO.details && PRODUCT_INFO.details.length > 0) {
+        const tableHTML = PRODUCT_INFO.details.map(detail => `
+            <tr>
+                <th>${detail.title}</th>
+                <td>${detail.content}</td>
+            </tr>
+        `).join('');
         
-        thumbnails[0].src = thumbnailImage;
-        thumbnails[0].classList.add('active');
-        
-        // 나머지 썸네일도 같은 이미지로 (다른 뷰 시뮬레이션)
-        for (let i = 1; i < thumbnails.length; i++) {
-            thumbnails[i].src = thumbnailImage;
-        }
-        
-        console.log('✅ 썸네일 업데이트 완료');
+        productInfoTable.innerHTML = tableHTML;
+        console.log('✅ 상품 정보 고시 업데이트 완료');
+    } else {
+        // 기본 정보 표시
+        productInfoTable.innerHTML = `
+            <tr>
+                <th>브랜드</th>
+                <td>${PRODUCT_INFO.brand || '상세페이지 참조'}</td>
+            </tr>
+            <tr>
+                <th>카테고리</th>
+                <td>${PRODUCT_INFO.category || '-'}</td>
+            </tr>
+        `;
     }
     
     // 옵션 선택 박스 업데이트
@@ -640,29 +649,170 @@ function updatePageInfo() {
             : PRODUCT_INFO.name;
         const priceText = PRODUCT_INFO.price.toLocaleString() + '원';
         
-        // 두 번째 옵션(실제 상품) 업데이트
-        if (optionSelect.children.length > 1) {
-            optionSelect.children[1].textContent = `${optionText} - ${priceText}`;
-            optionSelect.children[1].value = optionText;
-        } else {
-            // 옵션이 없으면 추가
-            const option = document.createElement('option');
-            option.value = optionText;
-            option.textContent = `${optionText} - ${priceText}`;
-            optionSelect.appendChild(option);
-        }
+        // 기존 옵션 제거
+        optionSelect.innerHTML = '<option value="">옵션을 선택해주세요</option>';
+        
+        // 새 옵션 추가
+        const option = document.createElement('option');
+        option.value = optionText;
+        option.textContent = `${optionText} - ${priceText}`;
+        optionSelect.appendChild(option);
         
         console.log('✅ 옵션 선택 박스 업데이트');
+    }
+    
+    // 상세 설명 이미지 업데이트
+    const detailContent = document.querySelector('#detail .product-description');
+    if (detailContent && PRODUCT_INFO.detailImages && PRODUCT_INFO.detailImages.length > 0) {
+        const detailHTML = PRODUCT_INFO.detailImages.map(imageUrl => `
+            <div class="detail-image">
+                <img src="${imageUrl}" alt="상세 이미지" style="width: 100%; height: auto;">
+            </div>
+        `).join('');
+        
+        detailContent.innerHTML = detailHTML;
+        console.log('✅ 상세 이미지 업데이트 완료:', PRODUCT_INFO.detailImages.length, '개');
+    } else if (detailContent) {
+        detailContent.innerHTML = '<p>상세 이미지가 없습니다.</p>';
+    }
+    
+    // 상세정보 탭의 상품 정보 고시 테이블 업데이트
+    const productSpecTable = document.getElementById('productSpecTable');
+    if (productSpecTable && PRODUCT_INFO.details && PRODUCT_INFO.details.length > 0) {
+        const specTableHTML = PRODUCT_INFO.details.map(detail => `
+            <tr>
+                <th>${detail.title}</th>
+                <td>${detail.content}</td>
+            </tr>
+        `).join('');
+        
+        productSpecTable.innerHTML = specTableHTML;
+        console.log('✅ 상세정보 탭 - 상품 정보 고시 업데이트 완료');
+    } else if (productSpecTable) {
+        // 기본 정보 표시
+        productSpecTable.innerHTML = `
+            <tr>
+                <th>브랜드</th>
+                <td>${PRODUCT_INFO.brand || '상품페이지 참고'}</td>
+            </tr>
+            <tr>
+                <th>카테고리</th>
+                <td>${PRODUCT_INFO.category || '-'}</td>
+            </tr>
+        `;
     }
     
     // 페이지 제목 업데이트
     document.title = PRODUCT_INFO.name + ' - 10쇼핑게임';
     
     console.log('✅ 페이지 정보 업데이트 완료!');
+    
+    // 관련 상품 로드
+    loadRelatedProducts();
+}
+
+// 관련 상품 로드
+async function loadRelatedProducts() {
+    if (!PRODUCT_INFO || !PRODUCT_INFO.category) {
+        console.log('⚠️ 카테고리 정보가 없어 관련 상품을 로드할 수 없습니다.');
+        return;
+    }
+    
+    try {
+        const db = firebase.firestore();
+        
+        // 같은 카테고리의 다른 상품들 가져오기
+        const productsSnapshot = await db.collection('products')
+            .where('category', '==', PRODUCT_INFO.category)
+            .where('status', '==', 'sale')
+            .limit(8)
+            .get();
+        
+        const relatedProducts = [];
+        productsSnapshot.forEach(doc => {
+            // 현재 상품은 제외
+            if (doc.id !== PRODUCT_INFO.id) {
+                const product = doc.data();
+                relatedProducts.push({
+                    id: doc.id,
+                    name: product.name,
+                    price: product.price,
+                    image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                    supportRate: product.supportRate || 5
+                });
+            }
+        });
+        
+        console.log('✅ 관련 상품 로드:', relatedProducts.length, '개');
+        
+        // 관련 상품 제목 업데이트
+        const relatedTitle = document.getElementById('relatedProductsTitle');
+        if (relatedTitle) {
+            relatedTitle.textContent = `${PRODUCT_INFO.name} 상품의 관련상품이에요`;
+        }
+        
+        // 관련 상품 렌더링
+        const relatedGrid = document.getElementById('relatedProductsGrid');
+        if (relatedGrid) {
+            if (relatedProducts.length === 0) {
+                relatedGrid.innerHTML = `
+                    <div class="empty-related">
+                        <i class="fas fa-box-open"></i>
+                        <h3>관련 상품이 없습니다.</h3>
+                        <p>현재 이용 가능한 관련 상품이 없습니다.</p>
+                    </div>
+                `;
+            } else {
+                const html = relatedProducts.map(product => {
+                    const support = Math.floor(product.price * (product.supportRate / 100));
+                    return `
+                        <div class="product-card">
+                            <a href="product-detail.html?id=${product.id}" class="product-link">
+                                <div class="product-image">
+                                    <img src="${product.image}" alt="${product.name}">
+                                </div>
+                                <div class="product-info">
+                                    <h3 class="product-title">${product.name}</h3>
+                                    <div class="product-support">쇼핑지원금 ${support.toLocaleString()}원</div>
+                                </div>
+                            </a>
+                        </div>
+                    `;
+                }).join('');
+                
+                relatedGrid.innerHTML = html;
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ 관련 상품 로드 오류:', error);
+    }
 }
 
 // 초기화
-function initProductDetail() {
+async function initProductDetail() {
+    console.log('🚀 상품 상세 페이지 초기화 시작');
+    
+    // Firebase가 로드될 때까지 대기
+    if (typeof firebase === 'undefined') {
+        console.log('⏳ Firebase SDK 로딩 대기...');
+        await new Promise(resolve => {
+            const checkFirebase = setInterval(() => {
+                if (typeof firebase !== 'undefined' && firebase.firestore) {
+                    clearInterval(checkFirebase);
+                    resolve();
+                }
+            }, 100);
+        });
+    }
+    
+    console.log('✅ Firebase SDK 로드 완료');
+    
+    // 상품 정보 로드
+    PRODUCT_INFO = await getProductFromUrl();
+    console.log('📦 로드된 상품 정보:', PRODUCT_INFO);
+    
+    // 페이지 업데이트
     updatePageInfo();
     initThumbnailClick();
     initOptionSelect();
@@ -677,6 +827,8 @@ function initProductDetail() {
     initMoreDescription();
     initHomeButton();
     initTodayViewedDetail();
+    
+    console.log('✅ 상품 상세 페이지 초기화 완료');
 }
 
 // DOM 로드 완료 시 실행
@@ -685,4 +837,3 @@ if (document.readyState === 'loading') {
 } else {
     initProductDetail();
 }
-
