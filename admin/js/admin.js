@@ -1628,22 +1628,61 @@ function renderWaitingList(productId) {
     // 당첨자가 받을 표기 지원금 합계 계산
     const participants = waitingData.slice(0, groupSize);
     const winnersSupport = participants.slice(0, winnerCount).reduce((sum, p) => sum + (p.productSupport || 0), 0);
-    // 미선정자 총 구매금 계산
-    const losersTotal = participants.slice(winnerCount).reduce((sum, p) => sum + (p.amount || 0), 0);
+    // 미선정자 수 계산
+    const losersCount = Math.max(0, participants.length - winnerCount);
     
-    console.log('🔍 winnersSupport:', winnersSupport);
-    console.log('🔍 losersTotal:', losersTotal);
+    console.log('🔍 지원금 계산 정보:');
+    console.log('  - 대기자 수:', waitingData.length);
+    console.log('  - 그룹 크기:', groupSize);
+    console.log('  - 당첨자 수:', winnerCount);
+    console.log('  - 참가자 수:', participants.length);
+    console.log('  - 당첨자 지원금 합계:', winnersSupport);
+    console.log('  - 미선정자 수:', losersCount);
+    
+    // 실제 추첨 결과가 있으면 사용 (확정된 지원금)
+    const hasCurrentResult = currentLotteryLosers && currentLotteryLosers.length > 0 && selectedProductId === productId;
     
     const htmlContent = waitingData.map((person, index) => {
         let displaySupport = 0;
         
-        // 미선정자 예상 지원금 계산
-        if (waitingData.length >= groupSize && index < groupSize && losersTotal > 0) {
-            displaySupport = (winnersSupport / losersTotal) * (person.amount || 0);
-            displaySupport = Math.floor(displaySupport / 10) * 10;
+        // 1순위: 현재 추첨 결과에서 calculatedSupport 사용
+        if (hasCurrentResult) {
+            const actualLoser = currentLotteryLosers.find(l => (l.id === person.id || (l.name === person.name && l.phone === person.phone)));
+            if (actualLoser && actualLoser.calculatedSupport !== undefined && !isNaN(actualLoser.calculatedSupport) && actualLoser.calculatedSupport !== null) {
+                displaySupport = actualLoser.calculatedSupport;
+                console.log(`✅ ${person.name}: 현재 추첨 결과 사용 (${displaySupport}원)`);
+            }
         }
         
-        console.log(`${person.name}: displaySupport = ${displaySupport}원`);
+        // 2순위: 확정 결과에서 support 사용 (이미 확정된 경우)
+        if (displaySupport === 0) {
+            const confirmedResult = LOTTERY_CONFIRMED_RESULTS.find(r => 
+                r.result === 'loser' && 
+                (r.name === person.name && r.phone === person.phone) &&
+                r.productId === productId
+            );
+            if (confirmedResult && confirmedResult.support !== undefined && !isNaN(confirmedResult.support) && confirmedResult.support !== null) {
+                displaySupport = confirmedResult.support;
+                console.log(`✅ ${person.name}: 확정 결과 사용 (${displaySupport}원)`);
+            }
+        }
+        
+        // 3순위: 예상 지원금 계산 (추첨 전 또는 확정되지 않은 경우)
+        if (displaySupport === 0) {
+            // 미선정자 예상 지원금 계산 (균등 분배)
+            // 당첨자는 index < winnerCount, 미선정자는 winnerCount <= index < groupSize
+            // 대기자 수가 그룹 크기보다 작아도 참가자 범위 내에서는 계산 가능
+            const isParticipant = index < Math.min(waitingData.length, groupSize);
+            const isLoser = index >= winnerCount;
+            
+            if (isParticipant && isLoser && losersCount > 0) {
+                displaySupport = winnersSupport / losersCount;
+                displaySupport = Math.floor(displaySupport / 10) * 10;
+                console.log(`${person.name}: 예상 지원금 계산 (${displaySupport}원, ${winnersSupport}원 ÷ ${losersCount}명)`);
+            }
+        }
+        
+        console.log(`${person.name} (index: ${index}, amount: ${person.amount}): displaySupport = ${displaySupport}원`);
         
         return `
         <tr>
@@ -1713,23 +1752,23 @@ function executeLottery() {
     // 지원금 계산 (먼저 계산)
     // 당첨자의 상품 표기 지원금 합계 (productSupport 사용)
     const winnersSupport = winners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
-    const losersTotal = losers.reduce((sum, l) => sum + (l.amount || 0), 0);
+    const losersCount = losers.length;
     
     console.log('🔵 지원금 계산 시작:');
     console.log('  - 당첨자 표기 지원금 합계:', winnersSupport);
-    console.log('  - 미선정자 총 구매금:', losersTotal);
+    console.log('  - 미선정자 수:', losersCount);
     
     // 지원금 계산 및 새로운 객체로 생성 (참조 문제 완전 해결)
+    // 공식: 당첨자 지원금 합계 / 미선정자 수 (균등 분배)
     losers = losers.map((loser, index) => {
-        // 공식: (당첨자 지원금 합계 / 미선정자 총 구매금) × 나의 구매금
         let supportAmount = 0;
-        if (losersTotal > 0) {
-            supportAmount = (winnersSupport / losersTotal) * (loser.amount || 0);
+        if (losersCount > 0) {
+            supportAmount = winnersSupport / losersCount;
         }
         // 10원 단위 절삭
         const calculatedSupport = Math.floor(supportAmount / 10) * 10;
         
-        console.log(`  - ${loser.name}: ${loser.amount}원 → 지원금 ${calculatedSupport}원`);
+        console.log(`  - ${loser.name}: 지원금 ${calculatedSupport}원 (${winnersSupport}원 ÷ ${losersCount}명)`);
         
         // 새로운 객체 반환 (calculatedSupport 포함)
         return {
@@ -1821,14 +1860,14 @@ function showLotteryResult(winners, losers, totalCount) {
             supportAmount = l.calculatedSupport;
             console.log(`✅ ${l.name}: calculatedSupport 사용 (${supportAmount}원)`);
         } else {
-            // calculatedSupport가 없으면 계산 (productSupport 사용)
+            // calculatedSupport가 없으면 재계산 (균등 분배)
             console.warn(`⚠️ ${l.name}: calculatedSupport가 없어서 재계산합니다.`);
             const winnersSupport = displayWinners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
-            const losersTotal = displayLosers.reduce((sum, lo) => sum + (lo.amount || 0), 0);
-            if (losersTotal > 0 && l.amount) {
-                supportAmount = (winnersSupport / losersTotal) * l.amount;
+            const losersCount = displayLosers.length;
+            if (losersCount > 0) {
+                supportAmount = winnersSupport / losersCount;
                 supportAmount = Math.floor(supportAmount / 10) * 10;
-                console.log(`✅ ${l.name}: 재계산 완료 (${supportAmount}원)`);
+                console.log(`✅ ${l.name}: 재계산 완료 (${supportAmount}원, ${winnersSupport}원 ÷ ${losersCount}명)`);
             }
         }
         
@@ -1849,11 +1888,11 @@ function showLotteryResult(winners, losers, totalCount) {
         if (l.calculatedSupport !== undefined && !isNaN(l.calculatedSupport) && l.calculatedSupport !== null) {
             support = l.calculatedSupport;
         } else {
-            // calculatedSupport가 없으면 재계산 (productSupport 사용)
+            // calculatedSupport가 없으면 재계산 (균등 분배)
             const winnersSupport = displayWinners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
-            const losersTotal = displayLosers.reduce((sum, lo) => sum + (lo.amount || 0), 0);
-            if (losersTotal > 0 && l.amount) {
-                support = (winnersSupport / losersTotal) * l.amount;
+            const losersCount = displayLosers.length;
+            if (losersCount > 0) {
+                support = winnersSupport / losersCount;
                 support = Math.floor(support / 10) * 10;
             }
         }
@@ -1924,14 +1963,14 @@ function confirmLotteryResult() {
             supportAmount = l.calculatedSupport;
             console.log(`✅ ${l.name}: calculatedSupport 사용 (${supportAmount}원)`);
         } else {
-            // calculatedSupport가 없으면 재계산 (productSupport 사용)
+            // calculatedSupport가 없으면 재계산 (균등 분배)
             console.warn(`⚠️ ${l.name}: calculatedSupport가 없어서 재계산합니다.`);
             const winnersSupport = currentLotteryWinners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
-            const losersTotal = currentLotteryLosers.reduce((sum, lo) => sum + (lo.amount || 0), 0);
-            if (losersTotal > 0 && l.amount) {
-                const calculated = (winnersSupport / losersTotal) * l.amount;
-                supportAmount = Math.floor(calculated / 10) * 10;
-                console.log(`✅ ${l.name}: 재계산 완료 (${supportAmount}원)`);
+            const losersCount = currentLotteryLosers.length;
+            if (losersCount > 0) {
+                supportAmount = winnersSupport / losersCount;
+                supportAmount = Math.floor(supportAmount / 10) * 10;
+                console.log(`✅ ${l.name}: 재계산 완료 (${supportAmount}원, ${winnersSupport}원 ÷ ${losersCount}명)`);
             }
         }
         
@@ -2030,10 +2069,19 @@ function updateRoundFilter() {
 
 // 확정 결과 렌더링
 function renderConfirmResults() {
+    // 지급 대상 모드일 때는 별도 렌더링
+    if (isShowingDailyPayment && dailyPaymentResults.length > 0) {
+        renderDailyPaymentResults(dailyPaymentResults);
+        return;
+    }
+    
     const tbody = document.getElementById('confirmResultsBody');
     const countEl = document.getElementById('confirmCount');
     
     if (!tbody) return;
+    
+    // 지급 완료 버튼 제거
+    hidePaymentCompleteButton();
     
     let filtered = [...LOTTERY_CONFIRMED_RESULTS];
     
@@ -2054,45 +2102,75 @@ function renderConfirmResults() {
         filtered = filtered.filter(r => r.result === resultFilter);
     }
     if (startDate) {
-        filtered = filtered.filter(r => r.date.split(' ')[0] >= startDate);
+        filtered = filtered.filter(r => {
+            if (!r.date) return false;
+            const datePart = r.date.split(' ')[0];
+            return datePart >= startDate;
+        });
     }
     if (endDate) {
-        filtered = filtered.filter(r => r.date.split(' ')[0] <= endDate);
+        filtered = filtered.filter(r => {
+            if (!r.date) return false;
+            const datePart = r.date.split(' ')[0];
+            return datePart <= endDate;
+        });
     }
     
-    if (countEl) countEl.textContent = filtered.length;
+    if (countEl) {
+        if (LOTTERY_CONFIRMED_RESULTS.length === 0) {
+            countEl.textContent = '0';
+        } else {
+            countEl.textContent = filtered.length;
+        }
+    }
     
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-message">조건에 맞는 결과가 없습니다.</td></tr>';
+        // 원본 데이터가 없으면 "추첨 확정 내역이 없습니다" 표시
+        if (LOTTERY_CONFIRMED_RESULTS.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">추첨 확정 내역이 없습니다.</td></tr>';
+        } else {
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">조건에 맞는 결과가 없습니다.</td></tr>';
+        }
         return;
     }
     
-    tbody.innerHTML = filtered.map((result, index) => `
+    tbody.innerHTML = filtered.map((result, index) => {
+        const round = result.round || 0;
+        const productName = result.productName || '알 수 없음';
+        const name = result.name || '이름 없음';
+        const phone = result.phone || '-';
+        const amount = result.amount || 0;
+        const support = result.support || 0;
+        const date = result.date || '-';
+        const paymentStatus = result.paymentStatus || 'pending';
+        
+        return `
         <tr>
             <td>${index + 1}</td>
-            <td><span class="badge badge-info">${result.round}회</span></td>
-            <td style="text-align: left; padding-left: 15px;">${result.productName}</td>
-            <td>${result.name}</td>
-            <td>${result.phone}</td>
-            <td>${result.amount.toLocaleString()}원</td>
+            <td><span class="badge badge-info">${round}회</span></td>
+            <td style="text-align: left; padding-left: 15px;">${escapeHtml(productName)}</td>
+            <td>${escapeHtml(name)}</td>
+            <td>${escapeHtml(phone)}</td>
+            <td>${amount.toLocaleString()}원</td>
             <td>
                 ${result.result === 'winner' 
                     ? '<span class="badge badge-success">당첨</span>' 
                     : '<span class="badge badge-info">미선정</span>'}
             </td>
-            <td>${result.result === 'winner' ? '-' : result.support.toLocaleString() + '원'}</td>
+            <td>${result.result === 'winner' ? '-' : support.toLocaleString() + '원'}</td>
             <td>
                 ${result.result === 'winner'
                     ? '<span class="payment-status paid">구매확정</span>'
-                    : `<button class="btn btn-sm ${result.paymentStatus === 'paid' ? 'btn-success' : 'btn-secondary'}" 
+                    : `<button class="btn btn-sm ${paymentStatus === 'paid' ? 'btn-success' : 'btn-secondary'}" 
                               onclick="togglePaymentStatus(${result.id})" 
                               style="min-width: 80px;">
-                          ${result.paymentStatus === 'paid' ? '지급완료' : '지급대기'}
+                          ${paymentStatus === 'paid' ? '지급완료' : '지급대기'}
                        </button>`}
             </td>
-            <td>${result.date}</td>
+            <td>${escapeHtml(date)}</td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // 필터 적용
@@ -2102,6 +2180,11 @@ function filterConfirmResults() {
 
 // 필터 초기화
 function resetConfirmFilter() {
+    // 지급 대상 모드 해제
+    isShowingDailyPayment = false;
+    dailyPaymentResults = [];
+    hidePaymentCompleteButton();
+    
     document.getElementById('confirmProductFilter').value = '';
     document.getElementById('confirmRoundFilter').value = '';
     document.getElementById('confirmResultFilter').value = '';
@@ -2179,7 +2262,10 @@ function removeImage(inputId, previewId) {
     }
 }
 
-// 당일 지원금 일괄 지급
+// 당일 지원금 일괄 지급 대상 표시
+let isShowingDailyPayment = false;
+let dailyPaymentResults = [];
+
 function processDailyPayment() {
     const today = new Date().toISOString().split('T')[0];
     const pendingResults = LOTTERY_CONFIRMED_RESULTS.filter(r => 
@@ -2193,20 +2279,116 @@ function processDailyPayment() {
         return;
     }
     
-    const totalAmount = pendingResults.reduce((sum, r) => sum + r.support, 0);
+    // 지급 대상 목록 저장
+    dailyPaymentResults = pendingResults;
+    isShowingDailyPayment = true;
     
-    // 명단 표시
-    const nameList = pendingResults.map((r, i) => `${i+1}. ${r.name} - ${r.support.toLocaleString()}원`).join('\n');
+    // 테이블에 지급 대상만 표시
+    renderDailyPaymentResults(pendingResults);
+}
+
+// 당일 지원금 일괄 지급 완료
+function completeDailyPayment() {
+    if (dailyPaymentResults.length === 0) {
+        alert('지급할 지원금이 없습니다.');
+        return;
+    }
     
-    if (confirm(`오늘(${today}) 지급할 지원금 내역:\n\n${nameList}\n\n━━━━━━━━━━━━━━━━━━━\n총 ${pendingResults.length}명, ${totalAmount.toLocaleString()}원\n\n일괄 지급하시겠습니까?`)) {
+    const totalAmount = dailyPaymentResults.reduce((sum, r) => sum + r.support, 0);
+    const paymentCount = dailyPaymentResults.length;
+    
+    if (confirm(`총 ${paymentCount}명, ${totalAmount.toLocaleString()}원을 일괄 지급하시겠습니까?`)) {
         // 지급 상태 업데이트
-        pendingResults.forEach(result => {
+        dailyPaymentResults.forEach(result => {
             result.paymentStatus = 'paid';
         });
         
-        alert(`✅ 지급이 완료되었습니다!\n\n지급 인원: ${pendingResults.length}명\n지급 금액: ${totalAmount.toLocaleString()}원\n\n각 회원의 계좌로 현금이 입금되었습니다.`);
+        // 지급 대상 목록 초기화
+        dailyPaymentResults = [];
+        isShowingDailyPayment = false;
+        
+        // 필터 초기화 및 전체 목록 표시
+        resetConfirmFilter();
+        
+        alert(`✅ 지급이 완료되었습니다!\n\n지급 인원: ${paymentCount}명\n지급 금액: ${totalAmount.toLocaleString()}원\n\n각 회원의 계좌로 현금이 입금되었습니다.`);
         
         updateConfirmPage();
+    }
+}
+
+// 당일 지원금 지급 대상 목록 렌더링
+function renderDailyPaymentResults(pendingResults) {
+    const tbody = document.getElementById('confirmResultsBody');
+    const countEl = document.getElementById('confirmCount');
+    
+    if (!tbody) return;
+    
+    const totalAmount = pendingResults.reduce((sum, r) => sum + r.support, 0);
+    
+    if (countEl) {
+        countEl.textContent = `${pendingResults.length}건 (지급 대상)`;
+    }
+    
+    if (pendingResults.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-message">오늘 지급할 지원금이 없습니다.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = pendingResults.map((result, index) => {
+        const round = result.round || 0;
+        const productName = result.productName || '알 수 없음';
+        const name = result.name || '이름 없음';
+        const phone = result.phone || '-';
+        const amount = result.amount || 0;
+        const support = result.support || 0;
+        const date = result.date || '-';
+        
+        return `
+        <tr style="background-color: #fff9e6;">
+            <td>${index + 1}</td>
+            <td><span class="badge badge-info">${round}회</span></td>
+            <td style="text-align: left; padding-left: 15px;">${escapeHtml(productName)}</td>
+            <td>${escapeHtml(name)}</td>
+            <td>${escapeHtml(phone)}</td>
+            <td>${amount.toLocaleString()}원</td>
+            <td><span class="badge badge-info">미선정</span></td>
+            <td style="font-weight: bold; color: #e74c3c;">${support.toLocaleString()}원</td>
+            <td><span class="badge badge-warning">지급대기</span></td>
+            <td>${escapeHtml(date)}</td>
+        </tr>
+        `;
+    }).join('');
+    
+    // 지급 완료 버튼 표시
+    showPaymentCompleteButton(totalAmount, pendingResults.length);
+}
+
+// 지급 완료 버튼 표시
+function showPaymentCompleteButton(totalAmount, count) {
+    // 기존 버튼 제거
+    const existingBtn = document.getElementById('paymentCompleteBtn');
+    if (existingBtn) {
+        existingBtn.remove();
+    }
+    
+    // 새 버튼 추가
+    const tableHeader = document.querySelector('.table-header-actions');
+    if (tableHeader) {
+        const completeBtn = document.createElement('button');
+        completeBtn.id = 'paymentCompleteBtn';
+        completeBtn.className = 'btn btn-success btn-sm';
+        completeBtn.style.marginLeft = '10px';
+        completeBtn.innerHTML = `<i class="fas fa-check-circle"></i> 지급 완료 (${count}명, ${totalAmount.toLocaleString()}원)`;
+        completeBtn.onclick = completeDailyPayment;
+        tableHeader.appendChild(completeBtn);
+    }
+}
+
+// 지급 완료 버튼 제거
+function hidePaymentCompleteButton() {
+    const existingBtn = document.getElementById('paymentCompleteBtn');
+    if (existingBtn) {
+        existingBtn.remove();
     }
 }
 
