@@ -934,19 +934,23 @@ img {
 }
 
 .badge.hit {
-    background: var(--danger-color);
+    background: #FFC1CC;
+    color: #8B4A5C;
 }
 
 .badge.new {
-    background: var(--success-color);
+    background: #C7E9B0;
+    color: #5A7A4A;
 }
 
 .badge.recommend {
-    background: #2196f3;
+    background: #A8D8EA;
+    color: #2C5F7A;
 }
 
 .badge.popular {
-    background: #9c27b0;
+    background: #E6D3FF;
+    color: #6B4C7A;
 }
 
 .product-info {
