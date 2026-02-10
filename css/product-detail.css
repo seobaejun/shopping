@@ -395,6 +395,24 @@
     color: var(--bg-white);
 }
 
+.share-btn[data-share="facebook"] i {
+    color: #1877F2;
+}
+
+.share-btn[data-share="instagram"] i {
+    color: #E4405F;
+}
+
+.share-btn[data-share="facebook"]:hover {
+    background: #1877F2;
+    border-color: #1877F2;
+}
+
+.share-btn[data-share="instagram"]:hover {
+    background: #E4405F;
+    border-color: #E4405F;
+}
+
 /* 상품 상세 탭 */
 .product-tabs {
     padding: 60px 0;

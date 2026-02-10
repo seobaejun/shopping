@@ -542,8 +542,43 @@ function toggleSubmenu(event, element) {
 window.toggleSubmenu = toggleSubmenu;
 
 // 초기화
+// 공유 버튼 이벤트 (상품 목록 페이지용)
+function initShareButtonsForProductList() {
+    document.addEventListener('click', (e) => {
+        const shareBtn = e.target.closest('.share-btn');
+        if (shareBtn) {
+            e.preventDefault();
+            
+            // 상품 카드에서 정보 추출
+            const productCard = shareBtn.closest('.product-card');
+            if (productCard) {
+                const productId = productCard.querySelector('a')?.href?.split('id=')[1];
+                const productName = productCard.querySelector('.product-name')?.textContent;
+                const productImage = productCard.querySelector('.product-image img')?.src;
+                
+                // 공유 모달 표시
+                if (typeof showShareModal === 'function') {
+                    showShareModal(productId, productName, productImage);
+                } else {
+                    alert('공유 기능을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                }
+            }
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    // 로그인 상태 업데이트 (script.js 로드 대기)
+    setTimeout(() => {
+        if (typeof updateHeaderForLoginStatus === 'function') {
+            updateHeaderForLoginStatus();
+        } else {
+            console.warn('updateHeaderForLoginStatus 함수를 찾을 수 없습니다.');
+        }
+    }, 100);
+    
     initPage();
     setTimeout(loadCategoriesMenu, 1000);
+    initShareButtonsForProductList();
 });
 

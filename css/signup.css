@@ -191,9 +191,14 @@
 
 .form-help {
     font-size: 12px;
-    color: var(--danger-color);
+    color: #666;
     margin-top: 6px;
     line-height: 1.5;
+}
+
+.form-help.error-message {
+    color: var(--danger-color);
+    font-weight: 500;
 }
 
 /* 입력 필드와 버튼 함께 */

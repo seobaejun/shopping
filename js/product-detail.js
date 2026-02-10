@@ -348,26 +348,38 @@ function initZoom() {
 function initShareButtons() {
     const shareBtns = document.querySelectorAll('.share-buttons .share-btn');
     
-    shareBtns.forEach((btn, index) => {
+    shareBtns.forEach((btn) => {
         btn.addEventListener('click', () => {
-            const icons = ['facebook-f', 'twitter', 'line', 'link'];
-            const icon = icons[index];
+            const shareType = btn.dataset.share;
             
-            switch(icon) {
-                case 'facebook-f':
-                    alert('페이스북 공유 기능은 준비 중입니다.');
+            // 현재 상품 정보 가져오기
+            const currentUrl = window.location.href;
+            
+            switch(shareType) {
+                case 'facebook':
+                    if (typeof shareToFacebook === 'function') {
+                        shareToFacebook(currentUrl);
+                    } else {
+                        alert('페이스북 공유 기능을 불러오는 중입니다.');
+                    }
                     break;
-                case 'twitter':
-                    alert('트위터 공유 기능은 준비 중입니다.');
-                    break;
-                case 'line':
-                    alert('라인 공유 기능은 준비 중입니다.');
+                case 'instagram':
+                    if (typeof shareToInstagram === 'function') {
+                        shareToInstagram(currentUrl);
+                    } else {
+                        alert('인스타그램 공유 기능을 불러오는 중입니다.');
+                    }
                     break;
                 case 'link':
                     // URL 복사
-                    navigator.clipboard.writeText(window.location.href).then(() => {
-                        alert('링크가 복사되었습니다.');
-                    });
+                    if (typeof copyToClipboard === 'function') {
+                        copyToClipboard(currentUrl);
+                        alert('링크가 복사되었습니다!');
+                    } else {
+                        navigator.clipboard.writeText(currentUrl).then(() => {
+                            alert('링크가 복사되었습니다!');
+                        });
+                    }
                     break;
             }
         });
@@ -833,7 +845,25 @@ async function initProductDetail() {
 
 // DOM 로드 완료 시 실행
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initProductDetail);
+    document.addEventListener('DOMContentLoaded', () => {
+        // 로그인 상태 업데이트 (script.js 로드 대기)
+        setTimeout(() => {
+            if (typeof updateHeaderForLoginStatus === 'function') {
+                updateHeaderForLoginStatus();
+            } else {
+                console.warn('updateHeaderForLoginStatus 함수를 찾을 수 없습니다.');
+            }
+        }, 100);
+        initProductDetail();
+    });
 } else {
+    // 로그인 상태 업데이트 (script.js 로드 대기)
+    setTimeout(() => {
+        if (typeof updateHeaderForLoginStatus === 'function') {
+            updateHeaderForLoginStatus();
+        } else {
+            console.warn('updateHeaderForLoginStatus 함수를 찾을 수 없습니다.');
+        }
+    }, 100);
     initProductDetail();
 }

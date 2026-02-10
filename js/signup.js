@@ -65,8 +65,11 @@ function initSignup() {
     // 다음 단계 버튼 이벤트
     setupNextButtons();
     
-    // 닉네임 중복확인
-    setupNicknameCheck();
+    // 아이디 중복확인
+    setupUserIdCheck();
+    
+    // 비밀번호 일치 확인
+    setupPasswordCheck();
     
     // 인증번호 요청
     setupVerification();
@@ -164,8 +167,10 @@ function goToStep(step) {
 // 단계 2 유효성 검사
 function validateStep2() {
     const userName = document.getElementById('userName').value.trim();
-    const nickname = document.getElementById('nickname').value.trim();
-    const email = document.getElementById('email').value.trim();
+    const userEmail = document.getElementById('userEmail').value.trim();
+    const userId = document.getElementById('userId').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const passwordConfirm = document.getElementById('passwordConfirm').value.trim();
     
     if (!userName) {
         alert('이름을 입력해주세요.');
@@ -173,43 +178,69 @@ function validateStep2() {
         return false;
     }
     
-    if (!nickname) {
-        alert('닉네임을 입력해주세요.');
-        document.getElementById('nickname').focus();
-        return false;
-    }
-    
-    // 닉네임 형식 검사
-    const nicknamePattern = /^[가-힣a-zA-Z0-9]+$/;
-    if (!nicknamePattern.test(nickname)) {
-        alert('닉네임은 공백 없이 한글, 영문, 숫자만 입력 가능합니다.');
-        return false;
-    }
-    
-    // 한글 2자 이상 또는 영문 4자 이상
-    const koreanCount = (nickname.match(/[가-힣]/g) || []).length;
-    const englishCount = (nickname.match(/[a-zA-Z]/g) || []).length;
-    
-    if (koreanCount > 0 && koreanCount < 2) {
-        alert('닉네임은 한글 2자 이상이어야 합니다.');
-        return false;
-    }
-    
-    if (englishCount > 0 && englishCount < 4) {
-        alert('닉네임은 영문 4자 이상이어야 합니다.');
-        return false;
-    }
-    
-    if (!email) {
+    if (!userEmail) {
         alert('이메일을 입력해주세요.');
-        document.getElementById('email').focus();
+        document.getElementById('userEmail').focus();
         return false;
     }
     
     // 이메일 형식 검사
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
+    if (!emailPattern.test(userEmail)) {
         alert('올바른 이메일 형식을 입력해주세요.');
+        document.getElementById('userEmail').focus();
+        return false;
+    }
+    
+    if (!userId) {
+        alert('닉네임을 입력해주세요.');
+        document.getElementById('userId').focus();
+        return false;
+    }
+    
+    // 닉네임 중복확인 체크
+    const userIdInput = document.getElementById('userId');
+    if (userIdInput.dataset.verified !== 'true') {
+        alert('닉네임 중복확인을 해주세요.');
+        return false;
+    }
+    
+    // 닉네임 길이 검사 (2자 이상)
+    if (userId.length < 2) {
+        alert('닉네임은 2자 이상이어야 합니다.');
+        return false;
+    }
+    
+    if (!password) {
+        alert('비밀번호를 입력해주세요.');
+        document.getElementById('password').focus();
+        return false;
+    }
+    
+    // 비밀번호 형식 검사
+    if (password.length < 8) {
+        alert('비밀번호는 8자 이상이어야 합니다.');
+        return false;
+    }
+    
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    if (!(hasLetter && hasNumber && hasSpecial)) {
+        alert('비밀번호는 영문, 숫자, 특수문자를 조합하여 입력해주세요.');
+        return false;
+    }
+    
+    if (!passwordConfirm) {
+        alert('비밀번호 확인을 입력해주세요.');
+        document.getElementById('passwordConfirm').focus();
+        return false;
+    }
+    
+    if (password !== passwordConfirm) {
+        alert('비밀번호가 일치하지 않습니다.');
+        document.getElementById('passwordConfirm').focus();
         return false;
     }
     
@@ -255,8 +286,9 @@ function validateStep2() {
 function saveStep2Data() {
     signupData = {
         userName: document.getElementById('userName').value.trim(),
-        nickname: document.getElementById('nickname').value.trim(),
-        email: document.getElementById('email').value.trim(),
+        userId: document.getElementById('userId').value.trim(),
+        email: document.getElementById('userEmail').value.trim(),
+        password: document.getElementById('password').value.trim(),
         postcode: document.getElementById('postcode').value.trim(),
         address: document.getElementById('address').value.trim(),
         detailAddress: document.getElementById('detailAddress').value.trim(),
@@ -266,6 +298,119 @@ function saveStep2Data() {
 }
 
 // 닉네임 중복확인
+// 아이디 중복확인 설정
+function setupUserIdCheck() {
+    const checkBtn = document.getElementById('checkUserId');
+    const userIdInput = document.getElementById('userId');
+    
+    checkBtn.addEventListener('click', async () => {
+        const userId = userIdInput.value.trim();
+        
+        if (!userId) {
+            alert('닉네임을 입력해주세요.');
+            userIdInput.focus();
+            return;
+        }
+        
+        // 닉네임 길이 검사 (2자 이상)
+        if (userId.length < 2) {
+            alert('닉네임은 2자 이상이어야 합니다.');
+            return;
+        }
+        
+        // 중복확인 (Firebase에서 확인)
+        checkBtn.disabled = true;
+        checkBtn.textContent = '확인중...';
+        
+        try {
+            const db = await initFirebase();
+            if (!db) {
+                throw new Error('Firebase 초기화 실패');
+            }
+            
+            // Firestore에서 닉네임 중복 확인
+            const snapshot = await db.collection('members')
+                .where('userId', '==', userId)
+                .get();
+            
+            if (!snapshot.empty) {
+                alert('이미 사용 중인 닉네임입니다.');
+                checkBtn.disabled = false;
+                checkBtn.textContent = '중복확인';
+                checkBtn.style.background = '';
+                userIdInput.dataset.verified = 'false';
+            } else {
+                alert('사용 가능한 닉네임입니다.');
+                checkBtn.textContent = '확인완료';
+                checkBtn.style.background = '#4caf50';
+                userIdInput.dataset.verified = 'true';
+            }
+        } catch (error) {
+            console.error('닉네임 중복확인 오류:', error);
+            alert('닉네임 중복확인 중 오류가 발생했습니다.');
+            checkBtn.disabled = false;
+            checkBtn.textContent = '중복확인';
+        }
+    });
+    
+    // 닉네임 입력 변경 시 중복확인 상태 초기화
+    userIdInput.addEventListener('input', () => {
+        checkBtn.disabled = false;
+        checkBtn.textContent = '중복확인';
+        checkBtn.style.background = '';
+        userIdInput.dataset.verified = 'false';
+    });
+}
+
+// 비밀번호 일치 확인 설정
+function setupPasswordCheck() {
+    const passwordInput = document.getElementById('password');
+    const passwordConfirmInput = document.getElementById('passwordConfirm');
+    const errorMessage = document.getElementById('passwordError');
+    
+    const checkPasswordMatch = () => {
+        const password = passwordInput.value;
+        const passwordConfirm = passwordConfirmInput.value;
+        
+        if (passwordConfirm === '') {
+            errorMessage.style.display = 'none';
+            return;
+        }
+        
+        if (password !== passwordConfirm) {
+            errorMessage.style.display = 'block';
+            errorMessage.style.color = '#f44336';
+            errorMessage.textContent = '비밀번호가 일치하지 않습니다.';
+        } else {
+            errorMessage.style.display = 'block';
+            errorMessage.style.color = '#4caf50';
+            errorMessage.textContent = '비밀번호가 일치합니다.';
+        }
+    };
+    
+    // 비밀번호 형식 검사
+    passwordInput.addEventListener('blur', () => {
+        const password = passwordInput.value;
+        
+        if (password.length < 8) {
+            alert('비밀번호는 8자 이상이어야 합니다.');
+            return;
+        }
+        
+        // 영문, 숫자, 특수문자 조합 확인
+        const hasLetter = /[a-zA-Z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        
+        if (!(hasLetter && hasNumber && hasSpecial)) {
+            alert('비밀번호는 영문, 숫자, 특수문자를 조합하여 입력해주세요.');
+        }
+    });
+    
+    passwordInput.addEventListener('input', checkPasswordMatch);
+    passwordConfirmInput.addEventListener('input', checkPasswordMatch);
+}
+
 function setupNicknameCheck() {
     const checkBtn = document.getElementById('checkNickname');
     const nicknameInput = document.getElementById('nickname');
@@ -624,12 +769,21 @@ function setupFinalSignup() {
                 throw new Error('Firebase 초기화에 실패했습니다.');
             }
             
-            // 회원 데이터 형식 변환 (memberService 형식에 맞춤)
+            console.log('🔐 Firebase Auth로 계정 생성 시작...', finalData.email);
+            
+            // 1. Firebase Auth에 이메일/비밀번호로 계정 생성
+            const userCredential = await firebase.auth()
+                .createUserWithEmailAndPassword(finalData.email, finalData.password);
+            
+            const uid = userCredential.user.uid;
+            console.log('✅ Firebase Auth 계정 생성 완료, UID:', uid);
+            
+            // 2. Firestore에 나머지 회원 정보 저장 (UID를 문서 ID로 사용)
             const memberData = {
-                userId: finalData.email || finalData.nickname, // 이메일 또는 닉네임을 userId로 사용
-                name: finalData.userName,
-                nickname: finalData.nickname,
+                uid: uid, // Firebase Auth UID
+                userId: finalData.userId, // 사용자 정의 아이디
                 email: finalData.email,
+                name: finalData.userName,
                 phone: finalData.mobile,
                 postcode: finalData.postcode,
                 address: finalData.address,
@@ -638,26 +792,39 @@ function setupFinalSignup() {
                 agreeEmail: finalData.agreeEmail || false,
                 agreeSMS: finalData.agreeSMS || false,
                 agreePublic: finalData.agreePublic || false,
-                status: '정상', // 기본 상태
+                status: '정상',
                 recommender: finalData.referralCode || '관리자',
-                joinDate: new Date().toISOString().split('T')[0] // YYYY-MM-DD 형식
-            };
-            
-            // Firestore에 회원 데이터 저장
-            const docRef = await db.collection('members').add({
-                ...memberData,
+                joinDate: new Date().toISOString().split('T')[0],
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            };
             
-            console.log('✅ 회원가입 완료 - Firestore에 저장됨:', docRef.id);
+            // UID를 문서 ID로 사용하여 저장
+            await db.collection('members').doc(uid).set(memberData);
+            
+            console.log('✅ 회원가입 완료 - Firestore에 저장됨, UID:', uid);
             
             // 가입완료 페이지로 이동
             document.getElementById('welcomeName').textContent = finalData.userName;
             goToStep(4);
+            
         } catch (error) {
-            console.error('회원가입 오류:', error);
-            alert('회원가입 중 오류가 발생했습니다: ' + error.message + '\n다시 시도해주세요.');
+            console.error('❌ 회원가입 오류:', error);
+            
+            // Firebase Auth 오류 메시지 처리
+            let errorMessage = '회원가입 중 오류가 발생했습니다.\n';
+            
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = '이미 사용 중인 이메일입니다.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = '올바르지 않은 이메일 형식입니다.';
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = '비밀번호가 너무 약합니다. (최소 6자 이상)';
+            } else {
+                errorMessage += error.message;
+            }
+            
+            alert(errorMessage);
             signupBtn.disabled = false;
             signupBtn.textContent = '회원가입';
         }

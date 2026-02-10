@@ -752,9 +752,24 @@ function initScrollHeader() {
 // 공유 버튼 이벤트
 function initShareButtons() {
     document.addEventListener('click', (e) => {
-        if (e.target.closest('.share-btn')) {
+        const shareBtn = e.target.closest('.share-btn');
+        if (shareBtn) {
             e.preventDefault();
-            alert('공유 기능은 준비 중입니다.');
+            
+            // 상품 카드에서 정보 추출
+            const productCard = shareBtn.closest('.product-card');
+            if (productCard) {
+                const productId = productCard.querySelector('a')?.href?.split('id=')[1];
+                const productName = productCard.querySelector('.product-name')?.textContent;
+                const productImage = productCard.querySelector('.product-image img')?.src;
+                
+                // 공유 모달 표시
+                if (typeof showShareModal === 'function') {
+                    showShareModal(productId, productName, productImage);
+                } else {
+                    alert('공유 기능을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                }
+            }
         }
     });
 }
@@ -1115,6 +1130,7 @@ function waitForFirebase() {
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', async () => {
+        updateHeaderForLoginStatus(); // 로그인 상태에 따라 헤더 업데이트
         init();
         // Firebase 초기화 대기 후 상품 및 카테고리 로드
         try {
@@ -1126,6 +1142,7 @@ if (document.readyState === 'loading') {
         }
     });
 } else {
+    updateHeaderForLoginStatus(); // 로그인 상태에 따라 헤더 업데이트
     init();
     waitForFirebase().then(async () => {
         await loadCategoriesMenu();
@@ -1134,4 +1151,91 @@ if (document.readyState === 'loading') {
         console.error('초기화 오류:', error);
     });
 }
+
+// 로그인 상태 확인 및 헤더 UI 업데이트
+function updateHeaderForLoginStatus() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const loginUserData = localStorage.getItem('loginUser');
+    
+    if (isLoggedIn && loginUserData) {
+        const user = JSON.parse(loginUserData);
+        updateHeaderToLoggedIn(user);
+    }
+}
+
+// 로그인 상태로 헤더 업데이트
+function updateHeaderToLoggedIn(user) {
+    // 상단 헤더의 로그인/회원가입 버튼 찾기
+    const userMenus = document.querySelectorAll('.user-menu');
+    
+    userMenus.forEach(userMenu => {
+        // 로그인 버튼 찾기 (href 또는 텍스트로 찾기)
+        let loginLink = userMenu.querySelector('a[href="login.html"]');
+        if (!loginLink) {
+            // href가 login.html이 아닌 경우, 텍스트에 "로그인"이 포함된 링크 찾기
+            const links = userMenu.querySelectorAll('a');
+            for (const link of links) {
+                if (link.textContent.includes('로그인')) {
+                    loginLink = link;
+                    break;
+                }
+            }
+        }
+        
+        if (loginLink) {
+            loginLink.href = '#';
+            loginLink.innerHTML = `<i class="fas fa-sign-out-alt"></i> 로그아웃`;
+            loginLink.onclick = (e) => {
+                e.preventDefault();
+                handleLogout();
+            };
+        }
+        
+        // 회원가입 버튼 찾기
+        const signupLink = userMenu.querySelector('a[href="signup.html"], .signup-btn');
+        if (signupLink) {
+            signupLink.href = 'mypage.html';
+            signupLink.innerHTML = `<i class="fas fa-user-circle"></i> 마이페이지`;
+            signupLink.classList.remove('signup-btn');
+            signupLink.classList.add('mypage-btn');
+        }
+    });
+    
+    // 사이드바 로그인/회원가입 버튼 찾기
+    const sidebarQuick = document.querySelector('.user-quick');
+    if (sidebarQuick) {
+        sidebarQuick.innerHTML = `
+            <a href="mypage.html"><i class="fas fa-user-circle"></i> ${user.name}님</a>
+            <a href="#" onclick="handleLogout(); return false;"><i class="fas fa-sign-out-alt"></i> 로그아웃</a>
+        `;
+    }
+    
+    // 하단 모바일 네비게이션
+    const bottomNavLogin = document.querySelector('.bottom-nav a[href*="로그인"]');
+    if (bottomNavLogin) {
+        bottomNavLogin.href = 'mypage.html';
+        bottomNavLogin.innerHTML = `
+            <i class="fas fa-user-circle"></i>
+            <span>마이페이지</span>
+        `;
+    }
+}
+
+// 로그아웃 처리
+function handleLogout() {
+    if (confirm('로그아웃 하시겠습니까?')) {
+        // 로그인 정보 삭제
+        localStorage.removeItem('loginUser');
+        localStorage.removeItem('isLoggedIn');
+        
+        alert('로그아웃 되었습니다.');
+        
+        // 메인 페이지로 이동
+        window.location.href = 'index.html';
+    }
+}
+
+// 전역으로 노출
+window.handleLogout = handleLogout;
+window.updateHeaderForLoginStatus = updateHeaderForLoginStatus;
 
