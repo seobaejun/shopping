@@ -2012,20 +2012,20 @@
             <!-- 배송진행 등록 페이지 -->
             <div id="delivery-register" class="content-page">
                 <div class="page-header">
-                    <h2>배송관리</h2>
-                    <h3>검색등록</h3>
+                    <h2>배송 진행 등록</h2>
+                    <p class="page-description">승인된 주문의 배송 상태·택배사·송장번호를 등록하고 관리합니다.</p>
                 </div>
 
                 <!-- 검색 필터 -->
                 <div class="search-panel">
                     <div class="search-row">
                         <div class="form-group">
-                            <label>기재자명</label>
-                            <input type="text" class="form-control" placeholder="기재자명 입력">
+                            <label>구매자명</label>
+                            <input type="text" class="form-control" id="deliveryRegisterName" placeholder="구매자명 입력">
                         </div>
                         <div class="form-group">
                             <label>배송상태</label>
-                            <select class="form-control">
+                            <select class="form-control" id="deliveryRegisterStatus">
                                 <option value="">전체</option>
                                 <option value="ready">배송준비</option>
                                 <option value="shipping">배송중</option>
@@ -2034,41 +2034,66 @@
                         </div>
                         <div class="form-group">
                             <label>시작일</label>
-                            <input type="date" class="form-control" value="2026-01-26">
+                            <input type="date" class="form-control" id="deliveryRegisterStart">
                         </div>
                         <div class="form-group">
                             <label>종료일</label>
-                            <input type="date" class="form-control" value="2026-02-02">
+                            <input type="date" class="form-control" id="deliveryRegisterEnd">
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary">검색</button>
-                        <button class="btn btn-default">취소</button>
-                        <button class="btn btn-secondary">출력</button>
+                        <button type="button" class="btn btn-primary" id="deliveryRegisterSearchBtn">검색</button>
+                        <button type="button" class="btn btn-default" id="deliveryRegisterResetBtn">취소</button>
                     </div>
                 </div>
 
-                <!-- 배송 테이블 -->
-                <div class="table-container">
-                    <p class="info-text">총 0 개의 배송상품이 검색되었습니다.</p>
+                <!-- 검색 결과 영역 (검색 버튼 클릭 시에만 표시, 구매요청·정산과 동일) -->
+                <div id="deliveryRegisterSearchResultsContainer" class="table-container" style="display: none; margin-top: 20px; margin-bottom: 20px;">
+                    <p class="info-text">검색 결과: <strong id="deliveryRegisterSearchResultCount">0</strong>건</p>
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>번호</th>
-                                <th>기재자</th>
+                                <th>구매자</th>
                                 <th>상품명</th>
                                 <th>수량</th>
-                                <th>구매자</th>
                                 <th>전화번호</th>
                                 <th>주소</th>
-                                <th>날짜</th>
-                                <th>상태</th>
+                                <th>주문일</th>
+                                <th>배송상태</th>
+                                <th>택배사</th>
+                                <th>송장번호</th>
+                                <th>관리</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="deliveryRegisterSearchResultsBody">
+                            <tr><td colspan="11" class="empty-message">검색 후 결과가 여기에 표시됩니다.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 전체 배송 목록 (항상 표시, 검색과 무관) -->
+                <div class="table-container">
+                    <h3 style="margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #17a2b8;">전체 배송 목록</h3>
+                    <p class="info-text" id="deliveryRegisterInfoText">총 0건의 배송 상품이 있습니다.</p>
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <td colspan="9" class="empty-message">등록된 데이터가 없습니다.</td>
+                                <th>번호</th>
+                                <th>구매자</th>
+                                <th>상품명</th>
+                                <th>수량</th>
+                                <th>전화번호</th>
+                                <th>주소</th>
+                                <th>주문일</th>
+                                <th>배송상태</th>
+                                <th>택배사</th>
+                                <th>송장번호</th>
+                                <th>관리</th>
                             </tr>
+                        </thead>
+                        <tbody id="deliveryRegisterTableBody">
+                            <tr><td colspan="11" class="empty-message">데이터를 불러오는 중...</td></tr>
                         </tbody>
                     </table>
                 </div>

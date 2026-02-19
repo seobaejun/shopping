@@ -317,6 +317,16 @@ async function loadPageData(pageId) {
             }
             await loadSettlementRound();
             break;
+        case 'delivery-register':
+            if (!window._deliveryRegisterDateInitialized) {
+                var drEnd = document.getElementById('deliveryRegisterEnd');
+                var drStart = document.getElementById('deliveryRegisterStart');
+                if (drEnd && !drEnd.value) drEnd.value = new Date().toISOString().split('T')[0];
+                if (drStart && !drStart.value) { var d = new Date(); d.setMonth(d.getMonth() - 1); drStart.value = d.toISOString().split('T')[0]; }
+                window._deliveryRegisterDateInitialized = true;
+            }
+            await loadDeliveryRegister();
+            break;
     }
 }
 
@@ -653,6 +663,112 @@ function applySettlementRoundSearch() {
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// 주문의 주소 문자열 반환
+function _orderAddress(order) {
+    if (order.deliveryAddress) return order.deliveryAddress;
+    var parts = [order.postcode, order.address, order.detailAddress].filter(Boolean);
+    return parts.length ? parts.join(' ') : (order.address || '-');
+}
+
+// 배송 진행 등록: 추첨 확정 주문만 전체 목록 로드 (검색 필터 없음)
+async function loadDeliveryRegister() {
+    var tbody = document.getElementById('deliveryRegisterTableBody');
+    var infoText = document.getElementById('deliveryRegisterInfoText');
+    if (!tbody) return;
+    try {
+        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
+            tbody.innerHTML = '<tr><td colspan="11" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
+            if (infoText) infoText.textContent = '총 0건의 배송 상품이 있습니다.';
+            return;
+        }
+        var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
+        var confirmedOrderIds = new Set((window.LOTTERY_CONFIRMED_RESULTS || []).map(function (r) { return r.orderId; }).filter(Boolean));
+        var fullList = allOrders.filter(function (o) {
+            return o.status === 'approved' && confirmedOrderIds.has(o.id);
+        });
+        window._deliveryRegisterFullList = fullList;
+        if (infoText) infoText.textContent = '총 ' + (fullList ? fullList.length : 0) + '건의 배송 상품이 있습니다.';
+        if (!fullList || fullList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="11" class="empty-message">추첨 확정된 배송 내역이 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = _deliveryRegisterBuildRows(fullList);
+    } catch (e) {
+        console.error('배송 진행 등록 로드 오류:', e);
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
+        if (infoText) infoText.textContent = '총 0건의 배송 상품이 있습니다.';
+    }
+}
+
+// 배송 목록 한 행 HTML 생성 (공통)
+function _deliveryRegisterBuildRows(list) {
+    return list.map(function (order, i) {
+        var orderId = order.id;
+        var ds = order.deliveryStatus || 'ready';
+        var company = _orderEscapeHtml(order.deliveryCompany || '');
+        var tracking = _orderEscapeHtml(order.trackingNumber || '');
+        var statusSelectHtml = '<select class="form-control delivery-status-select" data-order-id="' + _orderEscapeHtml(orderId) + '" style="min-width:100px;">' +
+            '<option value="ready"' + (ds === 'ready' ? ' selected' : '') + '>배송준비</option>' +
+            '<option value="shipping"' + (ds === 'shipping' ? ' selected' : '') + '>배송중</option>' +
+            '<option value="complete"' + (ds === 'complete' ? ' selected' : '') + '>배송완료</option></select>';
+        var dateStr = _orderFormatDate(order.createdAt);
+        var addressStr = _orderEscapeHtml(_orderAddress(order));
+        return '<tr data-order-id="' + _orderEscapeHtml(orderId) + '">' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td>' +
+            '<td>' + _orderEscapeHtml(order.productName || '-') + '</td>' +
+            '<td>1</td>' +
+            '<td>' + _orderEscapeHtml(order.phone || '-') + '</td>' +
+            '<td>' + addressStr + '</td>' +
+            '<td>' + dateStr + '</td>' +
+            '<td>' + statusSelectHtml + '</td>' +
+            '<td><input type="text" class="form-control delivery-company-input" data-order-id="' + _orderEscapeHtml(orderId) + '" placeholder="택배사" value="' + company + '" style="min-width:90px;"></td>' +
+            '<td><input type="text" class="form-control delivery-tracking-input" data-order-id="' + _orderEscapeHtml(orderId) + '" placeholder="송장번호" value="' + tracking + '" style="min-width:120px;"></td>' +
+            '<td><button type="button" class="btn btn-sm btn-primary btn-save-delivery" data-order-id="' + _orderEscapeHtml(orderId) + '">저장</button></td></tr>';
+    }).join('');
+}
+
+// 배송 진행 등록 검색: 필터 결과만 검색 결과 컨테이너에 표시 (전체 목록은 건드리지 않음)
+function applyDeliveryRegisterSearch() {
+    var fullList = window._deliveryRegisterFullList || [];
+    var nameInput = document.getElementById('deliveryRegisterName');
+    var statusSelect = document.getElementById('deliveryRegisterStatus');
+    var startInput = document.getElementById('deliveryRegisterStart');
+    var endInput = document.getElementById('deliveryRegisterEnd');
+    var name = (nameInput && nameInput.value) ? nameInput.value.trim().toLowerCase() : '';
+    var statusFilter = (statusSelect && statusSelect.value) ? statusSelect.value.trim() : '';
+    var startStr = (startInput && startInput.value) ? startInput.value.trim() : '';
+    var endStr = (endInput && endInput.value) ? endInput.value.trim() : '';
+    var startMs = _orderStartOfDayLocal(startStr);
+    var endMs = _orderEndOfDayLocal(endStr);
+    var filtered = fullList.filter(function (order) {
+        if (name) {
+            var orderName = (order.userName != null) ? String(order.userName).toLowerCase() : '';
+            if (!orderName || orderName.indexOf(name) === -1) return false;
+        }
+        if (statusFilter) {
+            var ds = order.deliveryStatus || 'ready';
+            if (ds !== statusFilter) return false;
+        }
+        var t = _orderGetCreatedTime(order);
+        if (startMs != null && t < startMs) return false;
+        if (endMs != null && t > endMs) return false;
+        return true;
+    });
+    var searchContainer = document.getElementById('deliveryRegisterSearchResultsContainer');
+    var searchTbody = document.getElementById('deliveryRegisterSearchResultsBody');
+    var countEl = document.getElementById('deliveryRegisterSearchResultCount');
+    if (!searchContainer || !searchTbody) return;
+    searchContainer.style.display = 'block';
+    if (countEl) countEl.textContent = filtered.length;
+    if (!filtered || filtered.length === 0) {
+        searchTbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 조건에 맞는 배송 내역이 없습니다.</td></tr>';
+    } else {
+        searchTbody.innerHTML = _deliveryRegisterBuildRows(filtered);
+    }
+    searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 // 날짜 문자열을 로컬 자정/종료 시각(ms)으로 변환 (UTC 해석 방지)
 function _orderStartOfDayLocal(dateStr) {
     if (!dateStr) return null;
@@ -809,6 +925,60 @@ document.addEventListener('click', (e) => {
         if (en) en.value = '';
         var searchContainer = document.getElementById('settlementRoundSearchResultsContainer');
         if (searchContainer) searchContainer.style.display = 'none';
+        return;
+    }
+    if (e.target.closest('#deliveryRegisterSearchBtn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        applyDeliveryRegisterSearch();
+        return;
+    }
+    if (e.target.closest('#deliveryRegisterResetBtn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        var n = document.getElementById('deliveryRegisterName');
+        var st = document.getElementById('deliveryRegisterStatus');
+        var s = document.getElementById('deliveryRegisterStart');
+        var en = document.getElementById('deliveryRegisterEnd');
+        if (n) n.value = '';
+        if (st) st.value = '';
+        if (s) s.value = '';
+        if (en) en.value = '';
+        var searchContainer = document.getElementById('deliveryRegisterSearchResultsContainer');
+        if (searchContainer) searchContainer.style.display = 'none';
+        return;
+    }
+    if (e.target.closest('.btn-save-delivery')) {
+        var btn = e.target.closest('.btn-save-delivery');
+        var orderId = btn.getAttribute('data-order-id');
+        if (!orderId) return;
+        var row = btn.closest('tr');
+        if (!row) return;
+        var statusSelect = row.querySelector('.delivery-status-select');
+        var companyInput = row.querySelector('.delivery-company-input');
+        var trackingInput = row.querySelector('.delivery-tracking-input');
+        var deliveryStatus = (statusSelect && statusSelect.value) ? statusSelect.value : 'ready';
+        var deliveryCompany = (companyInput && companyInput.value) ? companyInput.value.trim() : '';
+        var trackingNumber = (trackingInput && trackingInput.value) ? trackingInput.value.trim() : '';
+        (async function () {
+            try {
+                if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
+                    await window.firebaseAdmin.orderService.updateOrder(orderId, {
+                        deliveryStatus: deliveryStatus,
+                        deliveryCompany: deliveryCompany,
+                        trackingNumber: trackingNumber
+                    });
+                    if (typeof loadDeliveryRegister === 'function') loadDeliveryRegister();
+                    var searchContainer = document.getElementById('deliveryRegisterSearchResultsContainer');
+                    if (searchContainer && searchContainer.style.display !== 'none' && typeof applyDeliveryRegisterSearch === 'function') {
+                        applyDeliveryRegisterSearch();
+                    }
+                }
+            } catch (err) {
+                console.error('배송 정보 저장 오류:', err);
+                alert('배송 정보 저장에 실패했습니다.');
+            }
+        })();
         return;
     }
     if (e.target.closest('.btn-approve-order')) {
@@ -2466,9 +2636,10 @@ function confirmLotteryResult() {
         return;
     }
     
-    // 저장된 데이터로 확정 결과 생성
+    // 저장된 데이터로 확정 결과 생성 (orderId: 배송 진행 목록에서 사용)
     const winners = currentLotteryWinners.map((w, index) => ({
         id: Date.now() + index,
+        orderId: w.id || w.orderId,
         round: currentRound,
         productId: selectedProductId,
         productName: getProductName(selectedProductId),
@@ -2511,6 +2682,7 @@ function confirmLotteryResult() {
         
         return {
             id: Date.now() + winners.length + index,
+            orderId: l.id || l.orderId,
             round: currentRound,
             productId: selectedProductId,
             productName: getProductName(selectedProductId),
