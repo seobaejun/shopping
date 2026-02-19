@@ -1547,54 +1547,77 @@
                     <h2>개인별 정산관리</h2>
                 </div>
 
-                <!-- 검색 필터 -->
+                <!-- 검색 필터 (이름·날짜) -->
                 <div class="search-panel">
                     <div class="search-row">
                         <div class="form-group">
                             <label>이름</label>
-                            <input type="text" class="form-control" placeholder="이름 입력">
+                            <input type="text" class="form-control" id="settlementPersonalName" placeholder="이름 입력">
                         </div>
                         <div class="form-group">
                             <label>시작일</label>
-                            <input type="date" class="form-control" value="2026-01-26">
+                            <input type="date" class="form-control" id="settlementPersonalStart">
                         </div>
                         <div class="form-group">
                             <label>종료일</label>
-                            <input type="date" class="form-control" value="2026-02-02">
+                            <input type="date" class="form-control" id="settlementPersonalEnd">
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary">검색</button>
-                        <button class="btn btn-default">취소</button>
-                        <button class="btn btn-secondary">출력</button>
+                        <button type="button" class="btn btn-primary" id="settlementPersonalSearchBtn">검색</button>
+                        <button type="button" class="btn btn-default" id="settlementPersonalResetBtn">취소</button>
                     </div>
                 </div>
 
-                <!-- 정산 테이블 -->
-                <div class="table-container">
-                    <p class="info-text">총 0 개의 구매상품이 검색되었습니다.</p>
-                    <div class="stats-summary">
-                        <p>지원금 총지급액: <strong>0</strong></p>
-                    </div>
+                <!-- 총 정산 (전체 기준, 검색과 무관) -->
+                <div class="stats-summary settlement-total-block">
+                    <h4>총 정산</h4>
+                    <p>지원금 총지급액: <strong id="settlementPersonalTotalSupport">0</strong>원</p>
+                </div>
+
+                <!-- 검색 결과 영역 (검색 버튼 클릭 시에만 표시, 구매요청과 동일) -->
+                <div id="settlementPersonalSearchResultsContainer" class="table-container" style="display: none; margin-top: 20px; margin-bottom: 20px;">
+                    <p class="info-text">검색 결과: <strong id="settlementPersonalSearchResultCount">0</strong>건</p>
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>번호</th>
                                 <th>이름</th>
                                 <th>날짜</th>
-                                <th>회차</th>
                                 <th>전화번호</th>
                                 <th>계좌번호</th>
                                 <th>상품명</th>
                                 <th>구분</th>
-                                <th>지원금 총지급액</th>
+                                <th>지원금</th>
                                 <th>승인상태</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="settlementPersonalSearchResultsBody">
+                            <tr><td colspan="9" class="empty-message">검색 후 결과가 여기에 표시됩니다.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 전체 정산 목록 (항상 표시, 검색과 무관) -->
+                <div class="table-container">
+                    <h3 style="margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #17a2b8;">전체 정산 목록</h3>
+                    <p class="info-text" id="settlementPersonalInfoText">총 0개의 구매상품이 있습니다.</p>
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <td colspan="10" class="empty-message">등록된 데이터가 없습니다.</td>
+                                <th>번호</th>
+                                <th>이름</th>
+                                <th>날짜</th>
+                                <th>전화번호</th>
+                                <th>계좌번호</th>
+                                <th>상품명</th>
+                                <th>구분</th>
+                                <th>지원금</th>
+                                <th>승인상태</th>
                             </tr>
+                        </thead>
+                        <tbody id="settlementPersonalTableBody">
+                            <tr><td colspan="9" class="empty-message">데이터를 불러오는 중...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1606,51 +1629,83 @@
                     <h2>회차별 정산관리</h2>
                 </div>
 
-                <!-- 검색 필터 -->
+                <!-- 검색 필터 (상품명·회차·날짜) -->
                 <div class="search-panel">
                     <div class="search-row">
                         <div class="form-group">
-                            <label>이름</label>
-                            <input type="text" class="form-control" placeholder="이름 입력">
+                            <label>상품명</label>
+                            <input type="text" class="form-control" id="settlementRoundProduct" placeholder="상품명 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>정산회차</label>
+                            <input type="text" class="form-control" id="settlementRoundRound" placeholder="예: 1 (1회차)">
                         </div>
                         <div class="form-group">
                             <label>시작일</label>
-                            <input type="date" class="form-control" value="2026-01-26">
+                            <input type="date" class="form-control" id="settlementRoundStart">
                         </div>
                         <div class="form-group">
                             <label>종료일</label>
-                            <input type="date" class="form-control" value="2026-02-02">
+                            <input type="date" class="form-control" id="settlementRoundEnd">
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary">검색</button>
-                        <button class="btn btn-default">취소</button>
+                        <button type="button" class="btn btn-primary" id="settlementRoundSearchBtn">검색</button>
+                        <button type="button" class="btn btn-default" id="settlementRoundResetBtn">취소</button>
                     </div>
                 </div>
 
-                <!-- 회차별 정산 테이블 -->
-                <div class="table-container">
-                    <p class="info-text">총 0 개의 구매상품이 검색되었습니다.</p>
+                <!-- 총 정산 (전체 기준, 검색과 무관) -->
+                <div class="stats-summary settlement-total-block">
+                    <h4>총 정산</h4>
+                    <p>지원금 총지급액: <strong id="settlementRoundTotalSupport">0</strong>원</p>
+                </div>
+
+                <!-- 검색 결과 영역 (검색 버튼 클릭 시에만 표시, 구매요청과 동일) -->
+                <div id="settlementRoundSearchResultsContainer" class="table-container" style="display: none; margin-top: 20px; margin-bottom: 20px;">
+                    <p class="info-text">검색 결과: <strong id="settlementRoundSearchResultCount">0</strong>건</p>
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>번호</th>
                                 <th>날짜</th>
-                                <th>회차</th>
+                                <th>정산회차</th>
                                 <th>이름</th>
                                 <th>전화번호</th>
                                 <th>계좌번호</th>
                                 <th>상품명</th>
                                 <th>구분</th>
-                                <th>지원금 총지급액</th>
-                                <th>환불금액</th>
-                                <th>지원금 총지급액</th>
+                                <th>지원금</th>
+                                <th>승인상태</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="settlementRoundSearchResultsBody">
+                            <tr><td colspan="10" class="empty-message">검색 후 결과가 여기에 표시됩니다.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 전체 정산 목록 (항상 표시, 검색과 무관) -->
+                <div class="table-container">
+                    <h3 style="margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #17a2b8;">전체 정산 목록</h3>
+                    <p class="info-text" id="settlementRoundInfoText">총 0건의 정산 내역이 있습니다.</p>
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <td colspan="11" class="empty-message">등록된 데이터가 없습니다.</td>
+                                <th>번호</th>
+                                <th>날짜</th>
+                                <th>정산회차</th>
+                                <th>이름</th>
+                                <th>전화번호</th>
+                                <th>계좌번호</th>
+                                <th>상품명</th>
+                                <th>구분</th>
+                                <th>지원금</th>
+                                <th>승인상태</th>
                             </tr>
+                        </thead>
+                        <tbody id="settlementRoundTableBody">
+                            <tr><td colspan="10" class="empty-message">데이터를 불러오는 중...</td></tr>
                         </tbody>
                     </table>
                 </div>

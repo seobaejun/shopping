@@ -616,6 +616,18 @@ body {
     font-size: 16px;
 }
 
+/* 총 정산 블록: 검색 결과와 구분 */
+.settlement-total-block {
+    margin-bottom: 24px;
+    border: 1px solid #dee2e6;
+    background: #fff;
+}
+.settlement-total-block h4 {
+    margin: 0 0 8px 0;
+    font-size: 15px;
+    color: #495057;
+}
+
 /* 아이콘 버튼 */
 .btn-icon {
     background: white;

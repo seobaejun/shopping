@@ -284,8 +284,10 @@ async function loadPageData(pageId) {
             await loadPurchaseRequests();
             break;
         case 'draw-lottery':
-            // 추첨 현황 업데이트
-            if (typeof renderLotteryStatus === 'function') {
+            // 승인된 주문을 조별 추첨 대기 명단으로 로드 후 현황 표시
+            if (typeof loadLotteryWaitingData === 'function') {
+                await loadLotteryWaitingData();
+            } else if (typeof renderLotteryStatus === 'function') {
                 setTimeout(renderLotteryStatus, 100);
             }
             break;
@@ -295,7 +297,26 @@ async function loadPageData(pageId) {
                 setTimeout(updateConfirmPage, 100);
             }
             break;
-        // 다른 페이지들도 추가 가능
+        case 'settlement-personal':
+            if (!window._settlementPersonalDateInitialized) {
+                var spEnd = document.getElementById('settlementPersonalEnd');
+                var spStart = document.getElementById('settlementPersonalStart');
+                if (spEnd && !spEnd.value) spEnd.value = new Date().toISOString().split('T')[0];
+                if (spStart && !spStart.value) { var d = new Date(); d.setMonth(d.getMonth() - 1); spStart.value = d.toISOString().split('T')[0]; }
+                window._settlementPersonalDateInitialized = true;
+            }
+            await loadSettlementPersonal();
+            break;
+        case 'settlement-round':
+            if (!window._settlementRoundDateInitialized) {
+                var srEnd = document.getElementById('settlementRoundEnd');
+                var srStart = document.getElementById('settlementRoundStart');
+                if (srEnd && !srEnd.value) srEnd.value = new Date().toISOString().split('T')[0];
+                if (srStart && !srStart.value) { var d = new Date(); d.setMonth(d.getMonth() - 1); srStart.value = d.toISOString().split('T')[0]; }
+                window._settlementRoundDateInitialized = true;
+            }
+            await loadSettlementRound();
+            break;
     }
 }
 
@@ -471,6 +492,167 @@ async function loadPurchaseRequests() {
     }
 }
 
+// 개인별 정산관리: 총 정산 + 전체 목록만 표시 (검색 결과는 별도 컨테이너에만 표시)
+async function loadSettlementPersonal() {
+    var tbody = document.getElementById('settlementPersonalTableBody');
+    var infoText = document.getElementById('settlementPersonalInfoText');
+    var totalEl = document.getElementById('settlementPersonalTotalSupport');
+    if (!tbody) return;
+    try {
+        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
+            if (infoText) infoText.textContent = '총 0개의 구매상품이 있습니다.';
+            return;
+        }
+        var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
+        var fullList = allOrders.filter(function (o) { return o.status === 'approved'; });
+        window._settlementPersonalFullList = fullList;
+        var fullTotalSupport = fullList.reduce(function (sum, o) { return sum + (o.supportAmount || 0); }, 0);
+        if (totalEl) totalEl.textContent = fullTotalSupport.toLocaleString();
+        if (infoText) infoText.textContent = '총 ' + fullList.length + '개의 구매상품이 있습니다.';
+        if (!fullList || fullList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-message">정산 내역이 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = fullList.map(function (order, i) {
+            var dateStr = _orderFormatDate(order.createdAt);
+            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + _orderEscapeHtml(order.phone || '-') + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+        }).join('');
+    } catch (e) {
+        console.error('개인별 정산 로드 오류:', e);
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
+        if (infoText) infoText.textContent = '총 0개의 구매상품이 있습니다.';
+        if (totalEl) totalEl.textContent = '0';
+    }
+}
+
+// 개인별 정산 검색: 필터 결과만 검색 결과 컨테이너에 표시 (총 정산·전체 목록은 건드리지 않음, 구매요청과 동일)
+function applySettlementPersonalSearch() {
+    var fullList = window._settlementPersonalFullList || [];
+    var nameInput = document.getElementById('settlementPersonalName');
+    var startInput = document.getElementById('settlementPersonalStart');
+    var endInput = document.getElementById('settlementPersonalEnd');
+    var name = (nameInput && nameInput.value) ? nameInput.value.trim().toLowerCase() : '';
+    var startStr = (startInput && startInput.value) ? startInput.value.trim() : '';
+    var endStr = (endInput && endInput.value) ? endInput.value.trim() : '';
+    var startMs = _orderStartOfDayLocal(startStr);
+    var endMs = _orderEndOfDayLocal(endStr);
+    var filtered = fullList.filter(function (order) {
+        if (name) {
+            var orderName = (order.userName != null) ? String(order.userName).toLowerCase() : '';
+            if (!orderName || orderName.indexOf(name) === -1) return false;
+        }
+        var t = _orderGetCreatedTime(order);
+        if (startMs != null && t < startMs) return false;
+        if (endMs != null && t > endMs) return false;
+        return true;
+    });
+    var searchContainer = document.getElementById('settlementPersonalSearchResultsContainer');
+    var searchTbody = document.getElementById('settlementPersonalSearchResultsBody');
+    var countEl = document.getElementById('settlementPersonalSearchResultCount');
+    if (!searchContainer || !searchTbody) return;
+    searchContainer.style.display = 'block';
+    if (countEl) countEl.textContent = filtered.length;
+    if (!filtered || filtered.length === 0) {
+        searchTbody.innerHTML = '<tr><td colspan="9" class="empty-message">검색 조건에 맞는 정산 내역이 없습니다.</td></tr>';
+    } else {
+        searchTbody.innerHTML = filtered.map(function (order, i) {
+            var dateStr = _orderFormatDate(order.createdAt);
+            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + _orderEscapeHtml(order.phone || '-') + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+        }).join('');
+    }
+    searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// 회차별 정산관리: 총 정산 + 전체 목록만 표시 (검색 결과는 별도 컨테이너에만 표시)
+async function loadSettlementRound() {
+    var tbody = document.getElementById('settlementRoundTableBody');
+    var infoText = document.getElementById('settlementRoundInfoText');
+    var totalEl = document.getElementById('settlementRoundTotalSupport');
+    if (!tbody) return;
+    try {
+        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
+            if (infoText) infoText.textContent = '총 0건의 정산 내역이 있습니다.';
+            if (totalEl) totalEl.textContent = '0';
+            return;
+        }
+        var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
+        var fullList = allOrders.filter(function (o) { return o.status === 'approved'; });
+        window._settlementRoundFullList = fullList;
+        var fullTotalSupport = fullList.reduce(function (sum, o) { return sum + (o.supportAmount || 0); }, 0);
+        if (totalEl) totalEl.textContent = fullTotalSupport.toLocaleString();
+        if (infoText) infoText.textContent = '총 ' + (fullList ? fullList.length : 0) + '건의 정산 내역이 있습니다.';
+        if (!fullList || fullList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">정산 내역이 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = fullList.map(function (order, i) {
+            var t = _orderGetCreatedTime(order);
+            var d = new Date(t);
+            var dateOnly = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
+            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + _orderEscapeHtml(order.phone || '-') + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+        }).join('');
+    } catch (e) {
+        console.error('회차별 정산 로드 오류:', e);
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
+        if (infoText) infoText.textContent = '총 0건의 정산 내역이 있습니다.';
+        var totalElErr = document.getElementById('settlementRoundTotalSupport');
+        if (totalElErr) totalElErr.textContent = '0';
+    }
+}
+
+// 회차별 정산 검색: 필터 결과만 검색 결과 컨테이너에 표시 (총 정산·전체 목록은 건드리지 않음, 구매요청과 동일)
+function applySettlementRoundSearch() {
+    var fullList = window._settlementRoundFullList || [];
+    var productInput = document.getElementById('settlementRoundProduct');
+    var roundInput = document.getElementById('settlementRoundRound');
+    var startInput = document.getElementById('settlementRoundStart');
+    var endInput = document.getElementById('settlementRoundEnd');
+    var product = (productInput && productInput.value) ? productInput.value.trim().toLowerCase() : '';
+    var roundStr = (roundInput && roundInput.value) ? roundInput.value.trim().replace(/회차/g, '') : '';
+    var roundNum = roundStr ? parseInt(roundStr, 10) : null;
+    if (roundNum !== null && isNaN(roundNum)) roundNum = null;
+    var startStr = (startInput && startInput.value) ? startInput.value.trim() : '';
+    var endStr = (endInput && endInput.value) ? endInput.value.trim() : '';
+    var startMs = _orderStartOfDayLocal(startStr);
+    var endMs = _orderEndOfDayLocal(endStr);
+    var filtered = fullList.filter(function (order) {
+        if (product) {
+            var pn = (order.productName != null) ? String(order.productName).toLowerCase() : '';
+            if (!pn || pn.indexOf(product) === -1) return false;
+        }
+        if (roundNum != null) {
+            var r = order.settlementRound != null ? order.settlementRound : order.round;
+            if (r == null) return false;
+            if (Number(r) !== roundNum) return false;
+        }
+        var t = _orderGetCreatedTime(order);
+        if (startMs != null && t < startMs) return false;
+        if (endMs != null && t > endMs) return false;
+        return true;
+    });
+    var searchContainer = document.getElementById('settlementRoundSearchResultsContainer');
+    var searchTbody = document.getElementById('settlementRoundSearchResultsBody');
+    var countEl = document.getElementById('settlementRoundSearchResultCount');
+    if (!searchContainer || !searchTbody) return;
+    searchContainer.style.display = 'block';
+    if (countEl) countEl.textContent = filtered.length;
+    if (!filtered || filtered.length === 0) {
+        searchTbody.innerHTML = '<tr><td colspan="10" class="empty-message">검색 조건에 맞는 정산 내역이 없습니다.</td></tr>';
+    } else {
+        searchTbody.innerHTML = filtered.map(function (order, i) {
+            var t = _orderGetCreatedTime(order);
+            var d = new Date(t);
+            var dateOnly = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
+            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + _orderEscapeHtml(order.phone || '-') + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+        }).join('');
+    }
+    searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 // 날짜 문자열을 로컬 자정/종료 시각(ms)으로 변환 (UTC 해석 방지)
 function _orderStartOfDayLocal(dateStr) {
     if (!dateStr) return null;
@@ -586,6 +768,46 @@ document.addEventListener('click', (e) => {
         if (startInput) startInput.value = '';
         if (endInput) endInput.value = '';
         var searchContainer = document.getElementById('purchaseRequestSearchResultsContainer');
+        if (searchContainer) searchContainer.style.display = 'none';
+        return;
+    }
+    if (e.target.closest('#settlementPersonalSearchBtn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        applySettlementPersonalSearch();
+        return;
+    }
+    if (e.target.closest('#settlementPersonalResetBtn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        var n = document.getElementById('settlementPersonalName');
+        var s = document.getElementById('settlementPersonalStart');
+        var en = document.getElementById('settlementPersonalEnd');
+        if (n) n.value = '';
+        if (s) s.value = '';
+        if (en) en.value = '';
+        var searchContainer = document.getElementById('settlementPersonalSearchResultsContainer');
+        if (searchContainer) searchContainer.style.display = 'none';
+        return;
+    }
+    if (e.target.closest('#settlementRoundSearchBtn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        applySettlementRoundSearch();
+        return;
+    }
+    if (e.target.closest('#settlementRoundResetBtn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        var p = document.getElementById('settlementRoundProduct');
+        var r = document.getElementById('settlementRoundRound');
+        var s = document.getElementById('settlementRoundStart');
+        var en = document.getElementById('settlementRoundEnd');
+        if (p) p.value = '';
+        if (r) r.value = '';
+        if (s) s.value = '';
+        if (en) en.value = '';
+        var searchContainer = document.getElementById('settlementRoundSearchResultsContainer');
         if (searchContainer) searchContainer.style.display = 'none';
         return;
     }
@@ -1801,51 +2023,62 @@ document.addEventListener('click', (e) => {
 // 추첨 시스템
 // ============================================
 
-// 추첨 대기 데이터 (샘플)
-// 파일 업데이트 시간: 2026-02-05 23:13:00
-// 주의: productSupport는 상품의 표기 지원금이며, 미선정자가 받을 실제 지원금은 추첨 시 계산됩니다.
-const LOTTERY_WAITING_DATA = {
-    'product-1': [ // 메가커피 30,000원 (표기 지원금: 1,500원)
-        { id: 1, name: '김철수', phone: '010-1234-5678', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 09:30' },
-        { id: 2, name: '이영희', phone: '010-2345-6789', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 10:15' },
-        { id: 3, name: '박민수', phone: '010-3456-7890', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 11:20' },
-        { id: 4, name: '최지은', phone: '010-4567-8901', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 13:45' },
-        { id: 5, name: '정태양', phone: '010-5678-9012', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 14:30' },
-        { id: 6, name: '강민지', phone: '010-6789-0123', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 15:10' },
-        { id: 7, name: '윤서준', phone: '010-7890-1234', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 16:00' },
-        { id: 8, name: '임하늘', phone: '010-8901-2345', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 16:45' },
-        { id: 9, name: '한별', phone: '010-9012-3456', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 17:20' },
-        { id: 10, name: '송하나', phone: '010-0123-4567', amount: 30000, productSupport: 1500, confirmed: true, date: '2026-02-04 18:00' },
-    ],
-    'product-2': [ // 스타벅스 4,500원 (표기 지원금: 225원)
-        { id: 11, name: '오민석', phone: '010-1111-2222', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 09:00' },
-        { id: 12, name: '신예진', phone: '010-2222-3333', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 10:00' },
-        { id: 13, name: '조현우', phone: '010-3333-4444', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 11:00' },
-        { id: 14, name: '배수지', phone: '010-4444-5555', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 12:00' },
-        { id: 15, name: '나준호', phone: '010-5555-6666', amount: 4500, productSupport: 225, confirmed: true, date: '2026-02-04 13:00' },
-    ],
-    'product-3': [ // 배스킨라빈스 파인트 15,000원 (표기 지원금: 750원)
-        { id: 16, name: '류지훈', phone: '010-6666-7777', amount: 15000, productSupport: 750, confirmed: true, date: '2026-02-04 09:15' },
-        { id: 17, name: '서유나', phone: '010-7777-8888', amount: 15000, productSupport: 750, confirmed: true, date: '2026-02-04 10:30' },
-        { id: 18, name: '황도현', phone: '010-8888-9999', amount: 15000, productSupport: 750, confirmed: true, date: '2026-02-04 11:45' },
-    ]
-};
+// 추첨 대기 데이터 — 승인(approved)된 주문을 조별 추첨 명단으로 사용. loadLotteryWaitingData()에서 Firestore 기준으로 채움.
+let LOTTERY_WAITING_DATA = {};
+window.LOTTERY_PRODUCTS = [];
 
 let selectedProductId = null;
 let currentRound = 1;
 
-// 추첨 현황 카드 렌더링
+// 승인된 주문을 조별 추첨 대기 명단으로 로드 (구매요청에서 승인 시 여기로 넘어감)
+async function loadLotteryWaitingData() {
+    try {
+        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService || !window.firebaseAdmin.productService) return;
+        const allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
+        const approved = allOrders.filter(function (o) { return o.status === 'approved'; });
+        const products = await window.firebaseAdmin.productService.getProducts() || [];
+        window.LOTTERY_PRODUCTS = Array.isArray(products) ? products : [];
+        const byProduct = {};
+        approved.forEach(function (order) {
+            const pid = order.productId || 'unknown';
+            if (!byProduct[pid]) byProduct[pid] = [];
+            byProduct[pid].push({
+                id: order.id,
+                name: order.userName || order.name || '-',
+                phone: order.phone || '-',
+                amount: order.productPrice || 0,
+                productSupport: order.supportAmount || 0,
+                confirmed: true,
+                date: _orderFormatDate(order.createdAt)
+            });
+        });
+        LOTTERY_WAITING_DATA = byProduct;
+        if (typeof renderLotteryStatus === 'function') renderLotteryStatus();
+        if (selectedProductId && typeof renderWaitingList === 'function') renderWaitingList(selectedProductId);
+    } catch (e) {
+        console.error('추첨 대기 명단 로드 오류:', e);
+    }
+}
+
+// 추첨 현황 카드 렌더링 (실제 상품 + 승인 주문 기준 대기 인원)
 function renderLotteryStatus() {
     const container = document.querySelector('.lottery-status-grid');
     if (!container) return;
 
-    const products = [
-        { id: 'product-1', name: '메가커피 모바일금액권 3만원', price: 30000, productSupport: 1500, waiting: LOTTERY_WAITING_DATA['product-1']?.length || 0 },
-        { id: 'product-2', name: '스타벅스 아메리카노 Tall', price: 4500, productSupport: 225, waiting: LOTTERY_WAITING_DATA['product-2']?.length || 0 },
-        { id: 'product-3', name: '배스킨라빈스 파인트', price: 15000, productSupport: 750, waiting: LOTTERY_WAITING_DATA['product-3']?.length || 0 },
-    ];
+    const products = (window.LOTTERY_PRODUCTS && window.LOTTERY_PRODUCTS.length > 0)
+        ? window.LOTTERY_PRODUCTS.map(function (p) {
+            const waitingList = LOTTERY_WAITING_DATA[p.id] || [];
+            const firstSupport = waitingList[0] ? (waitingList[0].productSupport || 0) : 0;
+            return { id: p.id, name: p.name, price: p.price || 0, productSupport: firstSupport, waiting: waitingList.length };
+        })
+        : [];
 
-    container.innerHTML = products.map(product => {
+    if (products.length === 0) {
+        container.innerHTML = '<p class="empty-message">등록된 상품이 없거나, 승인된 구매가 없습니다. 구매 요청에서 승인하면 여기 명단에 올라옵니다.</p>';
+        return;
+    }
+
+    container.innerHTML = products.map(function (product) {
         const groupSize = parseInt(document.getElementById('groupSize')?.value || 10);
         const winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2);
         const canDraw = product.waiting >= groupSize;
@@ -1854,9 +2087,10 @@ function renderLotteryStatus() {
         // 당첨자 인원 × 상품 표기 지원금 = 총 지원금
         const totalSupport = product.productSupport * winnerCount;
 
+        var safeId = (product.id || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         return `
             <div class="lottery-product-card ${selectedProductId === product.id ? 'selected' : ''}" 
-                 onclick="selectProduct('${product.id}')">
+                 data-product-id="${safeId}" onclick="selectProduct(this.getAttribute('data-product-id'))">
                 <div class="product-card-header">
                     <h4 class="product-card-title">${product.name}</h4>
                     <div class="product-card-price">${product.price.toLocaleString()}원</div>
@@ -1911,13 +2145,13 @@ function renderWaitingList(productId) {
         return;
     }
 
-    const products = {
-        'product-1': '메가커피 모바일금액권 3만원',
-        'product-2': '스타벅스 아메리카노 Tall',
-        'product-3': '배스킨라빈스 파인트',
-    };
+    var productName = '상품';
+    if (window.LOTTERY_PRODUCTS && window.LOTTERY_PRODUCTS.length > 0) {
+        var p = window.LOTTERY_PRODUCTS.find(function (x) { return x.id === productId; });
+        if (p && p.name) productName = p.name;
+    }
 
-    if (productNameEl) productNameEl.textContent = products[productId];
+    if (productNameEl) productNameEl.textContent = productName;
     if (countEl) countEl.textContent = `${waitingData.length}명 대기`;
 
     // 대기 목록에서 계산된 지원금 표시
