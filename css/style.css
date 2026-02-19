@@ -1113,12 +1113,23 @@ img {
     color: var(--primary-color);
 }
 
-.footer-links .admin-link {
+/* 관리자 링크: 기본 숨김. body.show-admin-link 일 때만 표시 */
+.footer-links .admin-link,
+a.admin-link,
+li .admin-link {
+    display: none !important;
+    visibility: hidden !important;
     background: rgba(255, 193, 7, 0.2);
     padding: 5px 15px;
     border-radius: 5px;
     border: 1px solid rgba(255, 193, 7, 0.5);
     opacity: 1;
+}
+body.show-admin-link .footer-links .admin-link,
+body.show-admin-link a.admin-link,
+body.show-admin-link li .admin-link {
+    display: inline-flex !important;
+    visibility: visible !important;
 }
 
 .footer-links .admin-link:hover {

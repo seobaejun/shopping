@@ -8,6 +8,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <script>
+    (function(){
+        var isAdmin = localStorage.getItem('isAdmin') === 'true';
+        var hasUser = !!localStorage.getItem('loginUser');
+        if (!hasUser || !isAdmin) {
+            window.location.replace('../index.html');
+        }
+    })();
+    </script>
     <!-- 상단 헤더 -->
     <header class="admin-header">
         <div class="header-left">
@@ -359,94 +368,36 @@
             <div id="admin-settings" class="content-page">
                 <div class="page-header">
                     <h2>관리권한설정</h2>
-                    <p class="page-description">관리자 계정과 권한을 관리합니다.</p>
+                    <p class="page-description">관리자 계정을 추가·수정·비활성화합니다.</p>
                 </div>
 
                 <div class="settings-panel">
                     <div class="panel-header">
                         <h3><i class="fas fa-user-shield"></i> 관리자 목록</h3>
-                        <button class="btn btn-primary btn-sm" onclick="alert('관리자 추가 기능 (서버 연동 후 구현)')">
+                        <button type="button" class="btn btn-primary btn-sm" id="adminSettingsAddBtn">
                             <i class="fas fa-plus"></i> 관리자 추가
                         </button>
                     </div>
 
                     <div class="table-container">
+                        <p class="info-text" id="adminSettingsInfoText">총 0명의 관리자가 있습니다.</p>
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>번호</th>
                                     <th>아이디</th>
                                     <th>이름</th>
-                                    <th>권한</th>
                                     <th>이메일</th>
                                     <th>전화번호</th>
-                                    <th>최근 접속</th>
+                                    <th>등록일</th>
                                     <th>상태</th>
                                     <th>관리</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>superadmin</td>
-                                    <td>최고관리자</td>
-                                    <td><span class="badge badge-danger">최고관리자</span></td>
-                                    <td>admin@10market.com</td>
-                                    <td>010-0000-0000</td>
-                                    <td>2026-02-04 10:30</td>
-                                    <td><span class="badge badge-success">활성</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary">수정</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>mdadmin</td>
-                                    <td>MD관리자</td>
-                                    <td><span class="badge badge-warning">MD관리자</span></td>
-                                    <td>md@10market.com</td>
-                                    <td>010-1111-1111</td>
-                                    <td>2026-02-03 15:20</td>
-                                    <td><span class="badge badge-success">활성</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary">수정</button>
-                                        <button class="btn btn-sm btn-secondary">비활성화</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>csadmin</td>
-                                    <td>CS관리자</td>
-                                    <td><span class="badge badge-info">CS관리자</span></td>
-                                    <td>cs@10market.com</td>
-                                    <td>010-2222-2222</td>
-                                    <td>2026-02-02 09:15</td>
-                                    <td><span class="badge badge-success">활성</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary">수정</button>
-                                        <button class="btn btn-sm btn-secondary">비활성화</button>
-                                    </td>
-                                </tr>
+                            <tbody id="adminSettingsTableBody">
+                                <tr><td colspan="8" class="empty-message">데이터를 불러오는 중...</td></tr>
                             </tbody>
                         </table>
-                    </div>
-
-                    <div class="settings-section" style="margin-top: 30px;">
-                        <h3><i class="fas fa-key"></i> 권한 레벨 설명</h3>
-                        <div class="permission-info">
-                            <div class="permission-item">
-                                <span class="badge badge-danger">최고관리자</span>
-                                <p>모든 기능에 대한 전체 권한 (회원관리, 추첨관리, 정산관리, 배송관리, 환경설정)</p>
-                            </div>
-                            <div class="permission-item">
-                                <span class="badge badge-warning">MD관리자</span>
-                                <p>상품 관리, 배송 관리, 통계 조회 권한</p>
-                            </div>
-                            <div class="permission-item">
-                                <span class="badge badge-info">CS관리자</span>
-                                <p>회원 조회, 게시판 관리, 문의 응대 권한</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -2140,7 +2091,16 @@
             script1.src = 'js/firebase-admin.js';
             document.body.appendChild(script1);
             
-                script1.onload = () => {
+            script1.onload = () => {
+                // Firestore 초기화가 끝날 때까지 기다린 뒤 다음 스크립트 로드
+                var initDone = window.firebaseAdmin && typeof window.firebaseAdmin.getInitPromise === 'function'
+                    ? window.firebaseAdmin.getInitPromise()
+                    : Promise.resolve();
+                initDone.then(function() {
+                    if (window.firebaseAdmin && window.firebaseAdmin.db) {
+                        console.log('✅ Firestore 초기화 완료 후 스크립트 로드');
+                    }
+                }).catch(function(e) { console.warn('Firestore init:', e); }).finally(function() {
                 const script2 = document.createElement('script');
                 script2.src = 'js/delete-firebase-data.js';
                 document.body.appendChild(script2);
@@ -2213,6 +2173,7 @@
                         };
                     };
                 };
+                });
             };
         }).catch(error => {
             console.error('Firebase 초기화 실패:', error);
@@ -2508,6 +2469,52 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeEditMemberModal()">취소</button>
                 <button class="btn btn-primary" onclick="saveEditMember()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 관리자 추가/수정 모달 -->
+    <div id="adminEditModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="adminEditModalTitle">관리자 추가</h3>
+                <button type="button" class="modal-close" id="adminEditModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="adminAddFormSection" style="display: none;">
+                    <p class="admin-search-desc">이름과 비밀번호를 입력한 뒤 저장하면 관리자로 추가됩니다.</p>
+                    <div class="form-group">
+                        <label>이름 <span style="color:red;">*</span></label>
+                        <input type="text" class="form-control" id="adminAddName" placeholder="이름">
+                    </div>
+                    <div class="form-group">
+                        <label>비밀번호 <span style="color:red;">*</span></label>
+                        <input type="password" class="form-control" id="adminAddPassword" placeholder="비밀번호" autocomplete="off">
+                    </div>
+                </div>
+                <form id="adminEditForm" style="display: none;">
+                    <input type="hidden" id="adminEditId" value="">
+                    <div class="form-group">
+                        <label>아이디 <span style="color:red;">*</span></label>
+                        <input type="text" class="form-control" id="adminEditUserId" required placeholder="로그인 아이디">
+                    </div>
+                    <div class="form-group">
+                        <label>이름 <span style="color:red;">*</span></label>
+                        <input type="text" class="form-control" id="adminEditName" required placeholder="이름">
+                    </div>
+                    <div class="form-group">
+                        <label>이메일</label>
+                        <input type="email" class="form-control" id="adminEditEmail" placeholder="email@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>전화번호</label>
+                        <input type="text" class="form-control" id="adminEditPhone" placeholder="010-0000-0000">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="adminEditModalCancel">취소</button>
+                <button type="button" class="btn btn-primary" id="adminEditModalSave">저장</button>
             </div>
         </div>
     </div>

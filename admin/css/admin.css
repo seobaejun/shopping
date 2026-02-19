@@ -566,6 +566,62 @@ body {
     font-size: 14px;
 }
 
+/* 관리자 추가 모달 - 회원 검색 */
+.admin-member-search-section {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+.admin-search-desc {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 10px;
+}
+.admin-search-results {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-top: 8px;
+}
+.admin-search-results .empty-message {
+    padding: 16px;
+    margin: 0;
+    text-align: left;
+}
+.admin-search-result-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+}
+.admin-search-result-row:last-child {
+    border-bottom: none;
+}
+.admin-search-result-row:hover {
+    background: #f0f4ff;
+}
+.admin-search-result-row-selected,
+.admin-search-result-row-selected:hover {
+    background: #e0e8ff;
+    border-left: 3px solid var(--primary-color);
+}
+.admin-search-result-row .admin-search-name {
+    font-weight: 600;
+    min-width: 80px;
+}
+.admin-search-result-row .admin-search-id {
+    color: var(--text-light);
+    min-width: 100px;
+}
+.admin-search-result-row .admin-search-extra {
+    color: var(--text-light);
+    font-size: 12px;
+}
+
 /* 통계 패널 */
 .stats-panel {
     background: #fff;

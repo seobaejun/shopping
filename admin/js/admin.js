@@ -172,6 +172,11 @@ async function loadPageData(pageId) {
             // 이벤트 위임이 이미 등록되어 있으므로 추가 작업 불필요
             console.log('기본환경설정 페이지 로드 완료');
             break;
+        case 'admin-settings':
+            if (typeof loadAdminSettings === 'function') {
+                await loadAdminSettings();
+            }
+            break;
         case 'product-register':
             // 상품등록 페이지 진입 시 카테고리 로드
             console.log('🔵 상품등록 페이지 로드 - 카테고리 로드 시작');
@@ -3172,6 +3177,348 @@ function hidePaymentCompleteButton() {
     }
 }
 
+// ============================================
+// 관리권한설정 (admin-settings)
+// [관리자 목록이 안 보였던 이유]
+// 1. firebase-admin.js에서 window.firebaseAdmin.db를 스크립트 로드 시점의 null로 한 번만 넣어서,
+//    나중에 initFirebase()가 db를 설정해도 화면에서는 계속 null로 인식함.
+// 2. firebase-admin 로드 후 곧바로 다른 스크립트를 로드해, initFirebase() 완료 전에 관리자 페이지가
+//    열리면 db가 아직 null인 상태에서 getAdmins() 등이 호출됨.
+// 3. "준비됨" 판단을 getter만으로 하다 보니, 일부 환경에서 getter가 기대대로 동작하지 않을 수 있음.
+// 해결: getInitPromise()로 초기화 완료 대기, getDb()로 db 조회, HTML에서 초기화 완료 후 다음 스크립트
+// 로드, 목록은 getAdmins() 성공 시에만 그리도록 변경함.
+// ============================================
+const SEED_ADMIN_NAME = '서배준';
+const SEED_ADMIN_USER_ID = 'seobaejun';
+const ADMIN_ADD_PASSWORD = '7979';
+
+/** Firebase가 준비될 때까지 대기 후, 실제 db/서비스 사용 가능 여부 반환 */
+async function ensureFirebaseReady() {
+    if (!window.firebaseAdmin) return false;
+    try {
+        if (typeof window.firebaseAdmin.getInitPromise === 'function') {
+            await Promise.race([
+                window.firebaseAdmin.getInitPromise(),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))
+            ]);
+        }
+        if (typeof window.firebaseAdmin.initFirebase === 'function') {
+            await window.firebaseAdmin.initFirebase();
+        }
+        var d = window.firebaseAdmin.getDb ? window.firebaseAdmin.getDb() : window.firebaseAdmin.db;
+        return !!d;
+    } catch (e) {
+        console.warn('ensureFirebaseReady:', e);
+        var d = window.firebaseAdmin.getDb ? window.firebaseAdmin.getDb() : window.firebaseAdmin.db;
+        return !!d;
+    }
+}
+
+function showAdminSettingsError(tbody, infoText, msg) {
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-message">' + (msg || 'Firebase가 준비되지 않았습니다.') + ' <button type="button" class="btn btn-primary btn-sm" id="adminSettingsRetryBtn" style="margin-left:8px;">재시도</button></td></tr>';
+    if (infoText) infoText.textContent = '총 0명의 관리자가 있습니다.';
+    var retryBtn = document.getElementById('adminSettingsRetryBtn');
+    if (retryBtn) retryBtn.onclick = function() { loadAdminSettings(); };
+}
+
+async function loadAdminSettings() {
+    const tbody = document.getElementById('adminSettingsTableBody');
+    const infoText = document.getElementById('adminSettingsInfoText');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-message">데이터를 불러오는 중...</td></tr>';
+    try {
+        await ensureFirebaseReady();
+        const adminService = window.firebaseAdmin && window.firebaseAdmin.adminService;
+        if (!adminService) {
+            showAdminSettingsError(tbody, infoText, 'Firebase가 준비되지 않았습니다.');
+            return;
+        }
+        let admins = await adminService.getAdmins();
+        if (admins.length === 0) {
+            await adminService.addAdmin({
+                userId: SEED_ADMIN_USER_ID,
+                name: SEED_ADMIN_NAME,
+                email: '',
+                phone: '',
+                status: 'active'
+            });
+            admins = await adminService.getAdmins();
+        }
+        var memberMap = {};
+        try {
+            var memberService = window.firebaseAdmin && window.firebaseAdmin.memberService;
+            if (memberService) {
+                var members = await memberService.getMembers();
+                (members || []).forEach(function(m) {
+                    if (m.userId) memberMap[m.userId] = m;
+                    if (m.name && !memberMap[m.name]) memberMap[m.name] = m;
+                });
+            }
+        } catch (e) {
+            console.warn('회원 목록 보조 로드 실패:', e);
+        }
+        if (infoText) infoText.textContent = `총 ${admins.length}명의 관리자가 있습니다.`;
+        renderAdminSettingsTable(admins, memberMap);
+    } catch (err) {
+        console.error('관리자 목록 로드 오류:', err);
+        showAdminSettingsError(tbody, infoText, '오류: ' + (err.message || '알 수 없음'));
+    }
+}
+
+function formatAdminDate(ts) {
+    if (!ts) return '-';
+    if (ts.seconds != null) {
+        const d = new Date(ts.seconds * 1000);
+        return d.toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+    return '-';
+}
+
+function renderAdminSettingsTable(admins, memberMap) {
+    memberMap = memberMap || {};
+    const tbody = document.getElementById('adminSettingsTableBody');
+    if (!tbody) return;
+    if (!admins || admins.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-message">등록된 관리자가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = admins.map((a, i) => {
+        var member = memberMap[a.userId] || memberMap[a.name];
+        var displayUserId = (member && member.userId) ? member.userId : (a.userId || '');
+        var displayEmail = (member && member.email) ? member.email : (a.email || '');
+        var displayPhone = (member && member.phone) ? member.phone : (a.phone || '');
+        const createdAt = formatAdminDate(a.createdAt);
+        const statusBadge = a.status === 'active'
+            ? '<span class="badge badge-success">활성</span>'
+            : '<span class="badge badge-secondary">비활성</span>';
+        const toggleLabel = a.status === 'active' ? '비활성화' : '활성화';
+        return `<tr data-admin-id="${a.id}">
+            <td>${i + 1}</td>
+            <td>${escapeHtml(displayUserId)}</td>
+            <td>${escapeHtml(a.name || '')}</td>
+            <td>${escapeHtml(displayEmail)}</td>
+            <td>${escapeHtml(displayPhone)}</td>
+            <td>${createdAt}</td>
+            <td>${statusBadge}</td>
+            <td>
+                <button type="button" class="btn btn-sm btn-secondary btn-admin-toggle">${toggleLabel}</button>
+                <button type="button" class="btn btn-sm btn-danger btn-admin-delete">삭제</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function escapeHtml(str) {
+    if (str == null) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+let selectedAdminMemberIndex = -1;
+
+async function openAdminModal(editId) {
+    const modal = document.getElementById('adminEditModal');
+    const title = document.getElementById('adminEditModalTitle');
+    const addFormSection = document.getElementById('adminAddFormSection');
+    const adminEditForm = document.getElementById('adminEditForm');
+    if (!modal) return;
+    if (editId) {
+        if (addFormSection) addFormSection.style.display = 'none';
+        if (adminEditForm) adminEditForm.style.display = 'block';
+        title.textContent = '관리자 수정';
+        document.getElementById('adminEditId').value = editId;
+        const adminService = window.firebaseAdmin && window.firebaseAdmin.adminService;
+        if (!adminService) return;
+        const admins = await adminService.getAdmins();
+        const a = admins.find(x => x.id === editId);
+        if (a) {
+            var memberService = window.firebaseAdmin && window.firebaseAdmin.memberService;
+            var editUserId = a.userId || '';
+            var editEmail = a.email || '';
+            var editPhone = a.phone || '';
+            if (memberService && (editUserId || a.name)) {
+                try {
+                    var members = await memberService.getMembers(editUserId ? { searchTerm: editUserId } : { searchTerm: a.name });
+                    var mem = (members && members[0]) ? members[0] : null;
+                    if (mem) {
+                        editUserId = mem.userId || editUserId;
+                        editEmail = mem.email || editEmail;
+                        editPhone = mem.phone || editPhone;
+                    }
+                } catch (e) { console.warn('수정 시 회원 정보 보조 로드 실패:', e); }
+            }
+            document.getElementById('adminEditUserId').value = editUserId;
+            document.getElementById('adminEditUserId').readOnly = true;
+            document.getElementById('adminEditName').value = a.name || '';
+            document.getElementById('adminEditEmail').value = editEmail;
+            document.getElementById('adminEditPhone').value = editPhone;
+        }
+    } else {
+        title.textContent = '관리자 추가';
+        if (addFormSection) addFormSection.style.display = 'block';
+        if (adminEditForm) adminEditForm.style.display = 'none';
+        document.getElementById('adminEditId').value = '';
+        const nameEl = document.getElementById('adminAddName');
+        const pwEl = document.getElementById('adminAddPassword');
+        if (nameEl) nameEl.value = '';
+        if (pwEl) pwEl.value = '';
+    }
+    modal.style.display = 'flex';
+}
+
+function closeAdminModal() {
+    const modal = document.getElementById('adminEditModal');
+    if (modal) modal.style.display = 'none';
+}
+
+let lastAdminSearchMembers = [];
+
+async function searchMemberForAdmin() {
+    const nameInput = document.getElementById('adminEditMemberSearchName');
+    const resultsEl = document.getElementById('adminEditMemberSearchResults');
+    if (!nameInput || !resultsEl) return;
+    const name = (nameInput.value || '').trim();
+    if (!name) {
+        alert('이름을 입력한 뒤 검색해주세요.');
+        return;
+    }
+    const memberService = window.firebaseAdmin && window.firebaseAdmin.memberService;
+    if (!memberService) {
+        alert('회원 목록을 불러올 수 없습니다.');
+        return;
+    }
+    resultsEl.innerHTML = '<p class="empty-message">검색 중...</p>';
+    try {
+        const members = await memberService.getMembers({ searchTerm: name });
+        lastAdminSearchMembers = members || [];
+        if (lastAdminSearchMembers.length === 0) {
+            resultsEl.innerHTML = '<p class="empty-message">검색 결과가 없습니다.</p>';
+            return;
+        }
+        resultsEl.innerHTML = lastAdminSearchMembers.map((m, idx) => {
+            const userId = escapeHtml(m.userId || '');
+            const displayName = escapeHtml(m.name || '');
+            const phone = escapeHtml(m.phone || '');
+            const email = escapeHtml(m.email || '');
+            const extra = phone || email || '-';
+            const selectedClass = idx === selectedAdminMemberIndex ? ' admin-search-result-row-selected' : '';
+            return `<div class="admin-search-result-row${selectedClass}" data-index="${idx}">
+                <span class="admin-search-name">${displayName}</span>
+                <span class="admin-search-id">${userId}</span>
+                <span class="admin-search-extra">${escapeHtml(extra)}</span>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        console.error('회원 검색 오류:', err);
+        resultsEl.innerHTML = '<p class="empty-message">검색 중 오류가 발생했습니다.</p>';
+    }
+}
+
+function selectMemberForAdminRow(index) {
+    selectedAdminMemberIndex = index;
+    const resultsEl = document.getElementById('adminEditMemberSearchResults');
+    if (!resultsEl) return;
+    resultsEl.querySelectorAll('.admin-search-result-row').forEach((row, idx) => {
+        if (idx === index) {
+            row.classList.add('admin-search-result-row-selected');
+        } else {
+            row.classList.remove('admin-search-result-row-selected');
+        }
+    });
+}
+
+async function saveAdminModal() {
+    const id = document.getElementById('adminEditId').value.trim();
+    await ensureFirebaseReady();
+    const adminService = window.firebaseAdmin && window.firebaseAdmin.adminService;
+    if (!adminService || !window.firebaseAdmin.db) {
+        alert('Firebase가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+        return;
+    }
+    try {
+        if (id) {
+            const name = document.getElementById('adminEditName').value.trim();
+            const email = document.getElementById('adminEditEmail').value.trim();
+            const phone = document.getElementById('adminEditPhone').value.trim();
+            if (!name) {
+                alert('이름을 입력해주세요.');
+                return;
+            }
+            await adminService.updateAdmin(id, { name, email, phone });
+            alert('수정되었습니다.');
+        } else {
+            const name = (document.getElementById('adminAddName') && document.getElementById('adminAddName').value || '').trim();
+            const password = document.getElementById('adminAddPassword') ? document.getElementById('adminAddPassword').value : '';
+            if (!name) {
+                alert('이름을 입력해주세요.');
+                return;
+            }
+            if (password !== ADMIN_ADD_PASSWORD) {
+                alert('비밀번호가 올바르지 않습니다.');
+                return;
+            }
+            var userId = name.replace(/\s+/g, '_') || 'admin';
+            var email = '';
+            var phone = '';
+            var memberService = window.firebaseAdmin && window.firebaseAdmin.memberService;
+            if (memberService) {
+                try {
+                    var members = await memberService.getMembers({ searchTerm: name });
+                    if (members && members.length > 0) {
+                        var m = members[0];
+                        userId = m.userId || userId;
+                        email = m.email || '';
+                        phone = m.phone || '';
+                    }
+                } catch (e) { console.warn('관리자 추가 시 회원 조회 실패:', e); }
+            }
+            await adminService.addAdmin({
+                userId: userId,
+                name: name,
+                email: email,
+                phone: phone,
+                status: 'active'
+            });
+            alert('관리자로 추가되었습니다.');
+        }
+        closeAdminModal();
+        await loadAdminSettings();
+    } catch (err) {
+        console.error(err);
+        alert('저장 중 오류가 발생했습니다: ' + (err.message || '알 수 없음'));
+    }
+}
+
+async function toggleAdminStatus(adminId) {
+    const adminService = window.firebaseAdmin && window.firebaseAdmin.adminService;
+    if (!adminService) return;
+    const admins = await adminService.getAdmins();
+    const a = admins.find(x => x.id === adminId);
+    if (!a) return;
+    const next = a.status === 'active' ? 'inactive' : 'active';
+    if (!confirm(`이 관리자를 ${next === 'active' ? '활성화' : '비활성화'}하시겠습니까?`)) return;
+    try {
+        await adminService.updateAdmin(adminId, { status: next });
+        await loadAdminSettings();
+    } catch (err) {
+        alert('변경 중 오류: ' + (err.message || '알 수 없음'));
+    }
+}
+
+async function deleteAdminById(adminId) {
+    if (!confirm('이 관리자를 목록에서 삭제하시겠습니까?')) return;
+    const adminService = window.firebaseAdmin && window.firebaseAdmin.adminService;
+    if (!adminService) return;
+    try {
+        await adminService.deleteAdmin(adminId);
+        await loadAdminSettings();
+    } catch (err) {
+        alert('삭제 중 오류: ' + (err.message || '알 수 없음'));
+    }
+}
+
 // 페이지 로드 시 초기 데이터 렌더링
 // ============================================
 // DOMContentLoaded와 window.onload 모두 처리
@@ -3246,6 +3593,9 @@ function initAdminPage() {
             e.preventDefault();
             console.log('🔵 로그아웃 버튼 클릭됨');
             if (confirm('로그아웃 하시겠습니까?')) {
+                localStorage.removeItem('loginUser');
+                localStorage.removeItem('isLoggedIn');
+                localStorage.setItem('isAdmin', 'false');
                 window.location.href = '../index.html';
             }
             return false;
@@ -3353,6 +3703,50 @@ function initAdminPage() {
                 return false;
             };
             console.log('✅ 회원정보 엑셀 다운로드 버튼 등록 완료');
+        }
+
+        // 관리권한설정: 추가 버튼, 모달, 테이블 이벤트
+        const adminSettingsAddBtn = document.getElementById('adminSettingsAddBtn');
+        if (adminSettingsAddBtn) {
+            adminSettingsAddBtn.onclick = function() { openAdminModal(null); };
+        }
+        const adminEditModal = document.getElementById('adminEditModal');
+        const adminEditModalClose = document.getElementById('adminEditModalClose');
+        const adminEditModalCancel = document.getElementById('adminEditModalCancel');
+        const adminEditModalSave = document.getElementById('adminEditModalSave');
+        if (adminEditModalClose) adminEditModalClose.onclick = closeAdminModal;
+        if (adminEditModalCancel) adminEditModalCancel.onclick = closeAdminModal;
+        if (adminEditModalSave) adminEditModalSave.onclick = function() { saveAdminModal(); };
+        if (adminEditModal && adminEditModal.querySelector('.modal-content')) {
+            adminEditModal.querySelector('.modal-content').onclick = function(e) { e.stopPropagation(); };
+            adminEditModal.onclick = function(e) { if (e.target === adminEditModal) closeAdminModal(); };
+        }
+        const adminSettingsTableBody = document.getElementById('adminSettingsTableBody');
+        if (adminSettingsTableBody) {
+            adminSettingsTableBody.addEventListener('click', function(e) {
+                const row = e.target.closest('tr[data-admin-id]');
+                if (!row) return;
+                const adminId = row.getAttribute('data-admin-id');
+                if (e.target.classList.contains('btn-admin-toggle')) {
+                    toggleAdminStatus(adminId);
+                } else if (e.target.classList.contains('btn-admin-delete')) {
+                    deleteAdminById(adminId);
+                }
+            });
+        }
+        const adminEditMemberSearchBtn = document.getElementById('adminEditMemberSearchBtn');
+        if (adminEditMemberSearchBtn) {
+            adminEditMemberSearchBtn.onclick = function() { searchMemberForAdmin(); };
+        }
+        const adminEditMemberSearchResults = document.getElementById('adminEditMemberSearchResults');
+        if (adminEditMemberSearchResults) {
+            adminEditMemberSearchResults.addEventListener('click', function(e) {
+                const row = e.target.closest('.admin-search-result-row');
+                if (!row) return;
+                const idx = parseInt(row.getAttribute('data-index'), 10);
+                if (isNaN(idx) || idx < 0) return;
+                selectMemberForAdminRow(idx);
+            });
         }
         
         // 구매요청 및 승인대기: 검색/취소 버튼

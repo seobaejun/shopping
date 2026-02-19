@@ -14,6 +14,13 @@ const firebaseConfig = {
 // Firebase 초기화 (CDN 사용)
 let db = null;
 let initialized = false;
+/** 초기화 완료 Promise - admin 등에서 await하여 준비 보장 */
+let initPromise = null;
+
+function getInitPromise() {
+    if (!initPromise) initPromise = initFirebase();
+    return initPromise;
+}
 
 // Firebase 초기화 함수
 async function initFirebase() {
@@ -25,15 +32,12 @@ async function initFirebase() {
     try {
         // Firebase 모듈이 로드되었는지 확인
         if (typeof firebase === 'undefined') {
+            console.warn('Firebase SDK 대기 중...');
+            await new Promise(r => setTimeout(r, 500));
+            if (typeof firebase !== 'undefined') {
+                return initFirebase();
+            }
             console.error('Firebase SDK가 로드되지 않았습니다.');
-            // 1초 후 다시 시도
-            setTimeout(() => {
-                if (typeof firebase !== 'undefined') {
-                    initFirebase();
-                } else {
-                    console.error('Firebase SDK 로드 실패. CDN 링크를 확인하세요.');
-                }
-            }, 1000);
             return null;
         }
         
@@ -500,21 +504,100 @@ const settingsService = {
     }
 };
 
-// 페이지 로드 시 Firebase 초기화
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initFirebase);
-} else {
-    initFirebase();
-}
+// 관리자 목록 서비스 (권한 레벨 없음)
+const adminService = {
+    async getAdmins() {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            const snapshot = await collections.admins().get();
+            let list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            list.sort((a, b) => {
+                const at = a.createdAt && (a.createdAt.seconds != null ? a.createdAt.seconds : 0);
+                const bt = b.createdAt && (b.createdAt.seconds != null ? b.createdAt.seconds : 0);
+                return bt - at;
+            });
+            return list;
+        } catch (error) {
+            console.error('관리자 목록 가져오기 오류:', error);
+            return [];
+        }
+    },
+    async addAdmin(data) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            const docRef = await collections.admins().add({
+                userId: data.userId || '',
+                name: data.name || '',
+                email: data.email || '',
+                phone: data.phone || '',
+                status: data.status || 'active',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return docRef.id;
+        } catch (error) {
+            console.error('관리자 추가 오류:', error);
+            throw error;
+        }
+    },
+    async updateAdmin(adminId, data) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            await collections.admins().doc(adminId).update({
+                ...data,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (error) {
+            console.error('관리자 수정 오류:', error);
+            throw error;
+        }
+    },
+    async deleteAdmin(adminId) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            await collections.admins().doc(adminId).delete();
+        } catch (error) {
+            console.error('관리자 삭제 오류:', error);
+            throw error;
+        }
+    }
+};
 
-// 전역으로 export
+// 전역으로 export (db는 getter + getDb 함수로 참조)
+function getDb() { return db; }
 window.firebaseAdmin = {
     initFirebase,
-    db,
+    getInitPromise,
+    getDb,
+    get db() { return db; },
     memberService,
     productService,
     orderService,
     lotteryService,
-    settingsService
+    settingsService,
+    adminService
 };
+
+// 스크립트 실행 시점에 firebase가 이미 있으면 즉시 db 연결 (동기)
+if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+    try {
+        db = firebase.firestore();
+        initialized = true;
+        console.log('Firestore 즉시 연결됨 (기존 앱 사용)');
+    } catch (e) {
+        console.warn('Firestore 즉시 연결 실패:', e);
+    }
+}
+
+// 비동기 초기화(앱 생성 포함) - getInitPromise()로 완료 대기
+(function runInit() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function onReady() {
+            document.removeEventListener('DOMContentLoaded', onReady);
+            getInitPromise();
+        });
+    } else {
+        getInitPromise();
+    }
+})();
 

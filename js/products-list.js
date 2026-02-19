@@ -443,6 +443,11 @@ async function loadCategoriesMenu() {
 
         categories.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
+        var isAdmin = localStorage.getItem('isAdmin') === 'true';
+        if (!isAdmin) {
+            categories = categories.filter(function(c) { return c.isPublic !== false; });
+        }
+
         const categoryTree = buildCategoryTree(categories);
         const categoryList = document.getElementById('categoryList');
         if (categoryList) {

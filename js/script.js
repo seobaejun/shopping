@@ -970,6 +970,12 @@ async function loadCategoriesMenu() {
         // sortOrder로 정렬
         categories.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
+        // 관리자가 아니면 isPublic !== false 인 카테고리만 표시 (관리자는 전체 접근)
+        var isAdmin = localStorage.getItem('isAdmin') === 'true';
+        if (!isAdmin) {
+            categories = categories.filter(function(c) { return c.isPublic !== false; });
+        }
+
         console.log('✅ 카테고리 로드 완료:', categories.length, '개');
         console.log('카테고리 데이터:', categories);
 
@@ -1227,6 +1233,7 @@ function handleLogout() {
         // 로그인 정보 삭제
         localStorage.removeItem('loginUser');
         localStorage.removeItem('isLoggedIn');
+        localStorage.setItem('isAdmin', 'false');
         
         alert('로그아웃 되었습니다.');
         
