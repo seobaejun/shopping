@@ -340,15 +340,13 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
         const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
         const referralCode = member.referralCode || member.recommender || '';
         const status = member.status || '정상';
-        const maskedPhone = phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '';
-        const maskedName = name && name.length > 1 ? name.substring(0, 1) + '**' : name;
         const safeId = String(member.id || memberId).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         return `
             <tr>
                 <td>${startIndex + index + 1}</td>
                 <td>${escapeHtml(memberId)}</td>
-                <td>${escapeHtml(maskedName)}</td>
-                <td>${escapeHtml(maskedPhone)}</td>
+                <td>${escapeHtml(name)}</td>
+                <td>${escapeHtml(phone)}</td>
                 <td>${escapeHtml(joinDate)}</td>
                 <td>${escapeHtml(address)}</td>
                 <td>${escapeHtml(member.accountNumber || '')}</td>

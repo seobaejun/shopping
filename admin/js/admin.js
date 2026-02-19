@@ -354,6 +354,30 @@ function _orderEscapeHtml(str) {
 }
 function _orderMaskName(name) { return (name && name.length > 1 ? name.substring(0, 1) + '**' : name || '-'); }
 function _orderMaskPhone(phone) { return (phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '-'); }
+function _orderPhone(order) {
+    if (!order) return '-';
+    var v = order.phone || order.phoneNumber || order.tel || order.userPhone;
+    if (v == null || v === '') return '-';
+    return String(v).trim() || '-';
+}
+function _orderPhoneWithMember(order, memberMap) {
+    var p = _orderPhone(order);
+    if (p !== '-') return p;
+    if (!memberMap) return '-';
+    var m = memberMap[order.memberId] || memberMap[order.userId];
+    if (!m) return '-';
+    var v = m.phone || m.phoneNumber || m.tel;
+    return (v != null && String(v).trim() !== '') ? String(v).trim() : '-';
+}
+function _orderAddressWithMember(order, memberMap) {
+    var a = _orderAddress(order);
+    if (a !== '-') return a;
+    if (!memberMap) return '-';
+    var m = memberMap[order.memberId] || memberMap[order.userId];
+    if (!m) return '-';
+    var parts = [m.postcode, m.address, m.detailAddress].filter(Boolean);
+    return parts.length ? parts.join(' ') : (m.address || '-');
+}
 function _orderGetCreatedTime(order) {
     const c = order.createdAt;
     if (!c) return 0;
@@ -510,27 +534,42 @@ async function loadSettlementPersonal() {
     if (!tbody) return;
     try {
         if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
-            tbody.innerHTML = '<tr><td colspan="9" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
             if (infoText) infoText.textContent = '총 0개의 구매상품이 있습니다.';
             return;
         }
         var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
         var fullList = allOrders.filter(function (o) { return o.status === 'approved'; });
         window._settlementPersonalFullList = fullList;
+        var memberMap = {};
+        if (window.firebaseAdmin.memberService) {
+            try {
+                var members = await window.firebaseAdmin.memberService.getMembers() || [];
+                members.forEach(function (m) {
+                    var uid = m.userId || m.id;
+                    var docId = m.id;
+                    if (uid) memberMap[uid] = m;
+                    if (docId) memberMap[docId] = m;
+                });
+            } catch (e) { /* ignore */ }
+        }
+        window._settlementMemberMap = memberMap;
         var fullTotalSupport = fullList.reduce(function (sum, o) { return sum + (o.supportAmount || 0); }, 0);
         if (totalEl) totalEl.textContent = fullTotalSupport.toLocaleString();
         if (infoText) infoText.textContent = '총 ' + fullList.length + '개의 구매상품이 있습니다.';
         if (!fullList || fullList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="empty-message">정산 내역이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">정산 내역이 없습니다.</td></tr>';
             return;
         }
         tbody.innerHTML = fullList.map(function (order, i) {
             var dateStr = _orderFormatDate(order.createdAt);
-            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + _orderEscapeHtml(order.phone || '-') + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+            var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
+            var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
+            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     } catch (e) {
         console.error('개인별 정산 로드 오류:', e);
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
         if (infoText) infoText.textContent = '총 0개의 구매상품이 있습니다.';
         if (totalEl) totalEl.textContent = '0';
     }
@@ -563,12 +602,15 @@ function applySettlementPersonalSearch() {
     if (!searchContainer || !searchTbody) return;
     searchContainer.style.display = 'block';
     if (countEl) countEl.textContent = filtered.length;
+    var memberMap = window._settlementMemberMap || {};
     if (!filtered || filtered.length === 0) {
-        searchTbody.innerHTML = '<tr><td colspan="9" class="empty-message">검색 조건에 맞는 정산 내역이 없습니다.</td></tr>';
+        searchTbody.innerHTML = '<tr><td colspan="10" class="empty-message">검색 조건에 맞는 정산 내역이 없습니다.</td></tr>';
     } else {
         searchTbody.innerHTML = filtered.map(function (order, i) {
             var dateStr = _orderFormatDate(order.createdAt);
-            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + _orderEscapeHtml(order.phone || '-') + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+            var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
+            var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
+            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     }
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -582,7 +624,7 @@ async function loadSettlementRound() {
     if (!tbody) return;
     try {
         if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
-            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
             if (infoText) infoText.textContent = '총 0건의 정산 내역이 있습니다.';
             if (totalEl) totalEl.textContent = '0';
             return;
@@ -590,11 +632,24 @@ async function loadSettlementRound() {
         var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
         var fullList = allOrders.filter(function (o) { return o.status === 'approved'; });
         window._settlementRoundFullList = fullList;
+        var memberMap = {};
+        if (window.firebaseAdmin.memberService) {
+            try {
+                var members = await window.firebaseAdmin.memberService.getMembers() || [];
+                members.forEach(function (m) {
+                    var uid = m.userId || m.id;
+                    var docId = m.id;
+                    if (uid) memberMap[uid] = m;
+                    if (docId) memberMap[docId] = m;
+                });
+            } catch (e) { /* ignore */ }
+        }
+        window._settlementMemberMap = memberMap;
         var fullTotalSupport = fullList.reduce(function (sum, o) { return sum + (o.supportAmount || 0); }, 0);
         if (totalEl) totalEl.textContent = fullTotalSupport.toLocaleString();
         if (infoText) infoText.textContent = '총 ' + (fullList ? fullList.length : 0) + '건의 정산 내역이 있습니다.';
         if (!fullList || fullList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">정산 내역이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="empty-message">정산 내역이 없습니다.</td></tr>';
             return;
         }
         tbody.innerHTML = fullList.map(function (order, i) {
@@ -602,11 +657,13 @@ async function loadSettlementRound() {
             var d = new Date(t);
             var dateOnly = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
             var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
-            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + _orderEscapeHtml(order.phone || '-') + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+            var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
+            var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
+            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     } catch (e) {
         console.error('회차별 정산 로드 오류:', e);
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
         if (infoText) infoText.textContent = '총 0건의 정산 내역이 있습니다.';
         var totalElErr = document.getElementById('settlementRoundTotalSupport');
         if (totalElErr) totalElErr.textContent = '0';
@@ -649,25 +706,32 @@ function applySettlementRoundSearch() {
     if (!searchContainer || !searchTbody) return;
     searchContainer.style.display = 'block';
     if (countEl) countEl.textContent = filtered.length;
+    var memberMap = window._settlementMemberMap || {};
     if (!filtered || filtered.length === 0) {
-        searchTbody.innerHTML = '<tr><td colspan="10" class="empty-message">검색 조건에 맞는 정산 내역이 없습니다.</td></tr>';
+        searchTbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 조건에 맞는 정산 내역이 없습니다.</td></tr>';
     } else {
         searchTbody.innerHTML = filtered.map(function (order, i) {
             var t = _orderGetCreatedTime(order);
             var d = new Date(t);
             var dateOnly = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
             var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
-            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + _orderEscapeHtml(order.phone || '-') + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+            var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
+            var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
+            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     }
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// 주문의 주소 문자열 반환
+// 주문의 주소 문자열 반환 (가능한 필드 모두 사용)
 function _orderAddress(order) {
+    if (!order) return '-';
     if (order.deliveryAddress) return order.deliveryAddress;
     var parts = [order.postcode, order.address, order.detailAddress].filter(Boolean);
-    return parts.length ? parts.join(' ') : (order.address || '-');
+    if (parts.length) return parts.join(' ');
+    if (order.address) return order.address;
+    if (order.addr) return order.addr;
+    return '-';
 }
 
 // 배송 진행 등록: 추첨 확정 주문만 전체 목록 로드 (검색 필터 없음)
@@ -687,12 +751,25 @@ async function loadDeliveryRegister() {
             return o.status === 'approved' && confirmedOrderIds.has(o.id);
         });
         window._deliveryRegisterFullList = fullList;
+        var memberMap = {};
+        if (window.firebaseAdmin.memberService) {
+            try {
+                var members = await window.firebaseAdmin.memberService.getMembers() || [];
+                members.forEach(function (m) {
+                    var uid = m.userId || m.id;
+                    var docId = m.id;
+                    if (uid) memberMap[uid] = m;
+                    if (docId) memberMap[docId] = m;
+                });
+            } catch (e) { /* ignore */ }
+        }
+        window._deliveryMemberMap = memberMap;
         if (infoText) infoText.textContent = '총 ' + (fullList ? fullList.length : 0) + '건의 배송 상품이 있습니다.';
         if (!fullList || fullList.length === 0) {
             tbody.innerHTML = '<tr><td colspan="11" class="empty-message">추첨 확정된 배송 내역이 없습니다.</td></tr>';
             return;
         }
-        tbody.innerHTML = _deliveryRegisterBuildRows(fullList);
+        tbody.innerHTML = _deliveryRegisterBuildRows(fullList, memberMap);
     } catch (e) {
         console.error('배송 진행 등록 로드 오류:', e);
         tbody.innerHTML = '<tr><td colspan="11" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
@@ -700,8 +777,9 @@ async function loadDeliveryRegister() {
     }
 }
 
-// 배송 목록 한 행 HTML 생성 (공통)
-function _deliveryRegisterBuildRows(list) {
+// 배송 목록 한 행 HTML 생성 (공통) — 전화번호·주소 전체 표시, 회원 정보로 보완
+function _deliveryRegisterBuildRows(list, memberMap) {
+    memberMap = memberMap || window._deliveryMemberMap || {};
     return list.map(function (order, i) {
         var orderId = order.id;
         var ds = order.deliveryStatus || 'ready';
@@ -712,13 +790,14 @@ function _deliveryRegisterBuildRows(list) {
             '<option value="shipping"' + (ds === 'shipping' ? ' selected' : '') + '>배송중</option>' +
             '<option value="complete"' + (ds === 'complete' ? ' selected' : '') + '>배송완료</option></select>';
         var dateStr = _orderFormatDate(order.createdAt);
-        var addressStr = _orderEscapeHtml(_orderAddress(order));
+        var addressStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
+        var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
         return '<tr data-order-id="' + _orderEscapeHtml(orderId) + '">' +
             '<td>' + (i + 1) + '</td>' +
             '<td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td>' +
             '<td>' + _orderEscapeHtml(order.productName || '-') + '</td>' +
             '<td>1</td>' +
-            '<td>' + _orderEscapeHtml(order.phone || '-') + '</td>' +
+            '<td>' + phoneStr + '</td>' +
             '<td>' + addressStr + '</td>' +
             '<td>' + dateStr + '</td>' +
             '<td>' + statusSelectHtml + '</td>' +
@@ -764,7 +843,7 @@ function applyDeliveryRegisterSearch() {
     if (!filtered || filtered.length === 0) {
         searchTbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 조건에 맞는 배송 내역이 없습니다.</td></tr>';
     } else {
-        searchTbody.innerHTML = _deliveryRegisterBuildRows(filtered);
+        searchTbody.innerHTML = _deliveryRegisterBuildRows(filtered, window._deliveryMemberMap);
     }
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -1428,18 +1507,12 @@ function renderMemberInfoTable(data = null) {
         // 상태
         const status = member.status || '정상';
         
-        // 전화번호 마스킹 (뒷자리 4자리)
-        const maskedPhone = phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '';
-        
-        // 이름 마스킹 (뒷자리 1자리)
-        const maskedName = name && name.length > 1 ? name.substring(0, 1) + '**' : name;
-        
         return `
             <tr>
                 <td>${startIndex + index + 1}</td>
                 <td>${escapeHtml(memberId)}</td>
-                <td>${escapeHtml(maskedName)}</td>
-                <td>${escapeHtml(maskedPhone)}</td>
+                <td>${escapeHtml(name)}</td>
+                <td>${escapeHtml(phone)}</td>
                 <td>${escapeHtml(joinDate)}</td>
                 <td>${escapeHtml(address)}</td>
                 <td>${escapeHtml(accountNumber)}</td>
