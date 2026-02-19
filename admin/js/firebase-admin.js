@@ -348,23 +348,28 @@ const productService = {
 
 // 주문 관리 함수
 const orderService = {
-    // 주문 목록 가져오기
+    // 주문 목록 가져오기 (status 사용 시 복합 인덱스 없이 동작하도록 정렬은 메모리에서)
     async getOrders(filters = {}) {
         try {
             let query = collections.orders();
-            
             if (filters.status) {
                 query = query.where('status', '==', filters.status);
             }
             if (filters.memberId) {
                 query = query.where('memberId', '==', filters.memberId);
             }
-            
-            const snapshot = await query.orderBy('createdAt', 'desc').get();
-            return snapshot.docs.map(doc => ({
+            const snapshot = await query.get();
+            let list = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
+            const byCreated = (a, b) => {
+                const at = a.createdAt && (a.createdAt.seconds != null ? a.createdAt.seconds : (a.createdAt.toDate ? a.createdAt.toDate().getTime() / 1000 : 0));
+                const bt = b.createdAt && (b.createdAt.seconds != null ? b.createdAt.seconds : (b.createdAt.toDate ? b.createdAt.toDate().getTime() / 1000 : 0));
+                return (bt || 0) - (at || 0);
+            };
+            list.sort(byCreated);
+            return list;
         } catch (error) {
             console.error('주문 목록 가져오기 오류:', error);
             return [];

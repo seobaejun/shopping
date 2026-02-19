@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>10쇼핑게임 관리자</title>
-    <link rel="stylesheet" href="css/admin.css?v=20260206-1500">
+    <link rel="stylesheet" href="css/admin.css?v=20260219-25">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -1163,37 +1163,37 @@
                     <p class="page-description">회원들의 구매 요청을 승인하거나 거부합니다.</p>
                 </div>
 
-                <!-- 검색 필터 -->
+                <!-- 검색 필터 (승인대기 목록 필터) -->
                 <div class="search-panel">
                     <div class="search-row">
                         <div class="form-group">
                             <label>이름</label>
-                            <input type="text" class="form-control" placeholder="이름 입력">
+                            <input type="text" class="form-control" id="purchaseRequestSearchName" placeholder="이름 입력">
                         </div>
                         <div class="form-group">
                             <label>시작일</label>
-                            <input type="date" class="form-control" value="2026-01-03">
+                            <input type="date" class="form-control" id="purchaseRequestStartDate">
                         </div>
                         <div class="form-group">
                             <label>종료일</label>
-                            <input type="date" class="form-control" value="2026-02-02">
+                            <input type="date" class="form-control" id="purchaseRequestEndDate">
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary">검색</button>
-                        <button class="btn btn-default">취소</button>
+                        <button type="button" class="btn btn-primary" id="purchaseRequestSearchBtn">검색</button>
+                        <button type="button" class="btn btn-default" id="purchaseRequestResetBtn">취소</button>
                     </div>
                 </div>
 
-                <!-- 구매 요청 테이블 -->
-                <div class="table-container">
-                    <p class="info-text">총 11개의 구매상품이 검색되었습니다.</p>
+                <!-- 검색 결과 영역 (검색 버튼 클릭 시에만 표시, 회원조회와 동일) -->
+                <div id="purchaseRequestSearchResultsContainer" class="table-container" style="display: none; margin-top: 20px; margin-bottom: 20px;">
+                    <p class="info-text">검색 결과: <strong id="purchaseRequestSearchResultCount">0</strong>건</p>
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>번호</th>
                                 <th>이름</th>
-                                <th>전화번호</th>
+                                <th>계좌번호</th>
                                 <th>상품명</th>
                                 <th>상품가격</th>
                                 <th>소팅지원금</th>
@@ -1202,21 +1202,80 @@
                                 <th>관리</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="purchaseRequestSearchResultsBody">
+                            <tr><td colspan="9" class="empty-message">검색 후 결과가 여기에 표시됩니다.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 승인대기 목록 -->
+                <div class="table-container">
+                    <h3 style="margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #ffc107;">승인대기 목록</h3>
+                    <p class="info-text" id="purchaseRequestInfoText">총 0개의 구매 요청이 있습니다.</p>
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <td>1</td>
-                                <td>최**</td>
-                                <td>010-****-7</td>
-                                <td>메가커피 모바일금액권 3만원 모바일쿠폰</td>
-                                <td>30,000</td>
-                                <td>1,500</td>
-                                <td>2026-01-08</td>
-                                <td><span class="badge badge-warning">승인</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary">승인</button>
-                                    <button class="btn btn-sm btn-secondary">구매취소</button>
-                                </td>
+                                <th>번호</th>
+                                <th>이름</th>
+                                <th>계좌번호</th>
+                                <th>상품명</th>
+                                <th>상품가격</th>
+                                <th>소팅지원금</th>
+                                <th>날짜</th>
+                                <th>상태</th>
+                                <th>관리</th>
                             </tr>
+                        </thead>
+                        <tbody id="purchaseRequestTableBody">
+                            <tr><td colspan="9" class="empty-message">데이터를 불러오는 중...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 승인 목록 (승인 처리된 주문) -->
+                <div class="table-container" style="margin-top: 32px;">
+                    <h3 style="margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #28a745;">승인 목록</h3>
+                    <p class="info-text" id="purchaseRequestApprovedInfoText">총 0건의 승인 내역이 있습니다.</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>이름</th>
+                                <th>계좌번호</th>
+                                <th>상품명</th>
+                                <th>상품가격</th>
+                                <th>소팅지원금</th>
+                                <th>날짜</th>
+                                <th>상태</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchaseRequestApprovedTableBody">
+                            <tr><td colspan="9" class="empty-message">승인된 내역이 없습니다.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 구매취소 목록 -->
+                <div class="table-container" style="margin-top: 32px;">
+                    <h3 style="margin: 0 0 15px 0; padding-bottom: 10px; border-bottom: 2px solid #6c757d;">구매취소 목록</h3>
+                    <p class="info-text" id="purchaseRequestCancelledInfoText">총 0건의 취소 내역이 있습니다.</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>이름</th>
+                                <th>계좌번호</th>
+                                <th>상품명</th>
+                                <th>상품가격</th>
+                                <th>소팅지원금</th>
+                                <th>날짜</th>
+                                <th>상태</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchaseRequestCancelledTableBody">
+                            <tr><td colspan="9" class="empty-message">취소된 내역이 없습니다.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2051,7 +2110,7 @@
                                             
                                             // auto-lottery.js 로드 후 admin.js 로드
                                             const script5 = document.createElement('script');
-                                            script5.src = 'js/admin.js';
+                                            script5.src = 'js/admin.js?v=' + Date.now();
                                             script5.onload = () => {
                                                 console.log('✅ admin.js 로드 완료 - 네비게이션 초기화 실행');
                                                 // admin.js가 로드된 후 초기화 함수 호출

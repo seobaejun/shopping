@@ -163,6 +163,7 @@ async function handleLogin(e) {
             phone: userData.phone,
             status: userData.status,
             docId: userDoc.id,
+            accountNumber: userData.accountNumber || '',
             loginTime: new Date().toISOString()
         };
         

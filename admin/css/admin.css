@@ -351,6 +351,11 @@ body {
     color: var(--text-color);
 }
 
+/* 구매요청 및 승인대기 페이지: 제목(h3)만 25px로 확대 */
+#purchase-request .table-container h3 {
+    font-size: 25px !important;
+}
+
 /* 배지 */
 .badge {
     padding: 4px 10px;

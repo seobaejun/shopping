@@ -310,20 +310,345 @@ async function loadProducts() {
     }
 }
 
-// 구매 요청 목록 로드
+// 구매요청 페이지용 유틸
+function _orderFormatDate(createdAt) {
+    if (!createdAt) return '-';
+    if (createdAt.seconds != null) return new Date(createdAt.seconds * 1000).toLocaleString('ko-KR').slice(0, 16);
+    if (createdAt.toDate) return createdAt.toDate().toLocaleString('ko-KR').slice(0, 16);
+    return new Date(createdAt).toLocaleString('ko-KR').slice(0, 16);
+}
+function _orderEscapeHtml(str) {
+    if (str == null) return '';
+    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+}
+function _orderMaskName(name) { return (name && name.length > 1 ? name.substring(0, 1) + '**' : name || '-'); }
+function _orderMaskPhone(phone) { return (phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '-'); }
+function _orderGetCreatedTime(order) {
+    const c = order.createdAt;
+    if (!c) return 0;
+    if (c.seconds != null) return c.seconds * 1000;
+    if (c.toDate) return c.toDate().getTime();
+    return new Date(c).getTime();
+}
+
+// 승인대기 목록만 테이블에 그리기 (전체 목록 표시용, 검색 결과는 별도 검색 결과 영역에 표시)
+function renderPurchaseRequestTable(orders) {
+    const tbody = document.getElementById('purchaseRequestTableBody');
+    const infoText = document.getElementById('purchaseRequestInfoText');
+    if (!tbody) return;
+    if (infoText) infoText.textContent = '총 ' + (orders ? orders.length : 0) + '개의 구매 요청이 있습니다.';
+    if (!orders || orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-message">승인 대기 중인 구매 요청이 없습니다.</td></tr>';
+        return;
+    }
+    const rows = orders.map((order, index) => {
+        const name = _orderEscapeHtml(order.userName || order.name || '-');
+        const accountNumber = _orderEscapeHtml(order.accountNumber || '-');
+        const price = (order.productPrice || 0).toLocaleString();
+        const support = (order.supportAmount || 0).toLocaleString();
+        const date = _orderFormatDate(order.createdAt);
+        const orderId = _orderEscapeHtml(order.id);
+        return `<tr data-order-id="${orderId}">
+            <td>${index + 1}</td>
+            <td>${name}</td>
+            <td>${accountNumber}</td>
+            <td>${_orderEscapeHtml(order.productName || '-')}</td>
+            <td>${price}</td>
+            <td>${support}</td>
+            <td>${date}</td>
+            <td><span class="badge badge-warning">승인대기</span></td>
+            <td>
+                <button class="btn btn-sm btn-primary btn-approve-order" data-order-id="${orderId}" type="button">승인</button>
+                <button class="btn btn-sm btn-secondary btn-reject-order" data-order-id="${orderId}" type="button">구매취소</button>
+            </td>
+        </tr>`;
+    }).join('');
+    tbody.innerHTML = rows;
+}
+
+// 승인 목록 테이블 그리기 (status === 'approved') — 상태 변경 가능
+function renderPurchaseRequestApprovedTable(orders) {
+    const tbody = document.getElementById('purchaseRequestApprovedTableBody');
+    const infoText = document.getElementById('purchaseRequestApprovedInfoText');
+    if (!tbody) return;
+    if (infoText) infoText.textContent = '총 ' + (orders ? orders.length : 0) + '건의 승인 내역이 있습니다.';
+    if (!orders || orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-message">승인된 내역이 없습니다.</td></tr>';
+        return;
+    }
+    const rows = orders.map((order, index) => {
+        const name = _orderEscapeHtml(order.userName || order.name || '-');
+        const accountNumber = _orderEscapeHtml(order.accountNumber || '-');
+        const price = (order.productPrice || 0).toLocaleString();
+        const support = (order.supportAmount || 0).toLocaleString();
+        const date = _orderFormatDate(order.createdAt);
+        const orderId = _orderEscapeHtml(order.id);
+        const select = '<select class="form-control order-status-select" data-order-id="' + orderId + '" style="width:100px;display:inline-block;padding:4px 8px;">' +
+            '<option value="pending">승인대기</option>' +
+            '<option value="approved" selected>승인</option>' +
+            '<option value="cancelled">취소</option></select>';
+        return '<tr data-order-id="' + orderId + '"><td>' + (index + 1) + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
+            _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + '</td><td>' + date +
+            '</td><td><span class="badge badge-success">승인</span></td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
+    }).join('');
+    tbody.innerHTML = rows;
+}
+
+// 구매취소 목록 테이블 그리기 (status === 'cancelled') — 상태 변경 가능
+function renderPurchaseRequestCancelledTable(orders) {
+    const tbody = document.getElementById('purchaseRequestCancelledTableBody');
+    const infoText = document.getElementById('purchaseRequestCancelledInfoText');
+    if (!tbody) return;
+    if (infoText) infoText.textContent = '총 ' + (orders ? orders.length : 0) + '건의 취소 내역이 있습니다.';
+    if (!orders || orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-message">취소된 내역이 없습니다.</td></tr>';
+        return;
+    }
+    const rows = orders.map((order, index) => {
+        const name = _orderEscapeHtml(order.userName || order.name || '-');
+        const accountNumber = _orderEscapeHtml(order.accountNumber || '-');
+        const price = (order.productPrice || 0).toLocaleString();
+        const support = (order.supportAmount || 0).toLocaleString();
+        const date = _orderFormatDate(order.createdAt);
+        const orderId = _orderEscapeHtml(order.id);
+        const select = '<select class="form-control order-status-select" data-order-id="' + orderId + '" style="width:100px;display:inline-block;padding:4px 8px;">' +
+            '<option value="pending">승인대기</option>' +
+            '<option value="approved">승인</option>' +
+            '<option value="cancelled" selected>취소</option></select>';
+        return '<tr data-order-id="' + orderId + '"><td>' + (index + 1) + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
+            _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + '</td><td>' + date +
+            '</td><td><span class="badge badge-secondary">취소</span></td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
+    }).join('');
+    tbody.innerHTML = rows;
+}
+
+// 구매 요청 목록 로드 (승인대기 + 승인 목록 + 구매취소 목록)
 async function loadPurchaseRequests() {
+    const tbody = document.getElementById('purchaseRequestTableBody');
+    const infoText = document.getElementById('purchaseRequestInfoText');
+    const page = document.getElementById('purchase-request');
+    if (!tbody) return;
     try {
-        const orders = await window.firebaseAdmin.orderService.getOrders({ status: 'pending' });
-        // 추후 구현
+        let wait = 0;
+        while (!window.firebaseAdmin && wait < 50) {
+            await new Promise(r => setTimeout(r, 100));
+            wait++;
+        }
+        if (window.firebaseAdmin && !window.firebaseAdmin.db) {
+            await window.firebaseAdmin.initFirebase();
+        }
+        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
+            if (infoText) infoText.textContent = '총 0개의 구매 요청이 있습니다.';
+            return;
+        }
+        const allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
+        const pendingOrders = allOrders.filter(function (o) { return o.status === 'pending' || o.status === '대기'; });
+        const approvedOrders = allOrders.filter(function (o) { return o.status === 'approved'; });
+        const cancelledOrders = allOrders.filter(function (o) { return o.status === 'cancelled'; });
+        window._purchaseRequestPendingOrders = pendingOrders;
+        renderPurchaseRequestTable(pendingOrders);
+        renderPurchaseRequestApprovedTable(approvedOrders);
+        renderPurchaseRequestCancelledTable(cancelledOrders);
+        var searchResultsContainer = document.getElementById('purchaseRequestSearchResultsContainer');
+        if (searchResultsContainer) searchResultsContainer.style.display = 'none';
+        if (!window._purchaseRequestDateInitialized && page) {
+            const endInput = document.getElementById('purchaseRequestEndDate');
+            const startInput = document.getElementById('purchaseRequestStartDate');
+            if (endInput && !endInput.value) endInput.value = new Date().toISOString().split('T')[0];
+            if (startInput && !startInput.value) {
+                const d = new Date();
+                d.setMonth(d.getMonth() - 1);
+                startInput.value = d.toISOString().split('T')[0];
+            }
+            window._purchaseRequestDateInitialized = true;
+        }
+        bindPurchaseRequestSearchButtons();
     } catch (error) {
         console.error('구매 요청 목록 로드 오류:', error);
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
+        if (infoText) infoText.textContent = '총 0개의 구매 요청이 있습니다.';
+    }
+}
+
+// 날짜 문자열을 로컬 자정/종료 시각(ms)으로 변환 (UTC 해석 방지)
+function _orderStartOfDayLocal(dateStr) {
+    if (!dateStr) return null;
+    return new Date(dateStr + 'T00:00:00').getTime();
+}
+function _orderEndOfDayLocal(dateStr) {
+    if (!dateStr) return null;
+    var d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.getTime() - 1;
+}
+
+// 구매요청 검색: 필터 후 **검색 결과 테이블**에만 그리기 (회원조회와 동일, 승인대기 테이블은 그대로 유지)
+function applyPurchaseRequestSearch() {
+    const list = window._purchaseRequestPendingOrders || [];
+    const nameInput = document.getElementById('purchaseRequestSearchName');
+    const startInput = document.getElementById('purchaseRequestStartDate');
+    const endInput = document.getElementById('purchaseRequestEndDate');
+    const name = (nameInput && nameInput.value) ? nameInput.value.trim().toLowerCase() : '';
+    const startStr = startInput && startInput.value ? startInput.value.trim() : '';
+    const endStr = endInput && endInput.value ? endInput.value.trim() : '';
+    const startMs = _orderStartOfDayLocal(startStr);
+    const endMs = _orderEndOfDayLocal(endStr);
+    const filtered = list.filter(function (order) {
+        if (name) {
+            const orderName = (order.userName != null) ? String(order.userName).toLowerCase() : '';
+            if (!orderName || orderName.indexOf(name) === -1) return false;
+        }
+        const t = _orderGetCreatedTime(order);
+        if (startMs != null && t < startMs) return false;
+        if (endMs != null && t > endMs) return false;
+        return true;
+    });
+    var searchContainer = document.getElementById('purchaseRequestSearchResultsContainer');
+    var searchTbody = document.getElementById('purchaseRequestSearchResultsBody');
+    var countEl = document.getElementById('purchaseRequestSearchResultCount');
+    if (!searchContainer || !searchTbody) return;
+    searchContainer.style.display = 'block';
+    if (countEl) countEl.textContent = filtered.length;
+    if (!filtered || filtered.length === 0) {
+        searchTbody.innerHTML = '<tr><td colspan="9" class="empty-message">검색 조건에 맞는 구매 요청이 없습니다.</td></tr>';
+        return;
+    }
+    var rows = filtered.map(function (order, index) {
+        var nameStr = _orderEscapeHtml(order.userName || order.name || '-');
+        var accountNumber = _orderEscapeHtml(order.accountNumber || '-');
+        var price = (order.productPrice || 0).toLocaleString();
+        var support = (order.supportAmount || 0).toLocaleString();
+        var date = _orderFormatDate(order.createdAt);
+        var orderId = _orderEscapeHtml(order.id);
+        return '<tr data-order-id="' + orderId + '">' +
+            '<td>' + (index + 1) + '</td>' +
+            '<td>' + nameStr + '</td>' +
+            '<td>' + accountNumber + '</td>' +
+            '<td>' + _orderEscapeHtml(order.productName || '-') + '</td>' +
+            '<td>' + price + '</td>' +
+            '<td>' + support + '</td>' +
+            '<td>' + date + '</td>' +
+            '<td><span class="badge badge-warning">승인대기</span></td>' +
+            '<td><button class="btn btn-sm btn-primary btn-approve-order" data-order-id="' + orderId + '" type="button">승인</button> ' +
+            '<button class="btn btn-sm btn-secondary btn-reject-order" data-order-id="' + orderId + '" type="button">구매취소</button></td></tr>';
+    }).join('');
+    searchTbody.innerHTML = rows;
+    searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// 구매요청 페이지 검색/취소 버튼 직접 연결 (페이지 로드 시마다 호출)
+function bindPurchaseRequestSearchButtons() {
+    const searchBtn = document.getElementById('purchaseRequestSearchBtn');
+    const resetBtn = document.getElementById('purchaseRequestResetBtn');
+    if (searchBtn) {
+        searchBtn.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            applyPurchaseRequestSearch();
+            return false;
+        };
+    }
+    if (resetBtn) {
+        resetBtn.onclick = function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const nameInput = document.getElementById('purchaseRequestSearchName');
+            const startInput = document.getElementById('purchaseRequestStartDate');
+            const endInput = document.getElementById('purchaseRequestEndDate');
+            if (nameInput) nameInput.value = '';
+            if (startInput) startInput.value = '';
+            if (endInput) endInput.value = '';
+            var searchContainer = document.getElementById('purchaseRequestSearchResultsContainer');
+            if (searchContainer) searchContainer.style.display = 'none';
+            return false;
+        };
     }
 }
 
 // 회원조회 검색/엑셀/취소는 member-search.js에서 구현, initAdminPage에서 memberSearchBtn/memberResetBtn/memberExportBtn에 연결됨
 
-// 테이블 편집/삭제 버튼
+// 테이블 편집/삭제 버튼 (구매요청 검색/취소는 위임으로 항상 동작)
 document.addEventListener('click', (e) => {
+    if (e.target.closest('#purchaseRequestSearchBtn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        applyPurchaseRequestSearch();
+        return;
+    }
+    if (e.target.closest('#purchaseRequestResetBtn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const nameInput = document.getElementById('purchaseRequestSearchName');
+        const startInput = document.getElementById('purchaseRequestStartDate');
+        const endInput = document.getElementById('purchaseRequestEndDate');
+        if (nameInput) nameInput.value = '';
+        if (startInput) startInput.value = '';
+        if (endInput) endInput.value = '';
+        var searchContainer = document.getElementById('purchaseRequestSearchResultsContainer');
+        if (searchContainer) searchContainer.style.display = 'none';
+        return;
+    }
+    if (e.target.closest('.btn-approve-order')) {
+        const btn = e.target.closest('.btn-approve-order');
+        const orderId = btn.getAttribute('data-order-id');
+        if (!orderId) return;
+        if (!confirm('이 구매 요청을 승인하시겠습니까?')) return;
+        (async () => {
+            try {
+                if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
+                    await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'approved' });
+                    alert('승인되었습니다.');
+                    await loadPurchaseRequests();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('승인 처리 중 오류가 발생했습니다.');
+            }
+        })();
+        return;
+    }
+    if (e.target.closest('.btn-reject-order')) {
+        const btn = e.target.closest('.btn-reject-order');
+        const orderId = btn.getAttribute('data-order-id');
+        if (!orderId) return;
+        if (!confirm('이 구매 요청을 취소하시겠습니까?')) return;
+        (async () => {
+            try {
+                if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
+                    await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'cancelled' });
+                    alert('구매가 취소되었습니다.');
+                    await loadPurchaseRequests();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('취소 처리 중 오류가 발생했습니다.');
+            }
+        })();
+        return;
+    }
+    if (e.target.closest('.btn-change-order-status')) {
+        const btn = e.target.closest('.btn-change-order-status');
+        const orderId = btn.getAttribute('data-order-id');
+        const row = btn.closest('tr');
+        const select = row ? row.querySelector('.order-status-select') : null;
+        if (!orderId || !select) return;
+        const newStatus = select.value;
+        if (!newStatus) return;
+        (async () => {
+            try {
+                if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
+                    await window.firebaseAdmin.orderService.updateOrder(orderId, { status: newStatus });
+                    alert('상태가 변경되었습니다.');
+                    await loadPurchaseRequests();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('상태 변경 중 오류가 발생했습니다.');
+            }
+        })();
+        return;
+    }
     if (e.target.closest('.btn-edit')) {
         const row = e.target.closest('tr');
         const userId = row.cells[1].textContent;
@@ -2549,6 +2874,31 @@ function initAdminPage() {
                 return false;
             };
             console.log('✅ 회원정보 엑셀 다운로드 버튼 등록 완료');
+        }
+        
+        // 구매요청 및 승인대기: 검색/취소 버튼
+        const purchaseRequestSearchBtn = document.getElementById('purchaseRequestSearchBtn');
+        const purchaseRequestResetBtn = document.getElementById('purchaseRequestResetBtn');
+        if (purchaseRequestSearchBtn) {
+            purchaseRequestSearchBtn.onclick = function(e) {
+                e.preventDefault();
+                applyPurchaseRequestSearch();
+                return false;
+            };
+        }
+        if (purchaseRequestResetBtn) {
+            purchaseRequestResetBtn.onclick = function(e) {
+                e.preventDefault();
+                const page = document.getElementById('purchase-request');
+                const nameInput = page ? page.querySelector('#purchaseRequestSearchName') : document.getElementById('purchaseRequestSearchName');
+                const startInput = page ? page.querySelector('#purchaseRequestStartDate') : document.getElementById('purchaseRequestStartDate');
+                const endInput = page ? page.querySelector('#purchaseRequestEndDate') : document.getElementById('purchaseRequestEndDate');
+                if (nameInput) nameInput.value = '';
+                if (startInput) startInput.value = '';
+                if (endInput) endInput.value = '';
+                renderPurchaseRequestTable(window._purchaseRequestPendingOrders || []);
+                return false;
+            };
         }
         
         renderProductTable(PRODUCT_DATA);

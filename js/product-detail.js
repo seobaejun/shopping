@@ -232,18 +232,70 @@ function initCartActions() {
     });
 }
 
-// 바로구매
+// 바로구매: 구매 요청을 Firestore orders에 저장 (관리자 승인대기 표시용)
 function initBuyActions() {
     const buyBtns = document.querySelectorAll('.btn-buy, .btn-buy-fixed');
-    
+
     buyBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (selectedOptionsData.length === 0) {
                 alert('옵션을 선택해주세요.');
                 return;
             }
-            
-            alert('바로구매 기능은 준비 중입니다.');
+            if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
+                alert('상품 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const loginUserJson = localStorage.getItem('loginUser');
+            if (!isLoggedIn || !loginUserJson) {
+                alert('로그인 후 구매할 수 있습니다.');
+                window.location.href = 'login.html?return=' + encodeURIComponent(window.location.href);
+                return;
+            }
+
+            const loginUser = JSON.parse(loginUserJson);
+            const totalQuantity = selectedOptionsData.reduce((sum, opt) => sum + (opt.quantity || 1), 0);
+            const totalPrice = selectedOptionsData.reduce((sum, opt) => sum + (opt.price || 0) * (opt.quantity || 1), 0);
+            const supportRate = (PRODUCT_INFO.supportRate != null ? PRODUCT_INFO.supportRate : 5) / 100;
+            const supportAmount = Math.round(totalPrice * supportRate);
+
+            const orderData = {
+                status: 'pending',
+                userId: loginUser.userId,
+                userName: loginUser.name,
+                phone: loginUser.phone || '',
+                accountNumber: loginUser.accountNumber || '',
+                memberId: loginUser.docId || loginUser.userId,
+                productId: PRODUCT_INFO.id,
+                productName: PRODUCT_INFO.name,
+                productPrice: totalPrice,
+                supportAmount: supportAmount,
+                quantity: totalQuantity
+            };
+
+            try {
+                if (typeof firebase === 'undefined' || !firebase.firestore) {
+                    alert('결제 시스템을 불러올 수 없습니다. 잠시 후 다시 시도해주세요.');
+                    return;
+                }
+                const db = firebase.firestore();
+                await db.collection('orders').add({
+                    ...orderData,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert('구매 요청이 접수되었습니다. 관리자 승인 후 진행됩니다.');
+                selectedOptionsData = [];
+                renderSelectedOptions();
+                updateTotalPrice();
+            } catch (error) {
+                console.error('구매 요청 오류:', error);
+                alert('구매 요청 중 오류가 발생했습니다: ' + (error.message || '잠시 후 다시 시도해주세요.'));
+            }
         });
     });
 }
