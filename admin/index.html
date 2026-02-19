@@ -1667,6 +1667,22 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="form-group" style="margin-top: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <label style="margin: 0;">선택 옵션 (상세페이지에서 선택 가능)</label>
+                                    <button type="button" class="btn btn-sm btn-primary" id="btnAddProductOption">
+                                        <i class="fas fa-plus"></i> 옵션 추가
+                                    </button>
+                                </div>
+                                <div id="productOptionsContainer">
+                                    <div class="product-option-row" data-option-id="0">
+                                        <input type="text" class="form-control" name="optionLabel[]" placeholder="옵션명 (예: 기본)" style="max-width: 200px;">
+                                        <input type="number" class="form-control" name="optionPrice[]" placeholder="가격" style="max-width: 120px;"> 원
+                                        <button type="button" class="btn btn-sm btn-danger btn-remove-option"><i class="fas fa-minus"></i></button>
+                                    </div>
+                                </div>
+                                <small class="text-muted">옵션을 비우면 상세페이지에 "기본" 1개만 표시됩니다. 옵션명과 가격을 입력하면 상세페이지 선택옵션에서 선택할 수 있습니다.</small>
+                            </div>
                         </div>
 
                         <!-- 상세 설명 -->

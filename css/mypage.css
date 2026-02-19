@@ -191,6 +191,25 @@
     color: var(--primary-color);
 }
 
+/* 메뉴 항목 구현 여부 뱃지 */
+.nav-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+.nav-badge.implemented {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.nav-badge.pending {
+    background: #fff3e0;
+    color: #e65100;
+}
+
 /* ========== 메인 컨텐츠 ========== */
 .mypage-content {
     display: flex;

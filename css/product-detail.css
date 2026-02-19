@@ -326,7 +326,7 @@
 
 .action-buttons {
     display: grid;
-    grid-template-columns: 1fr 2fr 2fr;
+    grid-template-columns: minmax(110px, 1.2fr) 2fr 2fr;
     gap: 10px;
 }
 
@@ -346,6 +346,7 @@
     background: var(--bg-white);
     border: 2px solid var(--border-color);
     color: var(--text-dark);
+    white-space: nowrap;
 }
 
 .btn-wishlist:hover {

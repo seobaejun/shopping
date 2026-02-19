@@ -2428,6 +2428,18 @@ body {
     height: 40px;
 }
 
+/* 상품 선택 옵션 행 */
+.product-option-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.product-option-row input[type="text"],
+.product-option-row input[type="number"] {
+    height: 36px;
+}
+
 /* 이미지 업로드 박스 스타일 */
 .image-upload-box {
     border: 2px dashed #ddd;

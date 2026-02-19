@@ -2280,6 +2280,34 @@ function removeDetailRow(rowId) {
     }
 }
 
+// 상품 선택 옵션 행 추가/삭제
+let productOptionRowCounter = 0;
+function addProductOptionRow() {
+    productOptionRowCounter++;
+    const container = document.getElementById('productOptionsContainer');
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'product-option-row';
+    row.setAttribute('data-option-id', productOptionRowCounter);
+    row.innerHTML = '<input type="text" class="form-control" name="optionLabel[]" placeholder="옵션명 (예: 기본)" style="max-width: 200px;">' +
+        '<input type="number" class="form-control" name="optionPrice[]" placeholder="가격" style="max-width: 120px;"> 원' +
+        '<button type="button" class="btn btn-sm btn-danger btn-remove-option"><i class="fas fa-minus"></i></button>';
+    container.appendChild(row);
+}
+function initProductOptionButtons() {
+    const btnAdd = document.getElementById('btnAddProductOption');
+    if (btnAdd) btnAdd.onclick = addProductOptionRow;
+    const container = document.getElementById('productOptionsContainer');
+    if (container) {
+        container.addEventListener('click', function (e) {
+            if (e.target.closest('.btn-remove-option')) {
+                const row = e.target.closest('.product-option-row');
+                if (row && container.querySelectorAll('.product-option-row').length > 1) row.remove();
+            }
+        });
+    }
+}
+
 // 상세 이미지 업로드 추가/삭제 함수
 let detailImageUploadCounter = 0;
 
@@ -2411,12 +2439,28 @@ async function registerProduct(event) {
         // 분류 체크박스 값 수집 (배열)
         const displayCategories = formData.getAll('displayCategory');
         
+        // 선택 옵션 수집 (옵션명, 가격)
+        const optionLabels = formData.getAll('optionLabel[]');
+        const optionPrices = formData.getAll('optionPrice[]');
+        const options = [];
+        for (let i = 0; i < optionLabels.length; i++) {
+            const label = (optionLabels[i] || '').trim();
+            const price = parseInt(optionPrices[i], 10);
+            if (label || (price != null && !isNaN(price))) {
+                options.push({
+                    label: label || '옵션' + (i + 1),
+                    price: !isNaN(price) ? price : 0
+                });
+            }
+        }
+        
         // 숫자 필드 변환
         const productData = {
             name: data.productName,
             displayCategory: displayCategories.length > 0 ? displayCategories : ['all'], // 분류 배열로 저장
             category: data.category,
             price: parseInt(data.salePrice) || 0,
+            options: options,
             stock: parseInt(data.stock) || 0,
             status: data.status || 'sale',
             description: data.description || '',
@@ -2480,6 +2524,19 @@ async function registerProduct(event) {
             }
         });
         detailImageUploadCounter = 0;
+        
+        // 선택 옵션 초기화 (첫 번째 행만 남기기)
+        const optionsContainer = document.getElementById('productOptionsContainer');
+        if (optionsContainer) {
+            const optionRows = optionsContainer.querySelectorAll('.product-option-row');
+            optionRows.forEach((row, index) => {
+                if (index > 0) {
+                    row.remove();
+                } else {
+                    row.querySelectorAll('input').forEach(input => { input.value = ''; });
+                }
+            });
+        }
         
         // 상품 목록으로 이동
         const productListLink = document.querySelector('[data-page="product-list"]');
@@ -4425,6 +4482,9 @@ async function initAdminPage() {
     // 헤더 버튼은 위의 전역 이벤트 위임에서 처리됨
     console.log('✅ 모든 네비게이션 이벤트 초기화 완료');
     
+    // 상품 등록 - 선택 옵션 추가/삭제 버튼
+    initProductOptionButtons();
+    
     // 초기 활성화된 페이지가 member-search인 경우 데이터 로드
     const activePage = document.querySelector('.content-page.active');
     if (activePage && activePage.id === 'member-search') {
@@ -4467,6 +4527,7 @@ window.addDetailImageUpload = addDetailImageUpload;
 window.removeLastDetailImageUpload = removeLastDetailImageUpload;
 window.addDetailRow = addDetailRow;
 window.removeDetailRow = removeDetailRow;
+window.addProductOptionRow = addProductOptionRow;
 window.fileToBase64 = fileToBase64;
 
 // 초기화

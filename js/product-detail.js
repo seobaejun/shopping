@@ -4,6 +4,15 @@ var PRODUCT_DETAIL_FIREBASE_READY = false;
 
 function _parseProductDoc(doc) {
     var product = doc.data();
+    var options = [];
+    if (Array.isArray(product.options) && product.options.length > 0) {
+        product.options.forEach(function (o) {
+            options.push({
+                label: (o.label || o.name || '').trim() || '옵션',
+                price: o.price != null ? Number(o.price) : 0
+            });
+        });
+    }
     return {
         id: doc.id,
         name: product.name || '',
@@ -17,7 +26,8 @@ function _parseProductDoc(doc) {
         category: product.category || '',
         brand: product.brand || '',
         stock: product.stock != null ? Number(product.stock) : 0,
-        supportRate: product.supportRate != null ? Number(product.supportRate) : 5
+        supportRate: product.supportRate != null ? Number(product.supportRate) : 5,
+        options: options
     };
 }
 
@@ -151,30 +161,27 @@ function initThumbnailClick() {
 let selectedOptionsData = [];
 
 function initOptionSelect() {
-    productDetailElements.productOption.addEventListener('change', (e) => {
-        const selectedValue = e.target.value;
-        
+    if (!productDetailElements.productOption) return;
+    productDetailElements.productOption.addEventListener('change', function (e) {
+        var selectedOpt = e.target.options[e.target.selectedIndex];
+        var selectedValue = e.target.value;
         if (!selectedValue) return;
-        
-        // 이미 선택된 옵션인지 확인
-        const exists = selectedOptionsData.find(opt => opt.value === selectedValue);
+        var exists = selectedOptionsData.some(function (opt) { return opt.value === selectedValue; });
         if (exists) {
             alert('이미 선택된 옵션입니다.');
             e.target.selectedIndex = 0;
             return;
         }
-        
-        // 새 옵션 추가
-        const newOption = {
+        var price = selectedOpt.getAttribute('data-price') != null ? parseInt(selectedOpt.getAttribute('data-price'), 10) : (PRODUCT_INFO && PRODUCT_INFO.price) || 0;
+        var label = selectedOpt.getAttribute('data-label') || selectedOpt.textContent;
+        var newOption = {
             value: selectedValue,
-            name: e.target.options[e.target.selectedIndex].text,
+            name: label + ' - ' + price.toLocaleString('ko-KR') + '원',
             quantity: 1,
-            price: PRODUCT_INFO.price
+            price: price
         };
-        
         selectedOptionsData.push(newOption);
         e.target.selectedIndex = 0;
-        
         renderSelectedOptions();
         updateTotalPrice();
     });
@@ -251,13 +258,19 @@ function attachOptionEventListeners() {
     });
 }
 
-// 총 가격 업데이트
+// 총 가격 업데이트 (선택 옵션 합계 또는 상품 기본가)
 function updateTotalPrice() {
-    const total = selectedOptionsData.reduce((sum, option) => {
-        return sum + (option.price * option.quantity);
-    }, 0);
-    
-    productDetailElements.totalPrice.textContent = formatPrice(total) + '원';
+    var total;
+    if (selectedOptionsData.length > 0) {
+        total = selectedOptionsData.reduce(function (sum, option) {
+            return sum + (option.price * option.quantity);
+        }, 0);
+    } else {
+        total = (PRODUCT_INFO && PRODUCT_INFO.price != null) ? PRODUCT_INFO.price : 0;
+    }
+    if (productDetailElements.totalPrice) {
+        productDetailElements.totalPrice.textContent = formatPrice(total) + '원';
+    }
 }
 
 // 가격 포맷팅
@@ -770,24 +783,32 @@ function updatePageInfo() {
         `;
     }
     
-    // 옵션 선택 박스 업데이트
-    const optionSelect = productDetailElements.productOption;
+    // 총 상품금액 즉시 표시 (관리자에서 입력한 가격)
+    selectedOptionsData = [];
+    if (productDetailElements.totalPrice) {
+        productDetailElements.totalPrice.textContent = (PRODUCT_INFO.price != null ? PRODUCT_INFO.price : 0).toLocaleString('ko-KR') + '원';
+    }
+    if (productDetailElements.selectedOptions && productDetailElements.selectedOptions.innerHTML !== undefined) {
+        productDetailElements.selectedOptions.innerHTML = '';
+    }
+
+    // 옵션 선택 박스: 관리자에서 등록한 options 또는 기본 1개
+    var optionSelect = productDetailElements.productOption;
     if (optionSelect) {
-        const optionText = PRODUCT_INFO.option 
-            ? `${PRODUCT_INFO.name} - ${PRODUCT_INFO.option}` 
-            : PRODUCT_INFO.name;
-        const priceText = PRODUCT_INFO.price.toLocaleString() + '원';
-        
-        // 기존 옵션 제거
         optionSelect.innerHTML = '<option value="">옵션을 선택해주세요</option>';
-        
-        // 새 옵션 추가
-        const option = document.createElement('option');
-        option.value = optionText;
-        option.textContent = `${optionText} - ${priceText}`;
-        optionSelect.appendChild(option);
-        
-        console.log('✅ 옵션 선택 박스 업데이트');
+        var basePrice = PRODUCT_INFO.price != null ? PRODUCT_INFO.price : 0;
+        var opts = PRODUCT_INFO.options && PRODUCT_INFO.options.length > 0
+            ? PRODUCT_INFO.options
+            : [{ label: '기본', price: basePrice }];
+        opts.forEach(function (o, i) {
+            var opt = document.createElement('option');
+            opt.value = String(i);
+            opt.setAttribute('data-price', String(o.price));
+            opt.setAttribute('data-label', o.label || '옵션' + (i + 1));
+            opt.textContent = (o.label || '옵션' + (i + 1)) + ' - ' + (o.price != null ? o.price : 0).toLocaleString('ko-KR') + '원';
+            optionSelect.appendChild(opt);
+        });
+        console.log('✅ 옵션 선택 박스 업데이트:', opts.length, '개');
     }
     
     // 상세 설명 이미지 업데이트
