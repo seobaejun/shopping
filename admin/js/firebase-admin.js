@@ -130,6 +130,14 @@ const collections = {
     settings: () => {
         if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
         return db.collection('settings');
+    },
+    visitorLogs: () => {
+        if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+        return db.collection('visitor_logs');
+    },
+    posts: () => {
+        if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+        return db.collection('posts');
     }
 };
 
@@ -563,6 +571,99 @@ const adminService = {
     }
 };
 
+// 게시판(공지/이벤트/Q&A/후기) 서비스
+const boardService = {
+    async getPosts(boardType, filters) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            let query = collections.posts().where('boardType', '==', boardType);
+            const snapshot = await query.get();
+            let list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            list.sort((a, b) => {
+                const at = a.createdAt && (a.createdAt.seconds != null ? a.createdAt.seconds : 0);
+                const bt = b.createdAt && (b.createdAt.seconds != null ? b.createdAt.seconds : 0);
+                return bt - at;
+            });
+            if (filters && (filters.keyword || filters.author || filters.startDate || filters.endDate)) {
+                const kw = (filters.keyword || '').toLowerCase();
+                const author = (filters.author || '').trim();
+                const startTs = filters.startDate ? new Date(filters.startDate + 'T00:00:00').getTime() : 0;
+                const endTs = filters.endDate ? new Date(filters.endDate + 'T23:59:59').getTime() : 9999999999999;
+                list = list.filter(function (p) {
+                    var t = (p.createdAt && p.createdAt.seconds) ? p.createdAt.seconds * 1000 : 0;
+                    if (t < startTs || t > endTs) return false;
+                    if (author && (p.authorName || '').indexOf(author) === -1) return false;
+                    if (kw && (p.title || '').toLowerCase().indexOf(kw) === -1 && (p.content || '').toLowerCase().indexOf(kw) === -1) return false;
+                    return true;
+                });
+            }
+            return list;
+        } catch (error) {
+            console.error('게시글 목록 오류:', error);
+            return [];
+        }
+    },
+    async addPost(data) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            const docRef = await collections.posts().add({
+                boardType: data.boardType || 'notice',
+                title: data.title || '',
+                content: data.content || '',
+                authorName: data.authorName || '관리자',
+                authorId: data.authorId || '',
+                viewCount: 0,
+                status: data.status || 'published',
+                isNotice: data.isNotice === true,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return docRef.id;
+        } catch (error) {
+            console.error('게시글 추가 오류:', error);
+            throw error;
+        }
+    },
+    async updatePost(postId, data) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            await collections.posts().doc(postId).update({
+                ...data,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (error) {
+            console.error('게시글 수정 오류:', error);
+            throw error;
+        }
+    },
+    async deletePost(postId) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            await collections.posts().doc(postId).delete();
+        } catch (error) {
+            console.error('게시글 삭제 오류:', error);
+            throw error;
+        }
+    }
+};
+
+// 접속자 집계 서비스
+const visitorStatsService = {
+    async getLogsByDateRange(startDate, endDate) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            const snapshot = await collections.visitorLogs()
+                .where('date', '>=', startDate)
+                .where('date', '<=', endDate)
+                .get();
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error('접속 로그 조회 오류:', error);
+            return [];
+        }
+    }
+};
+
 // 전역으로 export (db는 getter + getDb 함수로 참조)
 function getDb() { return db; }
 window.firebaseAdmin = {
@@ -575,7 +676,9 @@ window.firebaseAdmin = {
     orderService,
     lotteryService,
     settingsService,
-    adminService
+    adminService,
+    visitorStatsService,
+    boardService
 };
 
 // 스크립트 실행 시점에 firebase가 이미 있으면 즉시 db 연결 (동기)

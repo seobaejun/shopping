@@ -414,24 +414,24 @@
                     <div class="search-row">
                         <div class="form-group">
                             <label>시작일</label>
-                            <input type="date" class="form-control" value="2026-01-01">
+                            <input type="date" class="form-control" id="visitorStatsStartDate">
                         </div>
                         <div class="form-group">
                             <label>종료일</label>
-                            <input type="date" class="form-control" value="2026-02-04">
+                            <input type="date" class="form-control" id="visitorStatsEndDate">
                         </div>
                         <div class="form-group">
                             <label>통계 유형</label>
-                            <select class="form-control">
+                            <select class="form-control" id="visitorStatsType">
                                 <option value="daily">일별</option>
                                 <option value="weekly">주별</option>
-                                <option value="monthly" selected>월별</option>
+                                <option value="monthly">월별</option>
                             </select>
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary">조회</button>
-                        <button class="btn btn-secondary">엑셀 다운로드</button>
+                        <button type="button" class="btn btn-primary" id="visitorStatsQueryBtn">조회</button>
+                        <button type="button" class="btn btn-secondary" id="visitorStatsExcelBtn">엑셀 다운로드</button>
                     </div>
                 </div>
 
@@ -443,8 +443,8 @@
                         </div>
                         <div class="summary-content">
                             <h4>총 방문자</h4>
-                            <p class="summary-number">12,547명</p>
-                            <span class="summary-period">최근 30일</span>
+                            <p class="summary-number" id="visitorStatsTotalVisitors">0명</p>
+                            <span class="summary-period" id="visitorStatsSummaryPeriod">-</span>
                         </div>
                     </div>
                     <div class="summary-card">
@@ -453,8 +453,8 @@
                         </div>
                         <div class="summary-content">
                             <h4>순 방문자</h4>
-                            <p class="summary-number">8,234명</p>
-                            <span class="summary-period">최근 30일</span>
+                            <p class="summary-number" id="visitorStatsUniqueVisitors">0명</p>
+                            <span class="summary-period" id="visitorStatsSummaryPeriod2">-</span>
                         </div>
                     </div>
                     <div class="summary-card">
@@ -462,26 +462,26 @@
                             <i class="fas fa-chart-line"></i>
                         </div>
                         <div class="summary-content">
-                            <h4>평균 체류시간</h4>
-                            <p class="summary-number">5분 32초</p>
-                            <span class="summary-period">최근 30일</span>
+                            <h4>페이지뷰</h4>
+                            <p class="summary-number" id="visitorStatsPageViews">0회</p>
+                            <span class="summary-period" id="visitorStatsSummaryPeriod3">-</span>
                         </div>
                     </div>
                     <div class="summary-card">
                         <div class="summary-icon" style="background: #17a2b8;">
-                            <i class="fas fa-mouse-pointer"></i>
+                            <i class="fas fa-user-plus"></i>
                         </div>
                         <div class="summary-content">
-                            <h4>페이지뷰</h4>
-                            <p class="summary-number">45,678회</p>
-                            <span class="summary-period">최근 30일</span>
+                            <h4>신규 회원</h4>
+                            <p class="summary-number" id="visitorStatsNewMembers">0명</p>
+                            <span class="summary-period" id="visitorStatsSummaryPeriod4">-</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- 일별 통계 테이블 -->
                 <div class="table-container">
-                    <h3 style="padding: 20px; margin: 0; border-bottom: 2px solid #ddd;">일별 접속 통계</h3>
+                    <h3 style="padding: 20px; margin: 0; border-bottom: 2px solid #ddd;" id="visitorStatsTableTitle">일별 접속 통계</h3>
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -490,42 +490,10 @@
                                 <th>순 방문자</th>
                                 <th>페이지뷰</th>
                                 <th>신규 회원</th>
-                                <th>평균 체류시간</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>2026-02-04</td>
-                                <td>523</td>
-                                <td>412</td>
-                                <td>1,847</td>
-                                <td>8</td>
-                                <td>5분 12초</td>
-                            </tr>
-                            <tr>
-                                <td>2026-02-03</td>
-                                <td>487</td>
-                                <td>389</td>
-                                <td>1,654</td>
-                                <td>6</td>
-                                <td>4분 58초</td>
-                            </tr>
-                            <tr>
-                                <td>2026-02-02</td>
-                                <td>612</td>
-                                <td>501</td>
-                                <td>2,134</td>
-                                <td>12</td>
-                                <td>6분 23초</td>
-                            </tr>
-                            <tr>
-                                <td>2026-02-01</td>
-                                <td>445</td>
-                                <td>367</td>
-                                <td>1,523</td>
-                                <td>5</td>
-                                <td>4분 45초</td>
-                            </tr>
+                        <tbody id="visitorStatsTableBody">
+                            <tr><td colspan="5" class="empty-message">기간을 선택한 뒤 조회를 눌러주세요.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -540,10 +508,10 @@
 
                 <!-- 게시판 선택 탭 -->
                 <div class="board-tabs">
-                    <button class="board-tab active" onclick="switchBoardTab('notice')">공지사항</button>
-                    <button class="board-tab" onclick="switchBoardTab('event')">이벤트</button>
-                    <button class="board-tab" onclick="switchBoardTab('qna')">Q&A</button>
-                    <button class="board-tab" onclick="switchBoardTab('review')">상품후기</button>
+                    <button type="button" class="board-tab active" data-board-type="notice">공지사항</button>
+                    <button type="button" class="board-tab" data-board-type="event">이벤트</button>
+                    <button type="button" class="board-tab" data-board-type="qna">Q&A</button>
+                    <button type="button" class="board-tab" data-board-type="review">상품후기</button>
                 </div>
 
                 <!-- 검색 패널 -->
@@ -551,31 +519,31 @@
                     <div class="search-row">
                         <div class="form-group">
                             <label>검색어</label>
-                            <input type="text" class="form-control" placeholder="제목 또는 내용 검색">
+                            <input type="text" class="form-control" id="boardSearchKeyword" placeholder="제목 또는 내용 검색">
                         </div>
                         <div class="form-group">
                             <label>작성자</label>
-                            <input type="text" class="form-control" placeholder="작성자 검색">
+                            <input type="text" class="form-control" id="boardSearchAuthor" placeholder="작성자 검색">
                         </div>
                         <div class="form-group">
                             <label>시작일</label>
-                            <input type="date" class="form-control" value="2026-01-01">
+                            <input type="date" class="form-control" id="boardSearchStartDate">
                         </div>
                         <div class="form-group">
                             <label>종료일</label>
-                            <input type="date" class="form-control" value="2026-02-04">
+                            <input type="date" class="form-control" id="boardSearchEndDate">
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary">검색</button>
-                        <button class="btn btn-default">초기화</button>
-                        <button class="btn btn-secondary"><i class="fas fa-plus"></i> 글 작성</button>
+                        <button type="button" class="btn btn-primary" id="boardSearchBtn">검색</button>
+                        <button type="button" class="btn btn-default" id="boardResetBtn">초기화</button>
+                        <button type="button" class="btn btn-secondary" id="boardWriteBtn"><i class="fas fa-plus"></i> 글 작성</button>
                     </div>
                 </div>
 
                 <!-- 게시글 목록 -->
                 <div class="table-container">
-                    <p class="info-text">총 45개의 게시글이 있습니다.</p>
+                    <p class="info-text" id="boardInfoText">총 0개의 게시글이 있습니다.</p>
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -588,68 +556,10 @@
                                 <th style="width: 120px;">관리</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td><span class="badge badge-danger">공지</span></td>
-                                <td style="text-align: left; padding-left: 15px;">2026년 2월 추첨 일정 안내</td>
-                                <td>관리자</td>
-                                <td>2026-02-01</td>
-                                <td>1,234</td>
-                                <td><span class="badge badge-success">게시중</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary">수정</button>
-                                    <button class="btn btn-sm btn-secondary">삭제</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge badge-danger">공지</span></td>
-                                <td style="text-align: left; padding-left: 15px;">신규 상품 입고 안내</td>
-                                <td>관리자</td>
-                                <td>2026-01-28</td>
-                                <td>987</td>
-                                <td><span class="badge badge-success">게시중</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary">수정</button>
-                                    <button class="btn btn-sm btn-secondary">삭제</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>43</td>
-                                <td style="text-align: left; padding-left: 15px;">설 연휴 배송 일정 안내</td>
-                                <td>관리자</td>
-                                <td>2026-01-25</td>
-                                <td>756</td>
-                                <td><span class="badge badge-success">게시중</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary">수정</button>
-                                    <button class="btn btn-sm btn-secondary">삭제</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>42</td>
-                                <td style="text-align: left; padding-left: 15px;">1월 당첨자 발표</td>
-                                <td>관리자</td>
-                                <td>2026-01-20</td>
-                                <td>2,345</td>
-                                <td><span class="badge badge-warning">임시저장</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary">수정</button>
-                                    <button class="btn btn-sm btn-secondary">삭제</button>
-                                </td>
-                            </tr>
+                        <tbody id="boardTableBody">
+                            <tr><td colspan="7" class="empty-message">조회 중...</td></tr>
                         </tbody>
                     </table>
-                </div>
-
-                <!-- 페이지네이션 -->
-                <div class="pagination">
-                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
-                    <button class="page-num active">1</button>
-                    <button class="page-num">2</button>
-                    <button class="page-num">3</button>
-                    <button class="page-num">4</button>
-                    <button class="page-num">5</button>
-                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
 
@@ -665,73 +575,30 @@
                     <div class="search-row">
                         <div class="form-group">
                             <label>시작일</label>
-                            <input type="date" class="form-control" value="2026-01-01">
+                            <input type="date" class="form-control" id="productSalesStartDate">
                         </div>
                         <div class="form-group">
                             <label>종료일</label>
-                            <input type="date" class="form-control" value="2026-02-04">
+                            <input type="date" class="form-control" id="productSalesEndDate">
                         </div>
                         <div class="form-group">
                             <label>카테고리</label>
-                            <select class="form-control">
+                            <select class="form-control" id="productSalesCategory">
                                 <option value="">전체</option>
-                                <option value="coffee">커피/음료</option>
-                                <option value="food">식품</option>
-                                <option value="beauty">뷰티</option>
-                                <option value="life">생활용품</option>
                             </select>
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary">조회</button>
-                        <button class="btn btn-secondary">엑셀 다운로드</button>
+                        <button type="button" class="btn btn-primary" id="productSalesQueryBtn">조회</button>
+                        <button type="button" class="btn btn-secondary" id="productSalesExcelBtn">엑셀 다운로드</button>
                     </div>
                 </div>
 
                 <!-- TOP 10 상품 -->
                 <div class="ranking-container">
                     <h3 style="margin-bottom: 20px;"><i class="fas fa-trophy"></i> TOP 10 인기 상품</h3>
-                    <div class="ranking-grid">
-                        <div class="ranking-card rank-1">
-                            <div class="rank-badge">1</div>
-                            <div class="product-info">
-                                <h4>메가커피 모바일금액권 3만원</h4>
-                                <p class="sales-count">판매: 234건</p>
-                                <p class="sales-amount">매출: 7,020,000원</p>
-                            </div>
-                        </div>
-                        <div class="ranking-card rank-2">
-                            <div class="rank-badge">2</div>
-                            <div class="product-info">
-                                <h4>스타벅스 아메리카노 Tall</h4>
-                                <p class="sales-count">판매: 189건</p>
-                                <p class="sales-amount">매출: 850,500원</p>
-                            </div>
-                        </div>
-                        <div class="ranking-card rank-3">
-                            <div class="rank-badge">3</div>
-                            <div class="product-info">
-                                <h4>배스킨라빈스 파인트 아이스크림</h4>
-                                <p class="sales-count">판매: 156건</p>
-                                <p class="sales-amount">매출: 2,340,000원</p>
-                            </div>
-                        </div>
-                        <div class="ranking-card">
-                            <div class="rank-badge">4</div>
-                            <div class="product-info">
-                                <h4>CU 편의점 모바일상품권 1만원</h4>
-                                <p class="sales-count">판매: 145건</p>
-                                <p class="sales-amount">매출: 1,450,000원</p>
-                            </div>
-                        </div>
-                        <div class="ranking-card">
-                            <div class="rank-badge">5</div>
-                            <div class="product-info">
-                                <h4>GS25 모바일상품권 1만원</h4>
-                                <p class="sales-count">판매: 132건</p>
-                                <p class="sales-amount">매출: 1,320,000원</p>
-                            </div>
-                        </div>
+                    <div class="ranking-grid" id="productSalesRankingGrid">
+                        <p class="empty-message">기간을 선택한 뒤 조회를 눌러주세요.</p>
                     </div>
                 </div>
 
@@ -750,52 +617,8 @@
                                 <th>순이익</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td><span class="rank-badge-small gold">1</span></td>
-                                <td style="text-align: left; padding-left: 15px;">메가커피 모바일금액권 3만원</td>
-                                <td>커피/음료</td>
-                                <td>234건</td>
-                                <td>7,020,000원</td>
-                                <td>351,000원</td>
-                                <td>6,669,000원</td>
-                            </tr>
-                            <tr>
-                                <td><span class="rank-badge-small silver">2</span></td>
-                                <td style="text-align: left; padding-left: 15px;">스타벅스 아메리카노 Tall</td>
-                                <td>커피/음료</td>
-                                <td>189건</td>
-                                <td>850,500원</td>
-                                <td>42,525원</td>
-                                <td>807,975원</td>
-                            </tr>
-                            <tr>
-                                <td><span class="rank-badge-small bronze">3</span></td>
-                                <td style="text-align: left; padding-left: 15px;">배스킨라빈스 파인트 아이스크림</td>
-                                <td>식품</td>
-                                <td>156건</td>
-                                <td>2,340,000원</td>
-                                <td>117,000원</td>
-                                <td>2,223,000원</td>
-                            </tr>
-                            <tr>
-                                <td>4</td>
-                                <td style="text-align: left; padding-left: 15px;">CU 편의점 모바일상품권 1만원</td>
-                                <td>생활용품</td>
-                                <td>145건</td>
-                                <td>1,450,000원</td>
-                                <td>72,500원</td>
-                                <td>1,377,500원</td>
-                            </tr>
-                            <tr>
-                                <td>5</td>
-                                <td style="text-align: left; padding-left: 15px;">GS25 모바일상품권 1만원</td>
-                                <td>생활용품</td>
-                                <td>132건</td>
-                                <td>1,320,000원</td>
-                                <td>66,000원</td>
-                                <td>1,254,000원</td>
-                            </tr>
+                        <tbody id="productSalesTableBody">
+                            <tr><td colspan="7" class="empty-message">기간을 선택한 뒤 조회를 눌러주세요.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2515,6 +2338,45 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" id="adminEditModalCancel">취소</button>
                 <button type="button" class="btn btn-primary" id="adminEditModalSave">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 게시글 작성/수정 모달 -->
+    <div id="boardPostModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="boardPostModalTitle">글 작성</h3>
+                <button type="button" class="modal-close" id="boardPostModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="boardPostId" value="">
+                <div class="form-group">
+                    <label>제목</label>
+                    <input type="text" class="form-control" id="boardPostTitle" placeholder="제목">
+                </div>
+                <div class="form-group">
+                    <label>작성자</label>
+                    <input type="text" class="form-control" id="boardPostAuthor" placeholder="작성자" value="관리자">
+                </div>
+                <div class="form-group" id="boardPostNoticeWrap" style="display: none;">
+                    <label><input type="checkbox" id="boardPostIsNotice"> 공지로 고정</label>
+                </div>
+                <div class="form-group">
+                    <label>내용</label>
+                    <textarea class="form-control" id="boardPostContent" rows="8" placeholder="내용"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>상태</label>
+                    <select class="form-control" id="boardPostStatus">
+                        <option value="published">게시중</option>
+                        <option value="draft">임시저장</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="boardPostModalCancel">취소</button>
+                <button type="button" class="btn btn-primary" id="boardPostModalSave">저장</button>
             </div>
         </div>
     </div>

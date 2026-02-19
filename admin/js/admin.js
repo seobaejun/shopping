@@ -177,6 +177,55 @@ async function loadPageData(pageId) {
                 await loadAdminSettings();
             }
             break;
+        case 'visitor-stats':
+            if (typeof loadVisitorStats === 'function') {
+                if (!window._visitorStatsDateInitialized) {
+                    var vsEnd = document.getElementById('visitorStatsEndDate');
+                    var vsStart = document.getElementById('visitorStatsStartDate');
+                    if (vsEnd && !vsEnd.value) vsEnd.value = new Date().toISOString().split('T')[0];
+                    if (vsStart && !vsStart.value) {
+                        var d = new Date();
+                        d.setDate(d.getDate() - 30);
+                        vsStart.value = d.toISOString().split('T')[0];
+                    }
+                    window._visitorStatsDateInitialized = true;
+                }
+                await loadVisitorStats();
+            }
+            break;
+        case 'product-sales':
+            if (typeof loadProductSales === 'function') {
+                if (!window._productSalesDateInitialized) {
+                    var psEnd = document.getElementById('productSalesEndDate');
+                    var psStart = document.getElementById('productSalesStartDate');
+                    if (psEnd && !psEnd.value) psEnd.value = new Date().toISOString().split('T')[0];
+                    if (psStart && !psStart.value) {
+                        var d = new Date();
+                        d.setDate(d.getDate() - 30);
+                        psStart.value = d.toISOString().split('T')[0];
+                    }
+                    window._productSalesDateInitialized = true;
+                }
+                await loadProductSales();
+            }
+            break;
+        case 'board-manage':
+            if (typeof loadBoardPosts === 'function') {
+                if (!window._boardManageDateInitialized) {
+                    var bEnd = document.getElementById('boardSearchEndDate');
+                    var bStart = document.getElementById('boardSearchStartDate');
+                    if (bEnd && !bEnd.value) bEnd.value = new Date().toISOString().split('T')[0];
+                    if (bStart && !bStart.value) {
+                        var bd = new Date();
+                        bd.setDate(bd.getDate() - 30);
+                        bStart.value = bd.toISOString().split('T')[0];
+                    }
+                    window._boardManageDateInitialized = true;
+                }
+                window._currentBoardType = window._currentBoardType || 'notice';
+                await loadBoardPosts(window._currentBoardType);
+            }
+            break;
         case 'product-register':
             // 상품등록 페이지 진입 시 카테고리 로드
             console.log('🔵 상품등록 페이지 로드 - 카테고리 로드 시작');
@@ -1814,19 +1863,192 @@ function navigateToPage(pageId) {
 }
 
 // ============================================
-// 게시판 탭 전환
+// 게시판 관리
 // ============================================
-function switchBoardTab(boardType) {
-    // 모든 탭 비활성화
-    document.querySelectorAll('.board-tab').forEach(tab => {
-        tab.classList.remove('active');
+const BOARD_TYPE_LABELS = { notice: '공지사항', event: '이벤트', qna: 'Q&A', review: '상품후기' };
+
+function getCurrentBoardType() {
+    var active = document.querySelector('#board-manage .board-tab.active');
+    return (active && active.getAttribute('data-board-type')) || 'notice';
+}
+
+function getBoardFilters() {
+    return {
+        keyword: (document.getElementById('boardSearchKeyword') && document.getElementById('boardSearchKeyword').value) || '',
+        author: (document.getElementById('boardSearchAuthor') && document.getElementById('boardSearchAuthor').value) || '',
+        startDate: (document.getElementById('boardSearchStartDate') && document.getElementById('boardSearchStartDate').value) || '',
+        endDate: (document.getElementById('boardSearchEndDate') && document.getElementById('boardSearchEndDate').value) || ''
+    };
+}
+
+async function loadBoardPosts(boardType) {
+    window._currentBoardType = boardType;
+    var tbody = document.getElementById('boardTableBody');
+    var infoText = document.getElementById('boardInfoText');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-message">조회 중...</td></tr>';
+    try {
+        await window.firebaseAdmin.getInitPromise();
+        var filters = getBoardFilters();
+        var list = await window.firebaseAdmin.boardService.getPosts(boardType, filters);
+        window._boardPostsList = list;
+        renderBoardTable(list, boardType);
+        if (infoText) infoText.textContent = '총 ' + (list.length) + '개의 게시글이 있습니다.';
+    } catch (error) {
+        console.error('게시판 로드 오류:', error);
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-message">목록을 불러오지 못했습니다.</td></tr>';
+        if (infoText) infoText.textContent = '총 0개의 게시글이 있습니다.';
+    }
+}
+
+function formatBoardDate(createdAt) {
+    if (!createdAt) return '-';
+    var ts = createdAt.seconds != null ? createdAt.seconds * 1000 : (createdAt.getTime ? createdAt.getTime() : 0);
+    if (!ts) return '-';
+    var d = new Date(ts);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function renderBoardTable(list, boardType) {
+    var tbody = document.getElementById('boardTableBody');
+    var infoText = document.getElementById('boardInfoText');
+    if (!tbody) return;
+    if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-message">등록된 게시글이 없습니다.</td></tr>';
+        if (infoText) infoText.textContent = '총 0개의 게시글이 있습니다.';
+        return;
+    }
+    var html = '';
+    list.forEach(function (p, idx) {
+        var numCell = p.isNotice ? '<span class="badge badge-danger">공지</span>' : (list.length - idx);
+        var title = (p.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var author = (p.authorName || '-').replace(/</g, '&lt;');
+        var date = formatBoardDate(p.createdAt);
+        var viewCount = (p.viewCount != null ? p.viewCount : 0).toLocaleString();
+        var statusBadge = (p.status === 'draft') ? '<span class="badge badge-warning">임시저장</span>' : '<span class="badge badge-success">게시중</span>';
+        html += '<tr data-post-id="' + (p.id || '') + '">' +
+            '<td>' + numCell + '</td>' +
+            '<td style="text-align: left; padding-left: 15px;">' + title + '</td>' +
+            '<td>' + author + '</td>' +
+            '<td>' + date + '</td>' +
+            '<td>' + viewCount + '</td>' +
+            '<td>' + statusBadge + '</td>' +
+            '<td><button type="button" class="btn btn-sm btn-primary btn-board-edit">수정</button> <button type="button" class="btn btn-sm btn-secondary btn-board-delete">삭제</button></td>' +
+            '</tr>';
     });
-    
-    // 클릭한 탭 활성화
-    event.target.classList.add('active');
-    
-    // 게시판 데이터 로드 (서버 연동 시 구현)
-    console.log(`${boardType} 게시판 로드`);
+    tbody.innerHTML = html;
+    if (infoText) infoText.textContent = '총 ' + list.length + '개의 게시글이 있습니다.';
+}
+
+function switchBoardTab(boardType) {
+    document.querySelectorAll('#board-manage .board-tab').forEach(function (tab) {
+        tab.classList.toggle('active', tab.getAttribute('data-board-type') === boardType);
+    });
+    loadBoardPosts(boardType);
+}
+
+function openBoardPostModal(editId, boardType) {
+    boardType = boardType || getCurrentBoardType();
+    var modal = document.getElementById('boardPostModal');
+    var titleEl = document.getElementById('boardPostModalTitle');
+    var idEl = document.getElementById('boardPostId');
+    var titleInput = document.getElementById('boardPostTitle');
+    var authorInput = document.getElementById('boardPostAuthor');
+    var contentInput = document.getElementById('boardPostContent');
+    var statusSelect = document.getElementById('boardPostStatus');
+    var noticeWrap = document.getElementById('boardPostNoticeWrap');
+    var noticeCheck = document.getElementById('boardPostIsNotice');
+    if (!modal || !titleEl || !idEl || !titleInput) return;
+    idEl.value = editId || '';
+    if (editId && window._boardPostsList) {
+        var post = window._boardPostsList.find(function (p) { return p.id === editId; });
+        if (post) {
+            titleEl.textContent = '글 수정';
+            titleInput.value = post.title || '';
+            authorInput.value = post.authorName || '관리자';
+            contentInput.value = post.content || '';
+            statusSelect.value = post.status === 'draft' ? 'draft' : 'published';
+            noticeCheck.checked = post.isNotice === true;
+        } else {
+            titleEl.textContent = '글 수정';
+            titleInput.value = '';
+            authorInput.value = '관리자';
+            contentInput.value = '';
+            statusSelect.value = 'published';
+            noticeCheck.checked = false;
+        }
+    } else {
+        titleEl.textContent = '글 작성';
+        titleInput.value = '';
+        authorInput.value = '관리자';
+        contentInput.value = '';
+        statusSelect.value = 'published';
+        noticeCheck.checked = false;
+    }
+    noticeWrap.style.display = (boardType === 'notice') ? 'block' : 'none';
+    modal.style.display = 'flex';
+}
+
+function closeBoardPostModal() {
+    var modal = document.getElementById('boardPostModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function saveBoardPost() {
+    var idEl = document.getElementById('boardPostId');
+    var titleInput = document.getElementById('boardPostTitle');
+    var authorInput = document.getElementById('boardPostAuthor');
+    var contentInput = document.getElementById('boardPostContent');
+    var statusSelect = document.getElementById('boardPostStatus');
+    var noticeCheck = document.getElementById('boardPostIsNotice');
+    var postId = (idEl && idEl.value) || '';
+    var boardType = getCurrentBoardType();
+    var title = (titleInput && titleInput.value) ? titleInput.value.trim() : '';
+    if (!title) {
+        alert('제목을 입력해 주세요.');
+        return;
+    }
+    try {
+        await window.firebaseAdmin.getInitPromise();
+        if (postId) {
+            await window.firebaseAdmin.boardService.updatePost(postId, {
+                title: title,
+                authorName: (authorInput && authorInput.value) ? authorInput.value.trim() : '관리자',
+                content: (contentInput && contentInput.value) ? contentInput.value : '',
+                status: (statusSelect && statusSelect.value) || 'published',
+                isNotice: (noticeCheck && noticeCheck.checked) || false
+            });
+            alert('수정되었습니다.');
+        } else {
+            await window.firebaseAdmin.boardService.addPost({
+                boardType: boardType,
+                title: title,
+                authorName: (authorInput && authorInput.value) ? authorInput.value.trim() : '관리자',
+                content: (contentInput && contentInput.value) ? contentInput.value : '',
+                status: (statusSelect && statusSelect.value) || 'published',
+                isNotice: (noticeCheck && noticeCheck.checked) || false
+            });
+            alert('등록되었습니다.');
+        }
+        closeBoardPostModal();
+        loadBoardPosts(boardType);
+    } catch (error) {
+        console.error('게시글 저장 오류:', error);
+        alert('저장에 실패했습니다.');
+    }
+}
+
+async function deleteBoardPost(postId) {
+    if (!postId || !confirm('이 게시글을 삭제하시겠습니까?')) return;
+    try {
+        await window.firebaseAdmin.getInitPromise();
+        await window.firebaseAdmin.boardService.deletePost(postId);
+        alert('삭제되었습니다.');
+        loadBoardPosts(getCurrentBoardType());
+    } catch (error) {
+        console.error('게시글 삭제 오류:', error);
+        alert('삭제에 실패했습니다.');
+    }
 }
 
 // ============================================
@@ -3519,6 +3741,299 @@ async function deleteAdminById(adminId) {
     }
 }
 
+// ============================================
+// 접속자 집계 (visitor-stats)
+// ============================================
+var lastVisitorStatsRows = [];
+
+function formatVisitorDate(str) {
+    if (!str) return '-';
+    var y = str.substring(0, 4), m = str.substring(5, 7), d = str.substring(8, 10);
+    return y + '-' + m + '-' + d;
+}
+
+function getDateKey(d, type) {
+    if (type === 'monthly') return d.substring(0, 7);
+    if (type === 'weekly') {
+        var date = new Date(d + 'T12:00:00');
+        var day = date.getDay();
+        var diff = date.getDate() - day + (day === 0 ? -6 : 1);
+        var monday = new Date(date);
+        monday.setDate(diff);
+        return monday.toISOString().split('T')[0];
+    }
+    return d;
+}
+
+async function loadVisitorStats() {
+    var startEl = document.getElementById('visitorStatsStartDate');
+    var endEl = document.getElementById('visitorStatsEndDate');
+    var typeEl = document.getElementById('visitorStatsType');
+    var tbody = document.getElementById('visitorStatsTableBody');
+    if (!startEl || !endEl || !tbody) return;
+    var startDate = (startEl.value || '').trim();
+    var endDate = (endEl.value || '').trim();
+    var type = (typeEl && typeEl.value) || 'daily';
+    if (!startDate || !endDate) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-message">시작일과 종료일을 선택해주세요.</td></tr>';
+        return;
+    }
+    if (startDate > endDate) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-message">시작일이 종료일보다 늦을 수 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-message">조회 중...</td></tr>';
+    try {
+        await ensureFirebaseReady();
+        var visitorStatsService = window.firebaseAdmin && window.firebaseAdmin.visitorStatsService;
+        var memberService = window.firebaseAdmin && window.firebaseAdmin.memberService;
+        if (!visitorStatsService) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-message">서비스를 사용할 수 없습니다.</td></tr>';
+            return;
+        }
+        var logs = await visitorStatsService.getLogsByDateRange(startDate, endDate);
+        var byKey = {};
+        logs.forEach(function (log) {
+            var key = getDateKey(log.date || '', type);
+            if (!byKey[key]) byKey[key] = { date: key, total: 0, sessionIds: {}, pageViews: 0 };
+            byKey[key].total += 1;
+            byKey[key].pageViews += 1;
+            if (log.sessionId) byKey[key].sessionIds[log.sessionId] = true;
+        });
+        var newMembersByDate = {};
+        if (memberService && window.firebaseAdmin.db) {
+            try {
+                var members = await memberService.getMembers();
+                var startTs = new Date(startDate + 'T00:00:00').getTime();
+                var endTs = new Date(endDate + 'T23:59:59').getTime();
+                (members || []).forEach(function (m) {
+                    var ct = m.createdAt;
+                    var t = 0;
+                    if (ct && (ct.seconds != null)) t = ct.seconds * 1000;
+                    else if (ct && ct.toDate) t = ct.toDate().getTime();
+                    if (t >= startTs && t <= endTs) {
+                        var d = new Date(t);
+                        var dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                        var key = getDateKey(dateStr, type);
+                        newMembersByDate[key] = (newMembersByDate[key] || 0) + 1;
+                    }
+                });
+            } catch (e) {
+                console.warn('신규 회원 집계 실패:', e);
+            }
+        }
+        var keys = Object.keys(byKey).sort().reverse();
+        var totalVisitors = 0, uniqueSet = {}, totalPageViews = 0, totalNewMembers = 0;
+        var rows = keys.map(function (key) {
+            var row = byKey[key];
+            var unique = Object.keys(row.sessionIds).length;
+            totalVisitors += row.total;
+            totalPageViews += row.pageViews;
+            Object.keys(row.sessionIds).forEach(function (s) { uniqueSet[s] = true; });
+            var newCount = newMembersByDate[key] || 0;
+            totalNewMembers += newCount;
+            return { date: key, visitors: row.total, unique: unique, pageViews: row.pageViews, newMembers: newCount };
+        });
+        lastVisitorStatsRows = rows;
+        var periodLabel = startDate + ' ~ ' + endDate;
+        document.getElementById('visitorStatsTotalVisitors').textContent = totalVisitors.toLocaleString() + '명';
+        document.getElementById('visitorStatsUniqueVisitors').textContent = Object.keys(uniqueSet).length.toLocaleString() + '명';
+        document.getElementById('visitorStatsPageViews').textContent = totalPageViews.toLocaleString() + '회';
+        document.getElementById('visitorStatsNewMembers').textContent = totalNewMembers.toLocaleString() + '명';
+        ['visitorStatsSummaryPeriod', 'visitorStatsSummaryPeriod2', 'visitorStatsSummaryPeriod3', 'visitorStatsSummaryPeriod4'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = periodLabel;
+        });
+        var titleEl = document.getElementById('visitorStatsTableTitle');
+        if (titleEl) titleEl.textContent = (type === 'monthly' ? '월별' : type === 'weekly' ? '주별' : '일별') + ' 접속 통계';
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-message">해당 기간 접속 데이터가 없습니다.</td></tr>';
+        } else {
+            tbody.innerHTML = rows.map(function (r) {
+                return '<tr><td>' + formatVisitorDate(r.date) + '</td><td>' + r.visitors.toLocaleString() + '</td><td>' + r.unique.toLocaleString() + '</td><td>' + r.pageViews.toLocaleString() + '</td><td>' + r.newMembers.toLocaleString() + '</td></tr>';
+            }).join('');
+        }
+    } catch (err) {
+        console.error('접속자 집계 오류:', err);
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-message">오류: ' + (err.message || '알 수 없음') + '</td></tr>';
+    }
+}
+
+function exportVisitorStatsExcel() {
+    if (lastVisitorStatsRows.length === 0) {
+        alert('먼저 조회를 실행해주세요.');
+        return;
+    }
+    var BOM = '\uFEFF';
+    var header = '날짜,방문자 수,순 방문자,페이지뷰,신규 회원\n';
+    var body = lastVisitorStatsRows.map(function (r) {
+        return formatVisitorDate(r.date) + ',' + r.visitors + ',' + r.unique + ',' + r.pageViews + ',' + r.newMembers;
+    }).join('\n');
+    var csv = BOM + header + body;
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '접속자집계_' + (document.getElementById('visitorStatsStartDate') && document.getElementById('visitorStatsStartDate').value) + '_' + (document.getElementById('visitorStatsEndDate') && document.getElementById('visitorStatsEndDate').value) + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+// ============================================
+// 상품 판매 순위 (product-sales)
+// ============================================
+var lastProductSalesRows = [];
+
+function escapeHtmlSales(str) {
+    if (str == null) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+async function loadProductSales() {
+    var startEl = document.getElementById('productSalesStartDate');
+    var endEl = document.getElementById('productSalesEndDate');
+    var categoryEl = document.getElementById('productSalesCategory');
+    var gridEl = document.getElementById('productSalesRankingGrid');
+    var tbody = document.getElementById('productSalesTableBody');
+    if (!startEl || !endEl || !tbody) return;
+    var startDate = (startEl.value || '').trim();
+    var endDate = (endEl.value || '').trim();
+    var categoryFilter = (categoryEl && categoryEl.value) || '';
+    if (!startDate || !endDate) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-message">시작일과 종료일을 선택해주세요.</td></tr>';
+        if (gridEl) gridEl.innerHTML = '<p class="empty-message">시작일과 종료일을 선택해주세요.</p>';
+        return;
+    }
+    if (startDate > endDate) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-message">시작일이 종료일보다 늦을 수 없습니다.</td></tr>';
+        if (gridEl) gridEl.innerHTML = '<p class="empty-message">시작일이 종료일보다 늦을 수 없습니다.</p>';
+        return;
+    }
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-message">조회 중...</td></tr>';
+    if (gridEl) gridEl.innerHTML = '<p class="empty-message">조회 중...</p>';
+    try {
+        await ensureFirebaseReady();
+        var orderService = window.firebaseAdmin && window.firebaseAdmin.orderService;
+        var productService = window.firebaseAdmin && window.firebaseAdmin.productService;
+        var db = window.firebaseAdmin && window.firebaseAdmin.db;
+        if (!orderService || !productService) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-message">서비스를 사용할 수 없습니다.</td></tr>';
+            if (gridEl) gridEl.innerHTML = '<p class="empty-message">서비스를 사용할 수 없습니다.</p>';
+            return;
+        }
+        var startTs = new Date(startDate + 'T00:00:00').getTime();
+        var endTs = new Date(endDate + 'T23:59:59').getTime();
+        var orders = await orderService.getOrders();
+        orders = (orders || []).filter(function (o) {
+            var t = 0;
+            var ct = o.createdAt;
+            if (ct && (ct.seconds != null)) t = ct.seconds * 1000;
+            else if (ct && ct.toDate) t = ct.toDate().getTime();
+            return t >= startTs && t <= endTs;
+        });
+        var byProduct = {};
+        orders.forEach(function (o) {
+            var pid = o.productId || 'unknown';
+            if (!byProduct[pid]) byProduct[pid] = { productId: pid, count: 0, totalSales: 0, supportTotal: 0 };
+            var qty = o.quantity || 1;
+            var price = o.productPrice || 0;
+            byProduct[pid].count += 1;
+            byProduct[pid].totalSales += price * qty;
+            byProduct[pid].supportTotal += (o.supportAmount || 0);
+        });
+        var products = await productService.getProducts();
+        var productMap = {};
+        (products || []).forEach(function (p) {
+            productMap[p.id] = { name: p.name || p.title || p.id, categoryId: p.categoryId || p.category || '' };
+        });
+        var categoryMap = {};
+        if (db) {
+            try {
+                var catSnap = await db.collection('categories').get();
+                catSnap.docs.forEach(function (d) {
+                    categoryMap[d.id] = (d.data().name || d.id);
+                });
+            } catch (e) {
+                console.warn('카테고리 로드 실패:', e);
+            }
+        }
+        if (categoryEl && categoryEl.options.length <= 1) {
+            categoryEl.innerHTML = '<option value="">전체</option>';
+            Object.keys(categoryMap).forEach(function (id) {
+                var opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = categoryMap[id];
+                categoryEl.appendChild(opt);
+            });
+        }
+        var rows = [];
+        Object.keys(byProduct).forEach(function (pid) {
+            var agg = byProduct[pid];
+            var prod = productMap[pid] || { name: pid, categoryId: '' };
+            if (categoryFilter && prod.categoryId !== categoryFilter) return;
+            var categoryName = categoryMap[prod.categoryId] || prod.categoryId || '-';
+            var netProfit = agg.totalSales - agg.supportTotal;
+            rows.push({
+                productId: pid,
+                productName: prod.name,
+                categoryName: categoryName,
+                categoryId: prod.categoryId,
+                count: agg.count,
+                totalSales: agg.totalSales,
+                supportTotal: agg.supportTotal,
+                netProfit: netProfit
+            });
+        });
+        rows.sort(function (a, b) {
+            return b.totalSales - a.totalSales;
+        });
+        lastProductSalesRows = rows;
+        var top10 = rows.slice(0, 10);
+        if (gridEl) {
+            if (top10.length === 0) {
+                gridEl.innerHTML = '<p class="empty-message">해당 기간 판매 데이터가 없습니다.</p>';
+            } else {
+                gridEl.innerHTML = top10.map(function (r, i) {
+                    var rankClass = (i === 0) ? ' rank-1' : (i === 1) ? ' rank-2' : (i === 2) ? ' rank-3' : '';
+                    return '<div class="ranking-card' + rankClass + '"><div class="rank-badge">' + (i + 1) + '</div><div class="product-info"><h4>' + escapeHtmlSales(r.productName) + '</h4><p class="sales-count">판매: ' + r.count.toLocaleString() + '건</p><p class="sales-amount">매출: ' + r.totalSales.toLocaleString() + '원</p></div></div>';
+                }).join('');
+            }
+        }
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-message">해당 기간 판매 데이터가 없습니다.</td></tr>';
+        } else {
+            tbody.innerHTML = rows.map(function (r, i) {
+                var rankBadge = (i === 0) ? '<span class="rank-badge-small gold">1</span>' : (i === 1) ? '<span class="rank-badge-small silver">2</span>' : (i === 2) ? '<span class="rank-badge-small bronze">3</span>' : (i + 1);
+                return '<tr><td>' + rankBadge + '</td><td style="text-align:left;padding-left:15px;">' + escapeHtmlSales(r.productName) + '</td><td>' + escapeHtmlSales(r.categoryName) + '</td><td>' + r.count.toLocaleString() + '건</td><td>' + r.totalSales.toLocaleString() + '원</td><td>' + r.supportTotal.toLocaleString() + '원</td><td>' + r.netProfit.toLocaleString() + '원</td></tr>';
+            }).join('');
+        }
+    } catch (err) {
+        console.error('상품 판매 순위 오류:', err);
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-message">오류: ' + (err.message || '알 수 없음') + '</td></tr>';
+        if (gridEl) gridEl.innerHTML = '<p class="empty-message">오류가 발생했습니다.</p>';
+    }
+}
+
+function exportProductSalesExcel() {
+    if (lastProductSalesRows.length === 0) {
+        alert('먼저 조회를 실행해주세요.');
+        return;
+    }
+    var BOM = '\uFEFF';
+    var header = '순위,상품명,카테고리,판매건수,총 매출,지원금,순이익\n';
+    var body = lastProductSalesRows.map(function (r, i) {
+        return (i + 1) + ',"' + (r.productName || '').replace(/"/g, '""') + '","' + (r.categoryName || '').replace(/"/g, '""') + '",' + r.count + ',' + r.totalSales + ',' + r.supportTotal + ',' + r.netProfit;
+    }).join('\n');
+    var csv = BOM + header + body;
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '상품판매순위_' + (document.getElementById('productSalesStartDate') && document.getElementById('productSalesStartDate').value) + '_' + (document.getElementById('productSalesEndDate') && document.getElementById('productSalesEndDate').value) + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
 // 페이지 로드 시 초기 데이터 렌더링
 // ============================================
 // DOMContentLoaded와 window.onload 모두 처리
@@ -3746,6 +4261,61 @@ function initAdminPage() {
                 const idx = parseInt(row.getAttribute('data-index'), 10);
                 if (isNaN(idx) || idx < 0) return;
                 selectMemberForAdminRow(idx);
+            });
+        }
+        var visitorStatsQueryBtn = document.getElementById('visitorStatsQueryBtn');
+        if (visitorStatsQueryBtn) visitorStatsQueryBtn.onclick = function () { loadVisitorStats(); };
+        var visitorStatsExcelBtn = document.getElementById('visitorStatsExcelBtn');
+        if (visitorStatsExcelBtn) visitorStatsExcelBtn.onclick = function () { exportVisitorStatsExcel(); };
+        var productSalesQueryBtn = document.getElementById('productSalesQueryBtn');
+        if (productSalesQueryBtn) productSalesQueryBtn.onclick = function () { loadProductSales(); };
+        var productSalesExcelBtn = document.getElementById('productSalesExcelBtn');
+        if (productSalesExcelBtn) productSalesExcelBtn.onclick = function () { exportProductSalesExcel(); };
+
+        // 게시판관리: 탭, 검색, 초기화, 글작성, 모달, 수정/삭제
+        document.querySelectorAll('#board-manage .board-tab').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                var boardType = tab.getAttribute('data-board-type');
+                if (boardType) switchBoardTab(boardType);
+            });
+        });
+        var boardSearchBtn = document.getElementById('boardSearchBtn');
+        if (boardSearchBtn) boardSearchBtn.onclick = function () { loadBoardPosts(getCurrentBoardType()); };
+        var boardResetBtn = document.getElementById('boardResetBtn');
+        if (boardResetBtn) {
+            boardResetBtn.onclick = function () {
+                var kw = document.getElementById('boardSearchKeyword');
+                var author = document.getElementById('boardSearchAuthor');
+                var start = document.getElementById('boardSearchStartDate');
+                var end = document.getElementById('boardSearchEndDate');
+                if (kw) kw.value = '';
+                if (author) author.value = '';
+                if (start) start.value = '';
+                if (end) end.value = '';
+                loadBoardPosts(getCurrentBoardType());
+            };
+        }
+        var boardWriteBtn = document.getElementById('boardWriteBtn');
+        if (boardWriteBtn) boardWriteBtn.onclick = function () { openBoardPostModal(null); };
+        var boardPostModal = document.getElementById('boardPostModal');
+        var boardPostModalClose = document.getElementById('boardPostModalClose');
+        var boardPostModalCancel = document.getElementById('boardPostModalCancel');
+        var boardPostModalSave = document.getElementById('boardPostModalSave');
+        if (boardPostModalClose) boardPostModalClose.onclick = closeBoardPostModal;
+        if (boardPostModalCancel) boardPostModalCancel.onclick = closeBoardPostModal;
+        if (boardPostModalSave) boardPostModalSave.onclick = function () { saveBoardPost(); };
+        if (boardPostModal && boardPostModal.querySelector('.modal-content')) {
+            boardPostModal.querySelector('.modal-content').onclick = function (e) { e.stopPropagation(); };
+            boardPostModal.onclick = function (e) { if (e.target === boardPostModal) closeBoardPostModal(); };
+        }
+        var boardTableBody = document.getElementById('boardTableBody');
+        if (boardTableBody) {
+            boardTableBody.addEventListener('click', function (e) {
+                var row = e.target.closest('tr[data-post-id]');
+                if (!row) return;
+                var postId = row.getAttribute('data-post-id');
+                if (e.target.classList.contains('btn-board-edit')) openBoardPostModal(postId);
+                else if (e.target.classList.contains('btn-board-delete')) deleteBoardPost(postId);
             });
         }
         
