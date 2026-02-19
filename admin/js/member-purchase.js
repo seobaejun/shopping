@@ -212,6 +212,25 @@ window.resetMemberPurchase = function() {
     }
 };
 
+// 페이지 진입 시 초기화 (loadPageData에서 호출)
+window.initMemberPurchasePage = function() {
+    const keywordInput = document.getElementById('purchaseSearchKeyword');
+    const startDateInput = document.getElementById('purchaseStartDate');
+    const endDateInput = document.getElementById('purchaseEndDate');
+    const resultsContainer = document.getElementById('purchaseResultsContainer');
+    const detailBody = document.getElementById('purchaseDetailBody');
+
+    if (keywordInput) keywordInput.value = '';
+    if (startDateInput) {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        startDateInput.value = oneMonthAgo.toISOString().split('T')[0];
+    }
+    if (endDateInput) endDateInput.value = new Date().toISOString().split('T')[0];
+    if (resultsContainer) resultsContainer.style.display = 'none';
+    if (detailBody) detailBody.innerHTML = '';
+};
+
 // 페이지 로드 시 날짜 초기화
 (function() {
     console.log('🔵 member-purchase.js 초기화');

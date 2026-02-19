@@ -274,6 +274,12 @@ async function loadPageData(pageId) {
                 console.error('❌ loadCategories 함수를 찾을 수 없습니다!');
             }
             break;
+        case 'member-purchase':
+            if (typeof window.initMemberPurchasePage === 'function') {
+                window.initMemberPurchasePage();
+                console.log('✅ 개인별 구매 누적정보 페이지 초기화 완료');
+            }
+            break;
         case 'purchase-request':
             await loadPurchaseRequests();
             break;
@@ -314,37 +320,7 @@ async function loadPurchaseRequests() {
     }
 }
 
-// 검색 기능
-const searchBtn = document.getElementById('searchBtn');
-const resetBtn = document.getElementById('resetBtn');
-const exportBtn = document.getElementById('exportBtn');
-
-if (searchBtn) {
-    searchBtn.addEventListener('click', () => {
-        // 검색 로직 구현
-        alert('검색 기능은 서버 연동 후 구현됩니다.');
-    });
-}
-
-if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-        // 폼 초기화
-        document.querySelectorAll('.form-control').forEach(input => {
-            if (input.type === 'text' || input.type === 'date') {
-                input.value = '';
-            } else if (input.tagName === 'SELECT') {
-                input.selectedIndex = 0;
-            }
-        });
-    });
-}
-
-if (exportBtn) {
-    exportBtn.addEventListener('click', () => {
-        // 엑셀 다운로드 로직
-        alert('엑셀 다운로드 기능은 서버 연동 후 구현됩니다.');
-    });
-}
+// 회원조회 검색/엑셀/취소는 member-search.js에서 구현, initAdminPage에서 memberSearchBtn/memberResetBtn/memberExportBtn에 연결됨
 
 // 테이블 편집/삭제 버튼
 document.addEventListener('click', (e) => {

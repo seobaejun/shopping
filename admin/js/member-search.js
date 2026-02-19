@@ -243,10 +243,22 @@ async function searchMemberInfo() {
             searchResultCount.textContent = window.filteredMembersData.length;
         }
         
-        // 검색 결과 테이블 렌더링 (전체회원과 동일한 패턴 - renderMemberTable처럼 직접 호출)
-        console.log('🔵 회원검색: 검색 결과 테이블 렌더링 시작');
-        renderSearchResultsTable(window.filteredMembersData);
-        console.log('✅ 회원검색: 검색 결과 테이블 렌더링 완료');
+        // 검색 결과는 항상 1페이지부터 표시
+        window.currentSearchResultsPage = 1;
+        window.currentMemberPage = 1;
+        // 검색 결과 테이블: 컨테이너 안의 tbody를 직접 사용 (같은 DOM 노드에 그리기)
+        const searchResultsTbody = searchResultsContainer.querySelector('tbody');
+        if (searchResultsTbody) {
+            renderMembersIntoBody(window.filteredMembersData, searchResultsTbody, {
+                currentPage: 1,
+                paginationElId: 'searchResultsPagination',
+                isSearchResults: true
+            });
+        }
+        // 메인 테이블(전체회원)에도 검색 결과 표시
+        renderMemberTable(window.filteredMembersData);
+        // 검색 결과 영역으로 스크롤
+        searchResultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
         
     } catch (error) {
         console.error('❌ 회원검색: 데이터 로드 오류:', error);
@@ -283,34 +295,30 @@ async function resetMemberSearch() {
     await loadAllMembers();
 }
 
-// 검색 결과 테이블 렌더링 함수
-function renderSearchResultsTable(membersToRender) {
-    console.log('🔵 renderSearchResultsTable 호출됨, 데이터:', membersToRender?.length || 0, '명');
-    
-    const tbody = document.getElementById('searchResultsBody');
-    if (!tbody) {
-        console.error('❌ searchResultsBody를 찾을 수 없습니다.');
-        console.error('HTML에 id="searchResultsBody"가 있는지 확인하세요.');
-        return;
-    }
-    
-    console.log('✅ searchResultsBody 찾음');
-    
+// 공통: 회원 목록을 지정한 tbody에 그리는 함수 (전체회원·검색결과 동일 로직)
+function renderMembersIntoBody(membersToRender, tbody, options) {
+    options = options || {};
+    const membersPerPage = 10;
+    const currentPage = options.currentPage != null ? options.currentPage : 1;
+    const paginationElId = options.paginationElId || null;
+    const isSearchResults = options.isSearchResults === true;
+
+    if (!tbody) return;
     if (!membersToRender || membersToRender.length === 0) {
-        console.warn('⚠️ 렌더링할 데이터가 없습니다.');
         tbody.innerHTML = '<tr><td colspan="12" class="empty-message">검색 결과가 없습니다.</td></tr>';
-        
-        // 페이지네이션 초기화
-        const paginationEl = document.getElementById('searchResultsPagination');
-        if (paginationEl) {
-            paginationEl.innerHTML = '';
+        if (paginationElId) {
+            const paginationEl = document.getElementById(paginationElId);
+            if (paginationEl) paginationEl.innerHTML = '';
         }
         return;
     }
-    
-    console.log('✅ 렌더링할 데이터 있음:', membersToRender.length, '명');
-    
-    // HTML 이스케이프 함수
+
+    const totalPages = Math.max(1, Math.ceil(membersToRender.length / membersPerPage));
+    const page = Math.min(Math.max(1, currentPage), totalPages);
+    const startIndex = (page - 1) * membersPerPage;
+    const endIndex = Math.min(startIndex + membersPerPage, membersToRender.length);
+    const pageMembers = membersToRender.slice(startIndex, endIndex);
+
     const escapeHtml = (str) => {
         if (!str) return '';
         return String(str).replace(/[&<>"']/g, (m) => {
@@ -318,49 +326,23 @@ function renderSearchResultsTable(membersToRender) {
             return map[m];
         });
     };
-    
-    // 페이지네이션 계산
-    const membersPerPage = 10;
-    const totalPages = Math.ceil(membersToRender.length / membersPerPage);
-    const startIndex = (window.currentMemberPage - 1) * membersPerPage;
-    const endIndex = startIndex + membersPerPage;
-    const pageMembers = membersToRender.slice(startIndex, endIndex);
-    
-    // 테이블 HTML 생성
+
     const tableHTML = pageMembers.map((member, index) => {
         const memberId = member.userId || member.id || '';
         const name = member.name || '';
         const phone = member.phone || '';
-        
-        // 가입일 처리
         let joinDate = '';
-        if (member.joinDate) {
-            joinDate = member.joinDate;
-        } else if (member.createdAt) {
-            if (member.createdAt.seconds) {
-                const date = new Date(member.createdAt.seconds * 1000);
-                joinDate = date.toISOString().replace('T', ' ').substring(0, 19);
-            } else if (member.createdAt.toDate) {
-                const date = member.createdAt.toDate();
-                joinDate = date.toISOString().replace('T', ' ').substring(0, 19);
-            }
+        if (member.joinDate) joinDate = member.joinDate;
+        else if (member.createdAt) {
+            if (member.createdAt.seconds) joinDate = new Date(member.createdAt.seconds * 1000).toISOString().replace('T', ' ').substring(0, 19);
+            else if (member.createdAt.toDate) joinDate = member.createdAt.toDate().toISOString().replace('T', ' ').substring(0, 19);
         }
-        
-        // 주소
-        const address = [member.postcode, member.address, member.detailAddress]
-            .filter(Boolean)
-            .join(' ') || '';
-        
-        // 추천인 코드
+        const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
         const referralCode = member.referralCode || member.recommender || '';
-        
-        // 상태
         const status = member.status || '정상';
-        
-        // 마스킹
         const maskedPhone = phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '';
         const maskedName = name && name.length > 1 ? name.substring(0, 1) + '**' : name;
-        
+        const safeId = String(member.id || memberId).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         return `
             <tr>
                 <td>${startIndex + index + 1}</td>
@@ -374,204 +356,83 @@ function renderSearchResultsTable(membersToRender) {
                 <td>${(member.purchaseAmount || 0).toLocaleString()}</td>
                 <td>${(member.supportAmount || 0).toLocaleString()} / ${(member.accumulatedSupport || 0).toLocaleString()}</td>
                 <td>
-                    <select class="status-select" onchange="changeMemberStatus('${member.id || memberId}', this.value)">
+                    <select class="status-select" data-member-id="${safeId}" onchange="changeMemberStatus(this.dataset.memberId, this.value)">
                         <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
                         <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
                         <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
                     </select>
                 </td>
                 <td>
-                    <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-icon btn-delete" onclick="deleteMemberInfo('${member.id || memberId}')" title="삭제">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <button class="btn-icon btn-edit" data-member-id="${safeId}" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon btn-delete" data-member-id="${safeId}" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `;
     }).join('');
-    
-    console.log('🔵 테이블 HTML 생성 완료, 길이:', tableHTML.length);
-    if (tableHTML.length > 0) {
-        console.log('🔵 테이블 HTML 샘플 (처음 500자):', tableHTML.substring(0, 500));
-    } else {
-        console.error('❌ 테이블 HTML이 비어있습니다!');
-    }
-    
-    if (!tableHTML || tableHTML.trim() === '') {
-        console.error('❌ 테이블 HTML이 비어있습니다!');
-        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">테이블 생성 오류가 발생했습니다.</td></tr>';
-        return;
-    }
-    
+
     tbody.innerHTML = tableHTML;
-    console.log('✅✅✅ 테이블 HTML 삽입 완료, tbody 자식 요소:', tbody.children.length);
-    
-    // 페이지네이션 렌더링
-    const paginationEl = document.getElementById('searchResultsPagination');
-    if (paginationEl) {
-        if (totalPages > 1) {
-            let paginationHTML = '';
-            paginationHTML += `<button class="page-btn" ${window.currentMemberPage === 1 ? 'disabled' : ''} onclick="changeSearchResultsPage(${window.currentMemberPage - 1})">
-                <i class="fas fa-chevron-left"></i>
-            </button>`;
-            
-            for (let i = 1; i <= totalPages; i++) {
-                paginationHTML += `<button class="page-num ${i === window.currentMemberPage ? 'active' : ''}" onclick="changeSearchResultsPage(${i})">${i}</button>`;
+
+    if (paginationElId) {
+        const paginationEl = document.getElementById(paginationElId);
+        if (paginationEl) {
+            if (totalPages > 1) {
+                const changeFn = isSearchResults ? 'changeSearchResultsPage' : 'changeMemberPage';
+                let html = `<button class="page-btn" ${page === 1 ? 'disabled' : ''} onclick="${changeFn}(${page - 1})"><i class="fas fa-chevron-left"></i></button>`;
+                for (let i = 1; i <= totalPages; i++) html += `<button class="page-num ${i === page ? 'active' : ''}" onclick="${changeFn}(${i})">${i}</button>`;
+                html += `<button class="page-btn" ${page === totalPages ? 'disabled' : ''} onclick="${changeFn}(${page + 1})"><i class="fas fa-chevron-right"></i></button>`;
+                paginationEl.innerHTML = html;
+            } else {
+                paginationEl.innerHTML = '';
             }
-            
-            paginationHTML += `<button class="page-btn" ${window.currentMemberPage === totalPages ? 'disabled' : ''} onclick="changeSearchResultsPage(${window.currentMemberPage + 1})">
-                <i class="fas fa-chevron-right"></i>
-            </button>`;
-            
-            paginationEl.innerHTML = paginationHTML;
-        } else {
-            paginationEl.innerHTML = '';
         }
     }
 }
 
-// 테이블 렌더링 함수 (전체 회원용)
+// 검색 결과 테이블: searchResultsContainer 안의 tbody에 그리기 (전체회원과 동일 로직)
+function renderSearchResultsTable(membersToRender) {
+    const container = document.getElementById('searchResultsContainer');
+    const tbody = container ? container.querySelector('tbody') : document.getElementById('searchResultsBody');
+    if (!tbody) return;
+    const page = Math.max(1, parseInt(window.currentSearchResultsPage, 10) || 1);
+    renderMembersIntoBody(membersToRender, tbody, {
+        currentPage: page,
+        paginationElId: 'searchResultsPagination',
+        isSearchResults: true
+    });
+}
+
+// 테이블 렌더링 함수 (전체 회원용) — renderMembersIntoBody 공통 사용
 function renderMemberTable(membersToRender) {
     const tbody = document.getElementById('memberTableBody');
-    if (!tbody) {
-        console.error('❌ memberTableBody를 찾을 수 없습니다.');
-        return;
-    }
-    
-    if (!membersToRender || membersToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">검색 결과가 없습니다.</td></tr>';
-        
-        // 페이지네이션 초기화
-        const paginationEl = document.getElementById('memberPagination');
-        if (paginationEl) {
-            paginationEl.innerHTML = '';
-        }
-        return;
-    }
-    
-    // HTML 이스케이프 함수
-    const escapeHtml = (str) => {
-        if (!str) return '';
-        return String(str).replace(/[&<>"']/g, (m) => {
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return map[m];
-        });
-    };
-    
-    // 페이지네이션 계산
-    const membersPerPage = 10;
-    const totalPages = Math.ceil(membersToRender.length / membersPerPage);
-    const startIndex = (window.currentMemberPage - 1) * membersPerPage;
-    const endIndex = startIndex + membersPerPage;
-    const pageMembers = membersToRender.slice(startIndex, endIndex);
-    
-    // 테이블 HTML 생성
-    const tableHTML = pageMembers.map((member, index) => {
-        const memberId = member.userId || member.id || '';
-        const name = member.name || '';
-        const phone = member.phone || '';
-        
-        // 가입일 처리
-        let joinDate = '';
-        if (member.joinDate) {
-            joinDate = member.joinDate;
-        } else if (member.createdAt) {
-            if (member.createdAt.seconds) {
-                const date = new Date(member.createdAt.seconds * 1000);
-                joinDate = date.toISOString().replace('T', ' ').substring(0, 19);
-            } else if (member.createdAt.toDate) {
-                const date = member.createdAt.toDate();
-                joinDate = date.toISOString().replace('T', ' ').substring(0, 19);
-            }
-        }
-        
-        // 주소
-        const address = [member.postcode, member.address, member.detailAddress]
-            .filter(Boolean)
-            .join(' ') || '';
-        
-        // 추천인 코드
-        const referralCode = member.referralCode || member.recommender || '';
-        
-        // 상태
-        const status = member.status || '정상';
-        
-        // 마스킹
-        const maskedPhone = phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '';
-        const maskedName = name && name.length > 1 ? name.substring(0, 1) + '**' : name;
-        
-        return `
-            <tr>
-                <td>${startIndex + index + 1}</td>
-                <td>${escapeHtml(memberId)}</td>
-                <td>${escapeHtml(maskedName)}</td>
-                <td>${escapeHtml(maskedPhone)}</td>
-                <td>${escapeHtml(joinDate)}</td>
-                <td>${escapeHtml(address)}</td>
-                <td>${escapeHtml(member.accountNumber || '')}</td>
-                <td>${escapeHtml(referralCode)}</td>
-                <td>${(member.purchaseAmount || 0).toLocaleString()}</td>
-                <td>${(member.supportAmount || 0).toLocaleString()} / ${(member.accumulatedSupport || 0).toLocaleString()}</td>
-                <td>
-                    <select class="status-select" onchange="changeMemberStatus('${member.id || memberId}', this.value)">
-                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
-                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
-                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
-                    </select>
-                </td>
-                <td>
-                    <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-icon btn-delete" onclick="deleteMemberInfo('${member.id || memberId}')" title="삭제">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-    
-    tbody.innerHTML = tableHTML;
-    
-    // 페이지네이션 렌더링
-    const paginationEl = document.getElementById('memberPagination');
-    if (paginationEl) {
-        if (totalPages > 1) {
-            let paginationHTML = '';
-            paginationHTML += `<button class="page-btn" ${window.currentMemberPage === 1 ? 'disabled' : ''} onclick="changeMemberPage(${window.currentMemberPage - 1})">
-                <i class="fas fa-chevron-left"></i>
-            </button>`;
-            
-            for (let i = 1; i <= totalPages; i++) {
-                paginationHTML += `<button class="page-num ${i === window.currentMemberPage ? 'active' : ''}" onclick="changeMemberPage(${i})">${i}</button>`;
-            }
-            
-            paginationHTML += `<button class="page-btn" ${window.currentMemberPage === totalPages ? 'disabled' : ''} onclick="changeMemberPage(${window.currentMemberPage + 1})">
-                <i class="fas fa-chevron-right"></i>
-            </button>`;
-            
-            paginationEl.innerHTML = paginationHTML;
-        } else {
-            paginationEl.innerHTML = '';
-        }
-    }
+    if (!tbody) return;
+    const page = Math.max(1, parseInt(window.currentMemberPage, 10) || 1);
+    renderMembersIntoBody(membersToRender, tbody, {
+        currentPage: page,
+        paginationElId: 'memberPagination',
+        isSearchResults: false
+    });
 }
 
-// 엑셀 다운로드 함수
+// 엑셀 다운로드 함수 (검색 결과가 있으면 필터된 목록, 없으면 전체 회원)
 function exportMembersToExcel() {
-    if (!window.allMembersData || window.allMembersData.length === 0) {
+    const dataToExport = (window.filteredMembersData && window.filteredMembersData.length > 0)
+        ? window.filteredMembersData
+        : (window.allMembersData || []);
+    if (dataToExport.length === 0) {
         alert('다운로드할 회원 데이터가 없습니다.');
         return;
     }
     
-    // CSV 형식으로 변환
     const headers = ['번호', '아이디', '이름', '전화번호', '이메일', '가입날짜', '우편번호', '주소', '상세주소', '계좌번호', '추천인코드', 'MD코드', '구매금액', '지원금', '누적지원금', '상태'];
-    
     const csvRows = [headers.join(',')];
     
-    window.allMembersData.forEach((member, index) => {
+    const escapeCsv = (val) => {
+        if (val == null) return '""';
+        const s = String(val).replace(/"/g, '""');
+        return s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || /[\r\n]/.test(s) ? `"${s}"` : `"${s}"`;
+    };
+    
+    dataToExport.forEach((member, index) => {
         const memberId = member.userId || member.id || '';
         const name = member.name || '';
         const phone = member.phone || '';
@@ -596,44 +457,40 @@ function exportMembersToExcel() {
         
         const row = [
             index + 1,
-            `"${memberId}"`,
-            `"${name}"`,
-            `"${phone}"`,
-            `"${email}"`,
-            `"${joinDate}"`,
-            `"${member.postcode || ''}"`,
-            `"${member.address || ''}"`,
-            `"${member.detailAddress || ''}"`,
-            `"${member.accountNumber || ''}"`,
-            `"${referralCode}"`,
-            `"${member.mdCode || ''}"`,
+            escapeCsv(memberId),
+            escapeCsv(name),
+            escapeCsv(phone),
+            escapeCsv(email),
+            escapeCsv(joinDate),
+            escapeCsv(member.postcode || ''),
+            escapeCsv(member.address || ''),
+            escapeCsv(member.detailAddress || ''),
+            escapeCsv(member.accountNumber || ''),
+            escapeCsv(referralCode),
+            escapeCsv(member.mdCode || ''),
             member.purchaseAmount || 0,
             member.supportAmount || 0,
             member.accumulatedSupport || 0,
-            `"${status}"`
+            escapeCsv(status)
         ];
-        
         csvRows.push(row.join(','));
     });
     
-    // BOM 추가 (한글 깨짐 방지)
     const BOM = '\uFEFF';
     const csvContent = BOM + csvRows.join('\n');
-    
-    // Blob 생성 및 다운로드
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `회원정보_${new Date().toISOString().split('T')[0]}.csv`);
+    const link = document.createElement('a');
+    link.href = url;
+    const isFiltered = window.filteredMembersData && window.allMembersData &&
+        window.filteredMembersData.length !== window.allMembersData.length;
+    link.setAttribute('download', `회원정보_${isFiltered ? '검색결과_' : ''}${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
-    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    console.log('✅ 엑셀 다운로드 완료:', window.allMembersData.length, '명');
+    URL.revokeObjectURL(url);
+    console.log('✅ 엑셀 다운로드 완료:', dataToExport.length, '명');
 }
 
 // 검색 결과 페이지 변경 함수
@@ -644,7 +501,7 @@ window.changeSearchResultsPage = function(page) {
     const totalPages = Math.ceil(dataToUse.length / 10);
     if (page < 1 || page > totalPages) return;
     
-    window.currentMemberPage = page;
+    window.currentSearchResultsPage = page;
     
     // 검색 결과 테이블 렌더링
     renderSearchResultsTable(dataToUse);
