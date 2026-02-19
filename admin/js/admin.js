@@ -18,9 +18,17 @@ async function loadCategoriesForProduct() {
         const categories = [];
         snapshot.forEach(doc => {
             const data = doc.data();
+            const displayName = (data.name != null && String(data.name).trim() !== '')
+                ? String(data.name).trim()
+                : ((data.categoryName != null && String(data.categoryName).trim() !== '')
+                    ? String(data.categoryName).trim()
+                    : ((data.title != null && String(data.title).trim() !== '')
+                        ? String(data.title).trim()
+                        : doc.id));
             categories.push({
+                ...data,
                 id: doc.id,
-                ...data
+                name: displayName
             });
         });
         
@@ -36,7 +44,8 @@ async function loadCategoriesForProduct() {
             visibleCategories.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.id;
-                option.textContent = `${cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차'} - ${cat.name}`;
+                const levelLabel = cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차';
+                option.textContent = `${levelLabel} - ${cat.name || cat.id}`;
                 registerCategorySelect.appendChild(option);
             });
             console.log('✅ 상품등록 카테고리 select 업데이트 완료');
@@ -49,10 +58,24 @@ async function loadCategoriesForProduct() {
             visibleCategories.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.id;
-                option.textContent = `${cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차'} - ${cat.name}`;
+                const levelLabel = cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차';
+                option.textContent = `${levelLabel} - ${cat.name || cat.id}`;
                 editCategorySelect.appendChild(option);
             });
             console.log('✅ 상품수정 카테고리 select 업데이트 완료');
+        }
+        
+        // 상품 목록 검색용 카테고리 select 업데이트
+        const searchCategorySelect = document.getElementById('productSearchCategory');
+        if (searchCategorySelect) {
+            searchCategorySelect.innerHTML = '<option value="">전체</option>';
+            visibleCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                const levelLabel = cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차';
+                option.textContent = `${levelLabel} - ${cat.name || cat.id}`;
+                searchCategorySelect.appendChild(option);
+            });
         }
         
         return categories;
@@ -238,7 +261,7 @@ async function loadPageData(pageId) {
             // 테이블 초기화
             const memberTableBody = document.getElementById('memberTableBody');
             if (memberTableBody) {
-                memberTableBody.innerHTML = '<tr><td colspan="12" class="empty-message">데이터를 불러오는 중...</td></tr>';
+                memberTableBody.innerHTML = '<tr><td colspan="13" class="empty-message">데이터를 불러오는 중...</td></tr>';
                 console.log('✅ 테이블 초기화 완료');
             } else {
                 console.error('❌ memberTableBody를 찾을 수 없습니다!');
@@ -267,14 +290,14 @@ async function loadPageData(pageId) {
                     console.error('❌❌❌ 회원조회 페이지 로드 오류:', error);
                     console.error('오류 스택:', error.stack);
                     if (memberTableBody) {
-                        memberTableBody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+                        memberTableBody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
                     }
                 }
             } else {
                 console.error('❌❌❌ loadAllMembers 함수를 찾을 수 없습니다! (대기 후에도 없음)');
                 console.error('window 객체 확인:', Object.keys(window).filter(k => k.includes('load') || k.includes('member')));
                 if (memberTableBody) {
-                    memberTableBody.innerHTML = '<tr><td colspan="12" class="empty-message">loadAllMembers 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.</td></tr>';
+                    memberTableBody.innerHTML = '<tr><td colspan="13" class="empty-message">loadAllMembers 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.</td></tr>';
                 }
             }
             break;
@@ -388,10 +411,10 @@ async function loadPageData(pageId) {
 async function loadProducts() {
     try {
         const products = await window.firebaseAdmin.productService.getProducts();
-        renderProductTable(products);
+        await renderProductTable(products);
     } catch (error) {
         console.error('상품 목록 로드 오류:', error);
-        renderProductTable(PRODUCT_DATA);
+        await renderProductTable(PRODUCT_DATA);
     }
 }
 
@@ -1245,7 +1268,7 @@ async function loadAllMembers() {
             console.error('❌ Firebase Admin을 찾을 수 없습니다.');
             const tbody = document.getElementById('memberTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="12" class="empty-message">Firebase가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">Firebase가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.</td></tr>';
             }
             return;
         }
@@ -1261,7 +1284,7 @@ async function loadAllMembers() {
             console.error('❌ DB 초기화 실패!');
             const tbody = document.getElementById('memberTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="12" class="empty-message">Firebase DB 초기화에 실패했습니다. 콘솔에서 testFirestoreMembers()를 실행해보세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">Firebase DB 초기화에 실패했습니다. 콘솔에서 testFirestoreMembers()를 실행해보세요.</td></tr>';
             }
             return;
         }
@@ -1273,7 +1296,7 @@ async function loadAllMembers() {
             console.log('window.firebaseAdmin:', window.firebaseAdmin);
             const tbody = document.getElementById('memberTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="12" class="empty-message">memberService를 찾을 수 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">memberService를 찾을 수 없습니다.</td></tr>';
             }
             return;
         }
@@ -1377,7 +1400,7 @@ async function loadAllMembers() {
         
         const tbody = document.getElementById('memberTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
     }
 }
@@ -1503,7 +1526,7 @@ function renderMemberInfoTable(data = null) {
         console.log('membersToRender 값:', membersToRender);
         console.log('membersToRender 타입:', typeof membersToRender);
         console.log('Firestore Console에서 members 컬렉션에 데이터가 있는지 확인하세요.');
-        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">등록된 회원이 없습니다. Firestore Console에서 members 컬렉션을 확인하세요.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" class="empty-message">등록된 회원이 없습니다. Firestore Console에서 members 컬렉션을 확인하세요.</td></tr>';
         renderMemberPagination(0);
         return;
     }
@@ -1545,7 +1568,8 @@ function renderMemberInfoTable(data = null) {
             .filter(Boolean)
             .join(' ') || '';
         
-        // 계좌번호 (현재는 없음, 추후 추가 가능)
+        // 은행 / 계좌번호 (마이페이지에서 입력)
+        const bank = member.bank || '';
         const accountNumber = member.accountNumber || '';
         
         // 추천인 코드 (referralCode 우선)
@@ -1569,6 +1593,7 @@ function renderMemberInfoTable(data = null) {
                 <td>${escapeHtml(phone)}</td>
                 <td>${escapeHtml(joinDate)}</td>
                 <td>${escapeHtml(address)}</td>
+                <td>${escapeHtml(bank)}</td>
                 <td>${escapeHtml(accountNumber)}</td>
                 <td>${escapeHtml(referralCode)}</td>
                 <td>${purchaseAmount.toLocaleString()}</td>
@@ -1601,7 +1626,7 @@ function renderMemberInfoTable(data = null) {
     } catch (error) {
         console.error('❌ 테이블 렌더링 중 오류:', error);
         console.error('오류 상세:', error.message, error.stack);
-        tbody.innerHTML = `<tr><td colspan="12" class="empty-message">테이블 렌더링 오류: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" class="empty-message">테이블 렌더링 오류: ${error.message}</td></tr>`;
     }
 }
 
@@ -2097,7 +2122,7 @@ async function searchProducts() {
             return matchName && matchCategory && matchStatus;
         });
 
-        renderProductTable(filtered);
+        await renderProductTable(filtered);
     } catch (error) {
         console.error('상품 검색 오류:', error);
         const filtered = PRODUCT_DATA.filter(product => {
@@ -2106,7 +2131,7 @@ async function searchProducts() {
             const matchStatus = !status || product.status === status;
             return matchName && matchCategory && matchStatus;
         });
-        renderProductTable(filtered);
+        await renderProductTable(filtered);
     }
 }
 
@@ -2117,14 +2142,14 @@ async function resetProductSearch() {
     
     try {
         const products = await window.firebaseAdmin.productService.getProducts();
-        renderProductTable(products);
+        await renderProductTable(products);
     } catch (error) {
         console.error('상품 목록 로드 오류:', error);
-        renderProductTable(PRODUCT_DATA);
+        await renderProductTable(PRODUCT_DATA);
     }
 }
 
-function renderProductTable(data) {
+async function renderProductTable(data) {
     const tbody = document.getElementById('productListBody');
     const countEl = document.getElementById('productCount');
     
@@ -2145,13 +2170,15 @@ function renderProductTable(data) {
         hidden: { text: '숨김', class: 'badge-warning' }
     };
 
-    const categoryMap = {
-        coffee: '커피/음료',
-        food: '식품',
-        beauty: '뷰티',
-        life: '생활용품',
-        fashion: '패션'
-    };
+    let categoryMap = {};
+    try {
+        const categories = await loadCategoriesForProduct();
+        categories.forEach(c => {
+            categoryMap[c.id] = c.name || c.id;
+        });
+    } catch (e) {
+        console.warn('카테고리 로드 실패, ID로 표시:', e);
+    }
 
     tbody.innerHTML = data.map((product, index) => {
         const productId = product.id || `product-${index}`;
@@ -4037,13 +4064,33 @@ function exportProductSalesExcel() {
 // 페이지 로드 시 초기 데이터 렌더링
 // ============================================
 // DOMContentLoaded와 window.onload 모두 처리
-function initAdminPage() {
+async function initAdminPage() {
     console.log('🔵🔵🔵 initAdminPage 함수 실행 시작');
     // DOM 요소 초기화
     menuToggle = document.getElementById('menuToggle');
     adminSidebar = document.getElementById('adminSidebar');
     navLinks = document.querySelectorAll('.nav-list a');
     contentPages = document.querySelectorAll('.content-page');
+    
+    // 메인 콘텐츠 영역이 한 개도 보이도록: 대시보드만 active로 표시
+    var dashboardEl = document.getElementById('dashboard');
+    if (contentPages && contentPages.length > 0) {
+        contentPages.forEach(function (page) {
+            page.classList.remove('active');
+        });
+        if (dashboardEl) {
+            dashboardEl.classList.add('active');
+        } else if (contentPages[0]) {
+            contentPages[0].classList.add('active');
+        }
+    }
+    document.querySelectorAll('.nav-list li').forEach(function (li) {
+        li.classList.remove('active');
+    });
+    var dashboardLink = document.querySelector('[data-page="dashboard"]');
+    if (dashboardLink && dashboardLink.parentElement) {
+        dashboardLink.parentElement.classList.add('active');
+    }
     
     console.log('DOM 요소 초기화:', {
         menuToggle: !!menuToggle,
@@ -4344,7 +4391,7 @@ function initAdminPage() {
             };
         }
         
-        renderProductTable(PRODUCT_DATA);
+        await renderProductTable(PRODUCT_DATA);
         renderLotteryStatus();
         updateConfirmPage();
     } catch (error) {

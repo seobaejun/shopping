@@ -960,9 +960,19 @@ async function loadCategoriesMenu() {
             const data = doc.data();
             // isHidden이 true가 아닌 카테고리만 추가
             if (data.isHidden !== true) {
+                const displayName = (data.name != null && String(data.name).trim() !== '')
+                    ? String(data.name).trim()
+                    : ((data.categoryName != null && String(data.categoryName).trim() !== '')
+                        ? String(data.categoryName).trim()
+                        : ((data.title != null && String(data.title).trim() !== '')
+                            ? String(data.title).trim()
+                            : '(이름 없음)'));
                 categories.push({
+                    ...data,
                     id: doc.id,
-                    ...data
+                    name: displayName,
+                    level: data.level != null ? Number(data.level) : 1,
+                    parentId: data.parentId != null && data.parentId !== '' ? data.parentId : null
                 });
             }
         });
@@ -1037,10 +1047,10 @@ function renderCategoryMenu(categoryTree) {
         
         if (hasChildren) {
             // 하위 카테고리가 있으면 클릭으로 펼치기
-            html += `<a href="#" onclick="toggleSubmenu(event, this)">${cat1.name}</a>`;
+            html += `<a href="#" onclick="toggleSubmenu(event, this)">${(cat1.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
         } else {
             // 하위 카테고리가 없으면 링크로 이동
-            html += `<a href="products-list.html?category=${cat1.id}">${cat1.name}</a>`;
+            html += `<a href="products-list.html?category=${cat1.id}">${(cat1.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
         }
         
         if (hasChildren) {
@@ -1053,16 +1063,16 @@ function renderCategoryMenu(categoryTree) {
                 
                 if (hasGrandChildren) {
                     // 3차 카테고리가 있으면 클릭으로 펼치기
-                    html += `<a href="#" onclick="toggleSubmenu(event, this)">${cat2.name}</a>`;
+                    html += `<a href="#" onclick="toggleSubmenu(event, this)">${(cat2.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
                 } else {
                     // 3차 카테고리가 없으면 링크로 이동
-                    html += `<a href="products-list.html?category=${cat2.id}">${cat2.name}</a>`;
+                    html += `<a href="products-list.html?category=${cat2.id}">${(cat2.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
                 }
                 
                 if (hasGrandChildren) {
                     html += '<ul class="submenu">';
                     cat2.children.forEach(cat3 => {
-                        html += `<li><a href="products-list.html?category=${cat3.id}">${cat3.name}</a></li>`;
+                        html += `<li><a href="products-list.html?category=${cat3.id}">${(cat3.name || '(이름 없음)').replace(/</g, '&lt;')}</a></li>`;
                     });
                     html += '</ul>';
                 }

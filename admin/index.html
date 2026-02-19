@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>10쇼핑게임 관리자</title>
+    <script>
+    (function(){
+        var path = document.location.pathname || '';
+        if (path.indexOf('admin') !== -1 && !document.querySelector('base')) {
+            var base = document.createElement('base');
+            var dir;
+            if (path === '/admin' || path === '/') dir = '/admin/';
+            else if (path.endsWith('/')) dir = path;
+            else dir = path.replace(/\/[^/]*$/, '') + '/';
+            base.setAttribute('href', dir);
+            document.head.insertBefore(base, document.head.firstChild);
+        }
+    })();
+    </script>
     <link rel="stylesheet" href="css/admin.css?v=20260219-25">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -779,6 +793,7 @@
                                     <th>전화번호</th>
                                     <th>가입날짜</th>
                                     <th>주소</th>
+                                    <th>은행</th>
                                     <th>계좌번호</th>
                                     <th>추천인</th>
                                     <th>구매금액</th>
@@ -788,7 +803,7 @@
                                 </tr>
                             </thead>
                             <tbody id="searchResultsBody">
-                                <tr><td colspan="12" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
+                                <tr><td colspan="13" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -814,6 +829,7 @@
                                 <th>전화번호</th>
                                 <th>가입날짜</th>
                                 <th>주소</th>
+                                <th>은행</th>
                                 <th>계좌번호</th>
                                 <th>추천인</th>
                                 <th>구매금액</th>
@@ -2275,7 +2291,11 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>계좌번호 (마이페이지에서 입력 가능)</label>
+                        <label>은행 (마이페이지에서 입력)</label>
+                        <input type="text" class="form-control" id="editMemberBank" readonly style="background: #f0f0f0;">
+                    </div>
+                    <div class="form-group">
+                        <label>계좌번호 (마이페이지에서 입력)</label>
                         <input type="text" class="form-control" id="editMemberAccountNumber" readonly style="background: #f0f0f0;">
                     </div>
                     

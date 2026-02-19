@@ -283,6 +283,123 @@
     font-size: 14px;
 }
 
+/* ========== 회원정보 수정 폼 (세련된 카드형) ========== */
+.mypage-profile-section .section-title {
+    margin-bottom: 28px;
+}
+
+.mypage-profile-form {
+    max-width: 560px;
+}
+
+.mypage-profile-form .profile-form-card {
+    background: #f8f9fc;
+    border-radius: 12px;
+    padding: 32px 36px 40px;
+    border: 1px solid #e8eaef;
+}
+
+.mypage-profile-form .form-row {
+    margin-bottom: 28px;
+}
+
+.mypage-profile-form .form-row:last-of-type {
+    margin-bottom: 0;
+}
+
+.mypage-profile-form label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #2c3e50;
+    letter-spacing: -0.02em;
+}
+
+.mypage-profile-form .form-control,
+.mypage-profile-form input[type="text"],
+.mypage-profile-form select {
+    width: 100%;
+    max-width: 400px;
+    padding: 14px 16px;
+    font-size: 15px;
+    line-height: 1.45;
+    border: 1px solid #d4d8e0;
+    border-radius: 8px;
+    background: #fff;
+    color: #2c3e50;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mypage-profile-form .form-control::placeholder,
+.mypage-profile-form input[type="text"]::placeholder {
+    color: #9ca3af;
+}
+
+.mypage-profile-form select {
+    cursor: pointer;
+    appearance: auto;
+}
+
+.mypage-profile-form .form-control:focus,
+.mypage-profile-form input[type="text"]:focus,
+.mypage-profile-form select:focus {
+    outline: none;
+    border-color: #4A5FC1;
+    box-shadow: 0 0 0 3px rgba(74, 95, 193, 0.18);
+}
+
+/* 저장 버튼 영역: 위 여백 + 구분선 */
+.mypage-profile-form .profile-form-actions {
+    margin-top: 36px;
+    padding-top: 28px;
+    border-top: 1px solid #e2e6ec;
+}
+
+/* 저장 버튼: style.css의 button { background:none } 덮어쓰기 */
+#mypageSectionProfile .mypage-profile-form .btn-mypage-save,
+#mypageSectionProfile .mypage-profile-form #mypageProfileSave,
+.mypage-profile-form .btn-mypage-save,
+.mypage-profile-form #mypageProfileSave {
+    display: inline-block !important;
+    padding: 16px 40px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #fff !important;
+    background: #4A5FC1 !important;
+    background-color: #4A5FC1 !important;
+    border: 2px solid #3d4fa8 !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    box-shadow: 0 4px 14px rgba(74, 95, 193, 0.4);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.mypage-profile-form .btn-mypage-save:hover,
+.mypage-profile-form #mypageProfileSave:hover {
+    color: #fff;
+    background: #3d4fa8;
+    background-color: #3d4fa8;
+    border-color: #334493;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 95, 193, 0.45);
+}
+
+.mypage-profile-form .btn-mypage-save:active,
+.mypage-profile-form #mypageProfileSave:active {
+    transform: translateY(0);
+}
+
+.mypage-profile-form .btn-mypage-save:disabled,
+.mypage-profile-form #mypageProfileSave:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* 반응형 */
 @media (max-width: 1024px) {
     .mypage-wrapper {

@@ -5,6 +5,7 @@ let currentProductPage = 1;
 const productsPerPage = 10;
 let allProductsData = []; // 모든 상품 데이터
 let searchResultsData = []; // 검색 결과 데이터
+let _productListCategoryMap = {}; // 카테고리 ID → 이름 (Firestore 기준)
 
 // Firebase 초기화 대기 함수
 async function waitForFirebaseAdmin(maxWait = 10000) {
@@ -97,6 +98,14 @@ async function loadAllProducts() {
         allProductsData = products;
 
         console.log('✅ 상품목록: Firestore에서 데이터 가져오기 완료:', products.length, '개');
+
+        if (typeof window.loadCategoriesForProduct === 'function') {
+            const categories = await window.loadCategoriesForProduct();
+            _productListCategoryMap = {};
+            categories.forEach(c => {
+                _productListCategoryMap[c.id] = c.name || c.id;
+            });
+        }
 
         document.getElementById('totalProductCount').textContent = products.length;
         
@@ -737,14 +746,8 @@ function getStatusText(status) {
 }
 
 function getCategoryName(category) {
-    const categoryMap = {
-        'coffee': '커피/음료',
-        'food': '식품',
-        'beauty': '뷰티',
-        'life': '생활용품',
-        'fashion': '패션'
-    };
-    return categoryMap[category] || category;
+    if (!category) return '-';
+    return _productListCategoryMap[category] || category;
 }
 
 function formatPrice(price) {

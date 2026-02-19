@@ -113,7 +113,7 @@ async function loadAllMembers() {
         
         const tbody = document.getElementById('memberTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
         
         throw error;
@@ -266,7 +266,7 @@ async function searchMemberInfo() {
         
         const tbody = document.getElementById('searchResultsBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
         
         alert('회원 검색 중 오류가 발생했습니다: ' + error.message);
@@ -305,7 +305,7 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
 
     if (!tbody) return;
     if (!membersToRender || membersToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">검색 결과가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" class="empty-message">검색 결과가 없습니다.</td></tr>';
         if (paginationElId) {
             const paginationEl = document.getElementById(paginationElId);
             if (paginationEl) paginationEl.innerHTML = '';
@@ -349,6 +349,7 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
                 <td>${escapeHtml(phone)}</td>
                 <td>${escapeHtml(joinDate)}</td>
                 <td>${escapeHtml(address)}</td>
+                <td>${escapeHtml(member.bank || '')}</td>
                 <td>${escapeHtml(member.accountNumber || '')}</td>
                 <td>${escapeHtml(referralCode)}</td>
                 <td>${(member.purchaseAmount || 0).toLocaleString()}</td>
@@ -421,7 +422,7 @@ function exportMembersToExcel() {
         return;
     }
     
-    const headers = ['번호', '아이디', '이름', '전화번호', '이메일', '가입날짜', '우편번호', '주소', '상세주소', '계좌번호', '추천인코드', 'MD코드', '구매금액', '지원금', '누적지원금', '상태'];
+    const headers = ['번호', '아이디', '이름', '전화번호', '이메일', '가입날짜', '우편번호', '주소', '상세주소', '은행', '계좌번호', '추천인코드', 'MD코드', '구매금액', '지원금', '누적지원금', '상태'];
     const csvRows = [headers.join(',')];
     
     const escapeCsv = (val) => {
@@ -463,6 +464,7 @@ function exportMembersToExcel() {
             escapeCsv(member.postcode || ''),
             escapeCsv(member.address || ''),
             escapeCsv(member.detailAddress || ''),
+            escapeCsv(member.bank || ''),
             escapeCsv(member.accountNumber || ''),
             escapeCsv(referralCode),
             escapeCsv(member.mdCode || ''),
@@ -570,7 +572,7 @@ async function loadAllMembers() {
         
         const tbody = document.getElementById('memberTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="12" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
         
         throw error;
@@ -639,6 +641,7 @@ window.editMemberInfo = async function(memberId) {
         document.getElementById('editMemberPostcode').value = member.postcode || '';
         document.getElementById('editMemberAddress').value = member.address || '';
         document.getElementById('editMemberDetailAddress').value = member.detailAddress || '';
+        document.getElementById('editMemberBank').value = member.bank || '';
         document.getElementById('editMemberAccountNumber').value = member.accountNumber || '';
         document.getElementById('editMemberReferralCode').value = member.referralCode || member.recommender || '';
         document.getElementById('editMemberStatus').value = member.status || '정상';

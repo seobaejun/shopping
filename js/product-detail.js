@@ -1,47 +1,86 @@
 // 상품 상세 페이지 전용 JavaScript
 
+var PRODUCT_DETAIL_FIREBASE_READY = false;
+
+function _parseProductDoc(doc) {
+    var product = doc.data();
+    return {
+        id: doc.id,
+        name: product.name || '',
+        option: product.shortDesc || '',
+        price: product.price != null ? Number(product.price) : 0,
+        originalPrice: product.originalPrice != null ? Number(product.originalPrice) : 0,
+        image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/600x600/E0E0E0/999?text=No+Image',
+        detailImages: product.detailImageUrls || product.detailImages || [],
+        description: product.description || '',
+        details: product.details || [],
+        category: product.category || '',
+        brand: product.brand || '',
+        stock: product.stock != null ? Number(product.stock) : 0,
+        supportRate: product.supportRate != null ? Number(product.supportRate) : 5
+    };
+}
+
 // URL에서 상품 ID 가져오기 및 Firestore에서 로드
 async function getProductFromUrl() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const productId = urlParams.get('id');
+    var urlParams = new URLSearchParams(window.location.search);
+    var productId = urlParams.get('id');
     
     console.log('📌 URL 상품 ID:', productId);
     
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
+        console.warn('⏳ Firestore 미준비, 대기 후 재시도');
+        await new Promise(function (resolve) {
+            var attempts = 0;
+            var t = setInterval(function () {
+                attempts++;
+                if (typeof firebase !== 'undefined' && firebase.firestore && firebase.apps && firebase.apps.length > 0) {
+                    clearInterval(t);
+                    resolve();
+                }
+                if (attempts > 50) {
+                    clearInterval(t);
+                    resolve();
+                }
+            }, 100);
+        });
+    }
+    
     if (productId && typeof firebase !== 'undefined' && firebase.firestore) {
         try {
-            const db = firebase.firestore();
-            const doc = await db.collection('products').doc(productId).get();
+            var db = firebase.firestore();
+            var doc = await db.collection('products').doc(productId).get();
             
             if (doc.exists) {
-                const product = doc.data();
-                console.log('✅ Firestore에서 상품 로드:', product);
-                
-                return {
-                    id: doc.id,
-                    name: product.name,
-                    option: product.shortDesc || '',
-                    price: product.price || 0,
-                    originalPrice: product.originalPrice || 0,
-                    image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/600x600/E0E0E0/999?text=No+Image',
-                    detailImages: product.detailImageUrls || [],
-                    description: product.description || '',
-                    details: product.details || [],
-                    category: product.category || '',
-                    brand: product.brand || '',
-                    stock: product.stock || 0,
-                    supportRate: product.supportRate || 5
-                };
-            } else {
-                console.warn('⚠️ Firestore에 해당 상품이 없습니다:', productId);
+                console.log('✅ Firestore에서 상품 로드:', doc.id);
+                return _parseProductDoc(doc);
             }
+            console.warn('⚠️ Firestore에 해당 상품이 없습니다:', productId);
         } catch (error) {
             console.error('❌ Firestore에서 상품 로드 오류:', error);
         }
     }
     
-    // 기본값 (첫 번째 상품)
+    // URL에 id가 없거나 문서가 없을 때: 첫 번째 상품으로 폴백 시도
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+        try {
+            var db = firebase.firestore();
+            var snapshot = await db.collection('products').limit(1).get();
+            if (!snapshot.empty) {
+                var firstDoc = snapshot.docs[0];
+                console.log('✅ 첫 번째 상품으로 표시:', firstDoc.id);
+                if (!productId) {
+                    window.history.replaceState({}, '', 'product-detail.html?id=' + firstDoc.id);
+                }
+                return _parseProductDoc(firstDoc);
+            }
+        } catch (e) {
+            console.warn('첫 상품 폴백 실패:', e);
+        }
+    }
+    
     return {
-        id: 'default',
+        id: null,
         name: '상품을 불러올 수 없습니다',
         option: '',
         price: 0,
@@ -59,6 +98,33 @@ async function getProductFromUrl() {
 
 // 상품 정보 (비동기로 로드)
 let PRODUCT_INFO = null;
+
+// 카테고리 ID → 이름 맵 (상품의 category 필드는 Firestore 카테고리 문서 ID)
+let _categoryNameMap = null;
+async function getCategoryNameMap() {
+    if (_categoryNameMap) return _categoryNameMap;
+    if (typeof firebase === 'undefined' || !firebase.firestore) return new Map();
+    try {
+        const snapshot = await firebase.firestore().collection('categories').get();
+        const map = new Map();
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const name = (data.name != null && String(data.name).trim() !== '')
+                ? String(data.name).trim()
+                : ((data.categoryName != null && String(data.categoryName).trim() !== '')
+                    ? String(data.categoryName).trim()
+                    : ((data.title != null && String(data.title).trim() !== '')
+                        ? String(data.title).trim()
+                        : doc.id));
+            map.set(doc.id, name);
+        });
+        _categoryNameMap = map;
+        return map;
+    } catch (e) {
+        console.warn('카테고리 목록 로드 실패:', e);
+        return new Map();
+    }
+}
 
 // DOM 요소
 const productDetailElements = {
@@ -631,26 +697,27 @@ function updatePageInfo() {
     
     console.log('🔄 상품 정보 업데이트:', PRODUCT_INFO);
     
+    var isError = !PRODUCT_INFO.id;
+    
     // 상품명 업데이트 (제목)
-    const productTitle = document.querySelector('.product-title');
+    var productTitle = document.querySelector('.product-title');
     if (productTitle) {
         productTitle.textContent = PRODUCT_INFO.name;
+        if (isError) {
+            productTitle.innerHTML = PRODUCT_INFO.name + ' <a href="products-list.html" style="font-size:14px;margin-left:8px;">상품 목록 보기</a>';
+        }
         console.log('✅ 제목 업데이트:', PRODUCT_INFO.name);
     }
     
     // 부제목(옵션) 업데이트
-    const productSubtitle = document.getElementById('productSubtitle');
+    var productSubtitle = document.getElementById('productSubtitle');
     if (productSubtitle) {
-        productSubtitle.textContent = PRODUCT_INFO.option || PRODUCT_INFO.description || '';
+        productSubtitle.textContent = isError ? '상품 목록에서 상품을 선택해 주세요.' : (PRODUCT_INFO.option || PRODUCT_INFO.description || '');
         console.log('✅ 부제목 업데이트:', PRODUCT_INFO.option);
     }
     
-    // 카테고리 태그 업데이트
+    // 카테고리 태그는 ID→이름 변환 후 아래에서 설정
     const categoryTag = productDetailElements.categoryTag;
-    if (categoryTag) {
-        categoryTag.innerHTML = `<i class="fas fa-tag"></i> ${PRODUCT_INFO.category || '카테고리'}`;
-        console.log('✅ 카테고리 업데이트:', PRODUCT_INFO.category);
-    }
     
     // 쇼핑지원금 업데이트
     const supportAmount = productDetailElements.supportAmount;
@@ -667,9 +734,7 @@ function updatePageInfo() {
     }
     
     const breadcrumbCategory = document.querySelector('.breadcrumb li:nth-child(3) a');
-    if (breadcrumbCategory) {
-        breadcrumbCategory.textContent = PRODUCT_INFO.category || '카테고리';
-    }
+    // breadcrumbCategory는 카테고리 이름 설정 시 함께 업데이트
     
     // 메인 이미지 업데이트
     const mainImage = productDetailElements.mainImage;
@@ -692,7 +757,7 @@ function updatePageInfo() {
         productInfoTable.innerHTML = tableHTML;
         console.log('✅ 상품 정보 고시 업데이트 완료');
     } else {
-        // 기본 정보 표시
+        // 기본 정보 표시 (카테고리 이름은 getCategoryNameMap 후 아래에서 보강)
         productInfoTable.innerHTML = `
             <tr>
                 <th>브랜드</th>
@@ -700,7 +765,7 @@ function updatePageInfo() {
             </tr>
             <tr>
                 <th>카테고리</th>
-                <td>${PRODUCT_INFO.category || '-'}</td>
+                <td class="product-info-category-cell">${PRODUCT_INFO.category || '-'}</td>
             </tr>
         `;
     }
@@ -753,7 +818,7 @@ function updatePageInfo() {
         productSpecTable.innerHTML = specTableHTML;
         console.log('✅ 상세정보 탭 - 상품 정보 고시 업데이트 완료');
     } else if (productSpecTable) {
-        // 기본 정보 표시
+        // 기본 정보 표시 (카테고리 이름은 getCategoryNameMap 후 보강)
         productSpecTable.innerHTML = `
             <tr>
                 <th>브랜드</th>
@@ -761,10 +826,24 @@ function updatePageInfo() {
             </tr>
             <tr>
                 <th>카테고리</th>
-                <td>${PRODUCT_INFO.category || '-'}</td>
+                <td class="product-spec-category-cell">${PRODUCT_INFO.category || '-'}</td>
             </tr>
         `;
     }
+    
+    // 카테고리 ID → 이름 변환 후 태그/브레드크럼/테이블에 반영
+    getCategoryNameMap().then(map => {
+        const categoryName = (PRODUCT_INFO.category && map.get(PRODUCT_INFO.category)) || PRODUCT_INFO.category || '카테고리';
+        if (categoryTag) {
+            categoryTag.innerHTML = `<i class="fas fa-tag"></i> ${categoryName.replace(/</g, '&lt;')}`;
+        }
+        if (breadcrumbCategory) {
+            breadcrumbCategory.textContent = categoryName;
+        }
+        document.querySelectorAll('.product-info-category-cell, .product-spec-category-cell').forEach(el => {
+            if (el) el.textContent = categoryName;
+        });
+    });
     
     // 페이지 제목 업데이트
     document.title = PRODUCT_INFO.name + ' - 10쇼핑게임';
@@ -857,12 +936,18 @@ async function loadRelatedProducts() {
 async function initProductDetail() {
     console.log('🚀 상품 상세 페이지 초기화 시작');
     
-    // Firebase가 로드될 때까지 대기
-    if (typeof firebase === 'undefined') {
-        console.log('⏳ Firebase SDK 로딩 대기...');
-        await new Promise(resolve => {
-            const checkFirebase = setInterval(() => {
-                if (typeof firebase !== 'undefined' && firebase.firestore) {
+    // Firebase가 로드·초기화될 때까지 대기
+    if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) {
+        console.log('⏳ Firebase 로딩·초기화 대기...');
+        await new Promise(function (resolve) {
+            var attempts = 0;
+            var checkFirebase = setInterval(function () {
+                attempts++;
+                if (typeof firebase !== 'undefined' && firebase.firestore && firebase.apps && firebase.apps.length > 0) {
+                    clearInterval(checkFirebase);
+                    resolve();
+                }
+                if (attempts > 80) {
                     clearInterval(checkFirebase);
                     resolve();
                 }
@@ -870,7 +955,7 @@ async function initProductDetail() {
         });
     }
     
-    console.log('✅ Firebase SDK 로드 완료');
+    console.log('✅ Firebase 준비 완료');
     
     // 상품 정보 로드
     PRODUCT_INFO = await getProductFromUrl();

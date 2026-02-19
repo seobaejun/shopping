@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>마이페이지 - 10쇼핑게임</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/mypage.css">
+    <link rel="stylesheet" href="css/mypage.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -70,7 +70,7 @@
                         <div class="user-greeting">
                             안녕하세요 ❤️ <strong id="userName">어린왕자</strong>님
                         </div>
-                        <button class="btn-info-edit">정보수정</button>
+                        <button type="button" class="btn-info-edit" id="mypageBtnInfoEdit">정보수정</button>
                         <div class="user-stats">
                             <div class="stat-item">
                                 <i class="fas fa-envelope"></i>
@@ -104,14 +104,13 @@
                             <ul>
                                 <li><a href="#" onclick="showSection('orders'); return false;">주문/배송조회 내역</a></li>
                                 <li><a href="#" onclick="showSection('wishlist'); return false;">위시/관심상품 내역</a></li>
-                                <li><a href="#" onclick="showSection('support'); return false;">쇼핑지원금 내역</a></li>
                             </ul>
                         </div>
                         <div class="nav-group">
                             <h4>혜택관리</h4>
                             <ul>
-                                <li><a href="#" onclick="showSection('coupons'); return false;">주첨결과 내역</a></li>
-                                <li><a href="#" onclick="showSection('points'); return false;">소평지원금 내역</a></li>
+                                <li><a href="#" data-section="coupons" onclick="showSection('coupons', this); return false;">주첨결과 내역</a></li>
+                                <li><a href="#" data-section="support" onclick="showSection('support', this); return false;">쇼핑지원금 내역</a></li>
                             </ul>
                         </div>
                         <div class="nav-group">
@@ -125,7 +124,7 @@
                         <div class="nav-group">
                             <h4>회원정보</h4>
                             <ul>
-                                <li><a href="#" onclick="showSection('profile'); return false;">회원정보 수정</a></li>
+                                <li><a href="#" data-section="profile" onclick="showSection('profile'); return false;">회원정보 수정</a></li>
                                 <li><a href="#" onclick="showSection('marketing'); return false;">마케팅 수신동의</a></li>
                                 <li><a href="#" onclick="showSection('address'); return false;">배송지 관리</a></li>
                                 <li><a href="#" onclick="showSection('password'); return false;">회원탈퇴</a></li>
@@ -134,8 +133,8 @@
                         <div class="nav-group">
                             <h4>공지</h4>
                             <ul>
-                                <li><a href="#" onclick="showSection('notice'); return false;">공지사항</a></li>
-                                <li><a href="#" onclick="showSection('events'); return false;">이벤트</a></li>
+                                <li><a href="#" data-section="notice" onclick="showSection('notice', this); return false;">공지사항</a></li>
+                                <li><a href="#" data-section="events" onclick="showSection('events', this); return false;">이벤트</a></li>
                                 <li><a href="#" onclick="showSection('faq'); return false;">자주묻는질문</a></li>
                             </ul>
                         </div>
@@ -145,47 +144,206 @@
                 <!-- 메인 컨텐츠 -->
                 <div class="mypage-content">
                     <!-- 주문/배송조회 -->
-                    <div class="content-section">
+                    <div class="content-section mypage-section" data-section="orders" id="mypageSectionOrders">
                         <div class="section-title">
                             <h3>주문/배송조회</h3>
-                            <a href="#" class="link-more">전체보기</a>
+                            <a href="#" class="link-more" id="mypageOrdersMore">전체보기</a>
                         </div>
                         <div class="order-steps">
                             <div class="step-item">
-                                <div class="step-number">0</div>
+                                <div class="step-number" id="orderStep1">0</div>
                                 <div class="step-name">주문</div>
                             </div>
                             <i class="fas fa-chevron-right step-arrow"></i>
                             <div class="step-item">
-                                <div class="step-number">0</div>
+                                <div class="step-number" id="orderStep2">0</div>
                                 <div class="step-name">입금</div>
                             </div>
                             <i class="fas fa-chevron-right step-arrow"></i>
                             <div class="step-item">
-                                <div class="step-number">0</div>
+                                <div class="step-number" id="orderStep3">0</div>
                                 <div class="step-name">준비</div>
                             </div>
                             <i class="fas fa-chevron-right step-arrow"></i>
                             <div class="step-item">
-                                <div class="step-number">0</div>
+                                <div class="step-number" id="orderStep4">0</div>
                                 <div class="step-name">배송</div>
                             </div>
                             <i class="fas fa-chevron-right step-arrow"></i>
                             <div class="step-item">
-                                <div class="step-number">0</div>
+                                <div class="step-number" id="orderStep5">0</div>
                                 <div class="step-name">완료</div>
                             </div>
+                        </div>
+                        <div class="mypage-order-list-wrap" style="margin-top: 20px;">
+                            <table class="mypage-table" style="width:100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #eee;">
+                                        <th style="padding: 10px; text-align: left;">주문일</th>
+                                        <th style="padding: 10px; text-align: left;">상품명</th>
+                                        <th style="padding: 10px; text-align: right;">금액</th>
+                                        <th style="padding: 10px; text-align: right;">지원금</th>
+                                        <th style="padding: 10px; text-align: center;">상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mypageOrderListBody">
+                                    <tr><td colspan="5" class="empty-message" style="padding: 20px; text-align: center;">주문 내역이 없습니다.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 회원정보 수정 -->
+                    <div class="content-section mypage-section mypage-profile-section" data-section="profile" id="mypageSectionProfile" style="display: none;">
+                        <div class="section-title">
+                            <h3>회원정보 수정</h3>
+                        </div>
+                        <form id="mypageProfileForm" class="mypage-profile-form">
+                            <div class="profile-form-card">
+                                <div class="form-row">
+                                    <label for="profileName">이름</label>
+                                    <input type="text" id="profileName" class="form-control" placeholder="이름">
+                                </div>
+                                <div class="form-row">
+                                    <label for="profilePhone">연락처</label>
+                                    <input type="text" id="profilePhone" class="form-control" placeholder="연락처">
+                                </div>
+                                <div class="form-row">
+                                    <label for="profilePostcode">우편번호</label>
+                                    <input type="text" id="profilePostcode" class="form-control" placeholder="우편번호">
+                                </div>
+                                <div class="form-row">
+                                    <label for="profileAddress">주소</label>
+                                    <input type="text" id="profileAddress" class="form-control" placeholder="주소">
+                                </div>
+                                <div class="form-row">
+                                    <label for="profileDetailAddress">상세주소</label>
+                                    <input type="text" id="profileDetailAddress" class="form-control" placeholder="상세주소">
+                                </div>
+                                <div class="form-row form-row-bank">
+                                    <label for="profileBank">은행 (쇼핑지원금 입금용)</label>
+                                    <div class="profile-bank-wrap">
+                                        <div class="profile-bank-select-wrap">
+                                            <select id="profileBank" class="form-control">
+                                                <option value="">은행 선택</option>
+                                                <option value="국민은행">국민은행</option>
+                                                <option value="신한은행">신한은행</option>
+                                                <option value="우리은행">우리은행</option>
+                                                <option value="하나은행">하나은행</option>
+                                                <option value="농협은행">농협은행</option>
+                                                <option value="기업은행">기업은행</option>
+                                                <option value="SC제일은행">SC제일은행</option>
+                                                <option value="대구은행">대구은행</option>
+                                                <option value="부산은행">부산은행</option>
+                                                <option value="케이뱅크">케이뱅크</option>
+                                                <option value="카카오뱅크">카카오뱅크</option>
+                                                <option value="토스뱅크">토스뱅크</option>
+                                                <option value="우체국">우체국</option>
+                                                <option value="새마을금고">새마을금고</option>
+                                                <option value="신협">신협</option>
+                                                <option value="직접입력">직접입력</option>
+                                            </select>
+                                        </div>
+                                        <div class="profile-bank-direct-wrap" style="display: none;">
+                                            <input type="text" id="profileBankDirect" class="form-control" placeholder="은행명을 입력하세요" maxlength="30">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <label for="profileAccountNumber">계좌번호</label>
+                                    <input type="text" id="profileAccountNumber" class="form-control" placeholder="계좌번호">
+                                </div>
+                                <div class="profile-form-actions">
+                                    <button type="submit" class="btn-mypage-save" id="mypageProfileSave" style="background:#4A5FC1 !important; color:#fff !important; padding:16px 40px; border-radius:10px; border:none; font-weight:600; font-size:16px; cursor:pointer; display:inline-block; box-shadow:0 4px 14px rgba(74,95,193,0.4);">저장</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 쇼핑지원금 내역 -->
+                    <div class="content-section mypage-section" data-section="support" id="mypageSectionSupport" style="display: none;">
+                        <div class="section-title">
+                            <h3>쇼핑지원금 내역</h3>
+                        </div>
+                        <p class="info-text" id="supportSummaryText">승인된 주문 기준 쇼핑지원금 내역입니다.</p>
+                        <div class="mypage-order-list-wrap" style="margin-top: 12px;">
+                            <table class="mypage-table" style="width:100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #eee;">
+                                        <th style="padding: 10px; text-align: left;">적용일</th>
+                                        <th style="padding: 10px; text-align: left;">상품명</th>
+                                        <th style="padding: 10px; text-align: right;">지원금</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mypageSupportListBody">
+                                    <tr><td colspan="3" class="empty-message" style="padding: 20px; text-align: center;">내역이 없습니다.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 주첨결과 내역 -->
+                    <div class="content-section mypage-section" data-section="coupons" id="mypageSectionCoupons" style="display: none;">
+                        <div class="section-title">
+                            <h3>주첨결과 내역</h3>
+                        </div>
+                        <p class="info-text">참여하신 추첨의 당첨/미선정 결과입니다.</p>
+                        <div class="mypage-order-list-wrap" style="margin-top: 12px;">
+                            <table class="mypage-table" style="width:100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #eee;">
+                                        <th style="padding: 10px; text-align: left;">회차</th>
+                                        <th style="padding: 10px; text-align: left;">상품명</th>
+                                        <th style="padding: 10px; text-align: center;">결과</th>
+                                        <th style="padding: 10px; text-align: right;">지원금</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mypageLotteryListBody">
+                                    <tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">확정된 주첨 결과가 없습니다.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
                     <!-- 공지사항 -->
-                    <div class="content-section">
+                    <div class="content-section mypage-section" data-section="notice" id="mypageSectionNotice">
                         <div class="section-title">
                             <h3>공지사항</h3>
                             <a href="#" class="link-more">전체보기</a>
                         </div>
-                        <div class="notice-empty">
-                            등록된 공지사항이 없습니다.
+                        <div class="notice-list-wrap">
+                            <table class="mypage-table" style="width:100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #eee;">
+                                        <th style="padding: 10px; text-align: left;">제목</th>
+                                        <th style="padding: 10px; width: 100px;">작성일</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mypageNoticeListBody">
+                                    <tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 이벤트 -->
+                    <div class="content-section mypage-section" data-section="events" id="mypageSectionEvents" style="display: none;">
+                        <div class="section-title">
+                            <h3>이벤트</h3>
+                            <a href="#" class="link-more">전체보기</a>
+                        </div>
+                        <div class="notice-list-wrap">
+                            <table class="mypage-table" style="width:100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #eee;">
+                                        <th style="padding: 10px; text-align: left;">제목</th>
+                                        <th style="padding: 10px; width: 100px;">작성일</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mypageEventsListBody">
+                                    <tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 이벤트가 없습니다.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -263,8 +421,9 @@
     
     <!-- 메인 스크립트 (로그인 상태 관리 포함) -->
     <script src="js/script.js?v=24"></script>
-    
     <script src="js/admin-link-visibility.js"></script>
+    <!-- 마이페이지 전용 Firestore 조회 (로그인 사용자 식별 통일) -->
+    <script src="js/mypage-api.js"></script>
     <!-- 마이페이지 스크립트 -->
     <script src="js/mypage.js?v=2"></script>
 </body>

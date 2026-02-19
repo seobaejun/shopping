@@ -434,9 +434,19 @@ async function loadCategoriesMenu() {
         snapshot.forEach(doc => {
             const data = doc.data();
             if (data.isHidden !== true) {
+                const displayName = (data.name != null && String(data.name).trim() !== '')
+                    ? String(data.name).trim()
+                    : ((data.categoryName != null && String(data.categoryName).trim() !== '')
+                        ? String(data.categoryName).trim()
+                        : ((data.title != null && String(data.title).trim() !== '')
+                            ? String(data.title).trim()
+                            : '(이름 없음)'));
                 categories.push({
+                    ...data,
                     id: doc.id,
-                    ...data
+                    name: displayName,
+                    level: data.level != null ? Number(data.level) : 1,
+                    parentId: data.parentId != null && data.parentId !== '' ? data.parentId : null
                 });
             }
         });
@@ -486,9 +496,9 @@ function renderCategoryMenu(categoryTree) {
         html += `<li${hasChildren ? ' class="has-submenu"' : ''}>`;
         
         if (hasChildren) {
-            html += `<a href="#" onclick="toggleSubmenu(event, this)">${cat1.name}</a>`;
+            html += `<a href="#" onclick="toggleSubmenu(event, this)">${(cat1.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
         } else {
-            html += `<a href="products-list.html?category=${cat1.id}">${cat1.name}</a>`;
+            html += `<a href="products-list.html?category=${cat1.id}">${(cat1.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
         }
         
         if (hasChildren) {
@@ -498,15 +508,15 @@ function renderCategoryMenu(categoryTree) {
                 html += `<li${hasGrandChildren ? ' class="has-submenu"' : ''}>`;
                 
                 if (hasGrandChildren) {
-                    html += `<a href="#" onclick="toggleSubmenu(event, this)">${cat2.name}</a>`;
+                    html += `<a href="#" onclick="toggleSubmenu(event, this)">${(cat2.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
                 } else {
-                    html += `<a href="products-list.html?category=${cat2.id}">${cat2.name}</a>`;
+                    html += `<a href="products-list.html?category=${cat2.id}">${(cat2.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
                 }
                 
                 if (hasGrandChildren) {
                     html += '<ul class="submenu">';
                     cat2.children.forEach(cat3 => {
-                        html += `<li><a href="products-list.html?category=${cat3.id}">${cat3.name}</a></li>`;
+                        html += `<li><a href="products-list.html?category=${cat3.id}">${(cat3.name || '(이름 없음)').replace(/</g, '&lt;')}</a></li>`;
                     });
                     html += '</ul>';
                 }
