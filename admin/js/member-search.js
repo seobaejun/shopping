@@ -340,7 +340,15 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
         const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
         const referralCode = member.referralCode || member.recommender || '';
         const status = member.status || '정상';
+        const statusDisplay = status === 'withdrawn' ? '탈퇴' : status;
         const safeId = String(member.id || memberId).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const statusCell = status === 'withdrawn'
+            ? `<span class="badge badge-secondary">탈퇴</span>`
+            : `<select class="status-select" data-member-id="${safeId}" onchange="changeMemberStatus(this.dataset.memberId, this.value)">
+                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
+                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
+                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
+                    </select>`;
         return `
             <tr>
                 <td>${startIndex + index + 1}</td>
@@ -354,13 +362,7 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
                 <td>${escapeHtml(referralCode)}</td>
                 <td>${(member.purchaseAmount || 0).toLocaleString()}</td>
                 <td>${(member.supportAmount || 0).toLocaleString()} / ${(member.accumulatedSupport || 0).toLocaleString()}</td>
-                <td>
-                    <select class="status-select" data-member-id="${safeId}" onchange="changeMemberStatus(this.dataset.memberId, this.value)">
-                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
-                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
-                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
-                    </select>
-                </td>
+                <td>${statusCell}</td>
                 <td>
                     <button class="btn-icon btn-edit" data-member-id="${safeId}" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button>
                     <button class="btn-icon btn-delete" data-member-id="${safeId}" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button>
@@ -453,7 +455,8 @@ function exportMembersToExcel() {
         
         const referralCode = member.referralCode || member.recommender || '';
         const status = member.status || '정상';
-        
+        const statusDisplay = status === 'withdrawn' ? '탈퇴' : status;
+
         const row = [
             index + 1,
             escapeCsv(memberId),
@@ -471,7 +474,7 @@ function exportMembersToExcel() {
             member.purchaseAmount || 0,
             member.supportAmount || 0,
             member.accumulatedSupport || 0,
-            escapeCsv(status)
+            escapeCsv(statusDisplay)
         ];
         csvRows.push(row.join(','));
     });

@@ -149,7 +149,14 @@ const productDetailElements = {
     tabContents: document.querySelectorAll('.tab-content'),
     categoryTag: document.getElementById('categoryTag'),
     supportAmount: document.getElementById('supportAmount'),
-    productInfoTable: document.getElementById('productInfoTable')
+    productInfoTable: document.getElementById('productInfoTable'),
+    buyNowDeliveryModal: document.getElementById('buyNowDeliveryModal'),
+    buyNowDeliveryModalClose: document.getElementById('buyNowDeliveryModalClose'),
+    buyNowDeliveryCancel: document.getElementById('buyNowDeliveryCancel'),
+    buyNowDeliverySubmit: document.getElementById('buyNowDeliverySubmit'),
+    deliveryOptionProfileSummary: document.getElementById('deliveryOptionProfileSummary'),
+    deliveryOptionDefaultSummary: document.getElementById('deliveryOptionDefaultSummary'),
+    deliveryNewForm: document.getElementById('deliveryNewForm')
 };
 
 // 썸네일 이미지 클릭 이벤트 (제거됨 - 더이상 썸네일 없음)
@@ -311,12 +318,170 @@ function initCartActions() {
     });
 }
 
-// 바로구매: 구매 요청을 Firestore orders에 저장 (관리자 승인대기 표시용)
-function initBuyActions() {
-    const buyBtns = document.querySelectorAll('.btn-buy, .btn-buy-fixed');
+// 바로구매 시 사용할 회원/로그인 정보 (배송지 모달에서 설정)
+var _buyNowMember = null;
+var _buyNowLoginUser = null;
 
-    buyBtns.forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+// 배송지 요약 텍스트 생성
+function _deliverySummary(rec, phone, postcode, address, detail) {
+    var parts = [];
+    if (rec) parts.push(rec);
+    if (phone) parts.push(phone);
+    var addr = [postcode, address, detail].filter(Boolean).join(' ');
+    if (addr) parts.push(addr);
+    return parts.length ? parts.join(' / ') : '-';
+}
+
+// 받는사람/연락처 입력란에 선택한 옵션 기본값 채우기
+function fillDeliveryRecipientAndPhone() {
+    var member = _buyNowMember;
+    var source = document.querySelector('input[name="deliverySource"]:checked');
+    var sourceVal = source ? source.value : 'profile';
+    var recEl = document.getElementById('deliveryRecipient');
+    var phoneEl = document.getElementById('deliveryPhone');
+    if (!recEl || !phoneEl) return;
+    if (sourceVal === 'profile' && member) {
+        recEl.value = member.name || '';
+        phoneEl.value = member.phone || '';
+    } else if (sourceVal === 'default' && member && member.addresses) {
+        var def = member.addresses.find(function (a) { return a.isDefault === true; });
+        if (def) {
+            recEl.value = def.recipientName || '';
+            phoneEl.value = def.phone || '';
+        } else {
+            recEl.value = '';
+            phoneEl.value = '';
+        }
+    } else if (sourceVal === 'new') {
+        recEl.value = '';
+        phoneEl.value = '';
+    }
+}
+
+// 바로구매: 배송지 선택 모달 열기
+function openBuyNowDeliveryModal(member, loginUser) {
+    _buyNowMember = member;
+    _buyNowLoginUser = loginUser;
+    var profileSummary = document.getElementById('deliveryOptionProfileSummary');
+    var defaultSummary = document.getElementById('deliveryOptionDefaultSummary');
+    if (profileSummary) {
+        profileSummary.textContent = _deliverySummary(
+            member.name,
+            member.phone,
+            member.postcode,
+            member.address,
+            member.detailAddress
+        );
+    }
+    var addresses = (member && member.addresses && Array.isArray(member.addresses)) ? member.addresses : [];
+    var defaultAddr = addresses.find(function (a) { return a.isDefault === true; });
+    if (defaultSummary) {
+        if (defaultAddr) {
+            defaultSummary.textContent = _deliverySummary(
+                defaultAddr.recipientName,
+                defaultAddr.phone,
+                defaultAddr.postcode,
+                defaultAddr.address,
+                defaultAddr.detailAddress
+            );
+        } else {
+            defaultSummary.textContent = '등록된 기본 배송지가 없습니다.';
+        }
+    }
+    document.querySelector('input[name="deliverySource"][value="profile"]').checked = true;
+    document.getElementById('deliveryNewForm').style.display = 'none';
+    fillDeliveryRecipientAndPhone();
+    var newPost = document.getElementById('deliveryNewPostcode');
+    var newAddr = document.getElementById('deliveryNewAddress');
+    var newDetail = document.getElementById('deliveryNewDetailAddress');
+    if (newPost) newPost.value = '';
+    if (newAddr) newAddr.value = '';
+    if (newDetail) newDetail.value = '';
+    if (productDetailElements.buyNowDeliveryModal) {
+        productDetailElements.buyNowDeliveryModal.classList.add('active');
+    }
+}
+
+function closeBuyNowDeliveryModal() {
+    _buyNowMember = null;
+    _buyNowLoginUser = null;
+    if (productDetailElements.buyNowDeliveryModal) {
+        productDetailElements.buyNowDeliveryModal.classList.remove('active');
+    }
+}
+
+// 선택된 배송지 정보 반환 { recipientName, phone, postcode, address, detailAddress }
+// 받는사람·연락처는 항상 상단 입력란 값 사용(기본값 또는 수정값)
+function getSelectedDelivery() {
+    var recEl = document.getElementById('deliveryRecipient');
+    var phoneEl = document.getElementById('deliveryPhone');
+    var recipientName = (recEl && recEl.value) ? recEl.value.trim() : '';
+    var phone = (phoneEl && phoneEl.value) ? phoneEl.value.trim() : '';
+    var source = document.querySelector('input[name="deliverySource"]:checked');
+    var sourceVal = source ? source.value : 'profile';
+    var member = _buyNowMember;
+    var postcode = '', address = '', detailAddress = '';
+    if (sourceVal === 'profile' && member) {
+        postcode = member.postcode || '';
+        address = member.address || '';
+        detailAddress = member.detailAddress || '';
+    } else if (sourceVal === 'default' && member && member.addresses) {
+        var def = member.addresses.find(function (a) { return a.isDefault === true; });
+        if (def) {
+            postcode = def.postcode || '';
+            address = def.address || '';
+            detailAddress = def.detailAddress || '';
+        }
+    } else if (sourceVal === 'new') {
+        var np = document.getElementById('deliveryNewPostcode');
+        var na = document.getElementById('deliveryNewAddress');
+        var nd = document.getElementById('deliveryNewDetailAddress');
+        postcode = (np && np.value) ? np.value.trim() : '';
+        address = (na && na.value) ? na.value.trim() : '';
+        detailAddress = (nd && nd.value) ? nd.value.trim() : '';
+    }
+    return { recipientName: recipientName, phone: phone, postcode: postcode, address: address, detailAddress: detailAddress };
+}
+
+// 바로구매: 구매 요청을 Firestore orders에 저장 (배송지 선택 후)
+function submitBuyNowOrder(delivery) {
+    var loginUser = _buyNowLoginUser;
+    if (!loginUser || !PRODUCT_INFO || !PRODUCT_INFO.id) return;
+    var totalQuantity = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.quantity || 1); }, 0);
+    var totalPrice = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.price || 0) * (opt.quantity || 1); }, 0);
+    var supportRate = (PRODUCT_INFO.supportRate != null ? PRODUCT_INFO.supportRate : 5) / 100;
+    var supportAmount = Math.round(totalPrice * supportRate);
+    var orderData = {
+        status: 'pending',
+        userId: loginUser.userId,
+        userName: loginUser.name,
+        phone: loginUser.phone || '',
+        accountNumber: loginUser.accountNumber || '',
+        memberId: loginUser.docId || loginUser.userId,
+        productId: PRODUCT_INFO.id,
+        productName: PRODUCT_INFO.name,
+        productPrice: totalPrice,
+        supportAmount: supportAmount,
+        quantity: totalQuantity,
+        deliveryRecipientName: delivery.recipientName || '',
+        deliveryPhone: delivery.phone || '',
+        deliveryPostcode: delivery.postcode || '',
+        deliveryAddress: delivery.address || '',
+        deliveryDetailAddress: delivery.detailAddress || ''
+    };
+    return firebase.firestore().collection('orders').add({
+        ...orderData,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+}
+
+// 바로구매: 구매 버튼 클릭 시 배송지 모달 열기
+function initBuyActions() {
+    var buyBtns = document.querySelectorAll('.btn-buy, .btn-buy-fixed');
+
+    buyBtns.forEach(function (btn) {
+        btn.addEventListener('click', async function (e) {
             e.preventDefault();
             e.stopPropagation();
             if (selectedOptionsData.length === 0) {
@@ -328,55 +493,99 @@ function initBuyActions() {
                 return;
             }
 
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const loginUserJson = localStorage.getItem('loginUser');
+            var isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            var loginUserJson = localStorage.getItem('loginUser');
             if (!isLoggedIn || !loginUserJson) {
                 alert('로그인 후 구매할 수 있습니다.');
                 window.location.href = 'login.html?return=' + encodeURIComponent(window.location.href);
                 return;
             }
 
-            const loginUser = JSON.parse(loginUserJson);
-            const totalQuantity = selectedOptionsData.reduce((sum, opt) => sum + (opt.quantity || 1), 0);
-            const totalPrice = selectedOptionsData.reduce((sum, opt) => sum + (opt.price || 0) * (opt.quantity || 1), 0);
-            const supportRate = (PRODUCT_INFO.supportRate != null ? PRODUCT_INFO.supportRate : 5) / 100;
-            const supportAmount = Math.round(totalPrice * supportRate);
-
-            const orderData = {
-                status: 'pending',
-                userId: loginUser.userId,
-                userName: loginUser.name,
-                phone: loginUser.phone || '',
-                accountNumber: loginUser.accountNumber || '',
-                memberId: loginUser.docId || loginUser.userId,
-                productId: PRODUCT_INFO.id,
-                productName: PRODUCT_INFO.name,
-                productPrice: totalPrice,
-                supportAmount: supportAmount,
-                quantity: totalQuantity
-            };
+            var loginUser = JSON.parse(loginUserJson);
+            var docId = loginUser.docId || loginUser.userId;
+            if (!docId) {
+                alert('회원 정보를 확인할 수 없습니다.');
+                return;
+            }
 
             try {
                 if (typeof firebase === 'undefined' || !firebase.firestore) {
                     alert('결제 시스템을 불러올 수 없습니다. 잠시 후 다시 시도해주세요.');
                     return;
                 }
-                const db = firebase.firestore();
-                await db.collection('orders').add({
-                    ...orderData,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                var db = firebase.firestore();
+                var memberSnap = await db.collection('members').doc(docId).get();
+                var member = memberSnap.exists ? { id: memberSnap.id, ...memberSnap.data() } : null;
+                if (!member) {
+                    member = {
+                        name: loginUser.name,
+                        phone: loginUser.phone || '',
+                        postcode: '',
+                        address: '',
+                        detailAddress: '',
+                        addresses: []
+                    };
+                }
+                openBuyNowDeliveryModal(member, loginUser);
+            } catch (err) {
+                console.error('회원 정보 로드 오류:', err);
+                alert('배송지 정보를 불러오는 중 오류가 발생했습니다.');
+            }
+        });
+    });
+}
+
+// 바로구매 배송지 모달: 라디오/폼/취소/구매하기
+function initBuyNowDeliveryModal() {
+    var modal = productDetailElements.buyNowDeliveryModal;
+    var closeBtn = productDetailElements.buyNowDeliveryModalClose;
+    var cancelBtn = productDetailElements.buyNowDeliveryCancel;
+    var submitBtn = productDetailElements.buyNowDeliverySubmit;
+    var newForm = productDetailElements.deliveryNewForm;
+
+    document.querySelectorAll('input[name="deliverySource"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            if (newForm) newForm.style.display = this.value === 'new' ? 'block' : 'none';
+            fillDeliveryRecipientAndPhone();
+        });
+    });
+
+    if (closeBtn) closeBtn.addEventListener('click', closeBuyNowDeliveryModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeBuyNowDeliveryModal);
+    if (modal) {
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) closeBuyNowDeliveryModal();
+        });
+    }
+
+    if (submitBtn) {
+        submitBtn.addEventListener('click', async function () {
+            var delivery = getSelectedDelivery();
+            if (!delivery.recipientName || !delivery.phone) {
+                alert('받는사람과 연락처를 입력해주세요.');
+                return;
+            }
+            var source = document.querySelector('input[name="deliverySource"]:checked');
+            var sourceVal = source ? source.value : 'profile';
+            if (sourceVal === 'new' && (!delivery.postcode || !delivery.address)) {
+                alert('우편번호와 주소를 입력해주세요.');
+                return;
+            }
+            submitBtn.disabled = true;
+            try {
+                await submitBuyNowOrder(delivery);
+                closeBuyNowDeliveryModal();
                 alert('구매 요청이 접수되었습니다. 관리자 승인 후 진행됩니다.');
                 selectedOptionsData = [];
                 renderSelectedOptions();
                 updateTotalPrice();
             } catch (error) {
                 console.error('구매 요청 오류:', error);
-                alert('구매 요청 중 오류가 발생했습니다: ' + (error.message || '잠시 후 다시 시도해주세요.'));
+                alert('구매 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
             }
+            submitBtn.disabled = false;
         });
-    });
+    }
 }
 
 // 관심상품
@@ -988,6 +1197,7 @@ async function initProductDetail() {
     initOptionSelect();
     initCartActions();
     initBuyActions();
+    initBuyNowDeliveryModal();
     initWishlistActions();
     initCartModal();
     initTabs();

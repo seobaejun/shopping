@@ -334,11 +334,17 @@ function setupUserIdCheck() {
                 .get();
             
             if (!snapshot.empty) {
-                alert('이미 사용 중인 닉네임입니다.');
+                const existing = snapshot.docs[0].data();
+                if (existing.status === 'withdrawn') {
+                    alert('탈퇴한 아이디입니다. 재가입하시면 같은 아이디로 다시 이용할 수 있습니다.');
+                    checkBtn.textContent = '확인완료';
+                    checkBtn.style.background = '#4caf50';
+                    userIdInput.dataset.verified = 'true';
+                } else {
+                    alert('이미 사용 중인 닉네임입니다.');
+                    userIdInput.dataset.verified = 'false';
+                }
                 checkBtn.disabled = false;
-                checkBtn.textContent = '중복확인';
-                checkBtn.style.background = '';
-                userIdInput.dataset.verified = 'false';
             } else {
                 alert('사용 가능한 닉네임입니다.');
                 checkBtn.textContent = '확인완료';
@@ -767,6 +773,38 @@ function setupFinalSignup() {
             await initFirebase();
             if (!db) {
                 throw new Error('Firebase 초기화에 실패했습니다.');
+            }
+
+            // 탈퇴 회원 재가입: 같은 userId로 된 탈퇴 문서가 있으면 복구
+            const withdrawnSnap = await db.collection('members')
+                .where('userId', '==', finalData.userId)
+                .get();
+            const withdrawnDoc = withdrawnSnap.empty ? null : withdrawnSnap.docs[0];
+            const isWithdrawn = withdrawnDoc && (withdrawnDoc.data().status === 'withdrawn');
+
+            if (isWithdrawn) {
+                const docId = withdrawnDoc.id;
+                await db.collection('members').doc(docId).update({
+                    email: finalData.email,
+                    name: finalData.userName,
+                    phone: finalData.mobile,
+                    postcode: finalData.postcode,
+                    address: finalData.address,
+                    detailAddress: finalData.detailAddress,
+                    password: finalData.password,
+                    agreeEmail: finalData.agreeEmail,
+                    agreeSMS: finalData.agreeSMS,
+                    agreePublic: finalData.agreePublic,
+                    status: '정상',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    withdrawnAt: firebase.firestore.FieldValue.delete()
+                });
+                console.log('✅ 재가입 완료 - 기존 문서 복구, docId:', docId);
+                alert('재가입이 완료되었습니다. 입력하신 비밀번호로 로그인해 주세요.');
+                window.location.href = 'login.html';
+                signupBtn.disabled = false;
+                signupBtn.textContent = '회원가입';
+                return;
             }
             
             console.log('🔐 Firebase Auth로 계정 생성 시작...', finalData.email);

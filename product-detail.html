@@ -396,6 +396,64 @@
         </div>
     </div>
 
+    <!-- 바로구매 배송지 선택 모달 -->
+    <div class="buy-now-delivery-modal" id="buyNowDeliveryModal">
+        <div class="buy-now-modal-content">
+            <div class="buy-now-modal-header">
+                <h3>배송지 선택</h3>
+                <button type="button" class="buy-now-modal-close" id="buyNowDeliveryModalClose" aria-label="닫기">&times;</button>
+            </div>
+            <div class="buy-now-modal-body">
+                <div class="delivery-option-list">
+                    <label class="delivery-option-item">
+                        <input type="radio" name="deliverySource" value="profile" checked>
+                        <span class="delivery-option-label">회원 정보의 주소</span>
+                        <p class="delivery-option-summary" id="deliveryOptionProfileSummary">-</p>
+                    </label>
+                    <label class="delivery-option-item">
+                        <input type="radio" name="deliverySource" value="default">
+                        <span class="delivery-option-label">기본 배송지</span>
+                        <p class="delivery-option-summary" id="deliveryOptionDefaultSummary">등록된 기본 배송지가 없습니다.</p>
+                    </label>
+                    <label class="delivery-option-item">
+                        <input type="radio" name="deliverySource" value="new">
+                        <span class="delivery-option-label">새로 입력</span>
+                        <p class="delivery-option-summary" id="deliveryOptionNewHint">선택 시 아래에 주소를 입력합니다.</p>
+                    </label>
+                </div>
+                <div class="delivery-recipient-fields">
+                    <p class="delivery-recipient-desc">받는사람과 연락처는 기본값을 그대로 쓰거나 수정할 수 있습니다.</p>
+                    <div class="form-row">
+                        <label for="deliveryRecipient">받는사람</label>
+                        <input type="text" id="deliveryRecipient" placeholder="받는사람 이름" maxlength="30">
+                    </div>
+                    <div class="form-row">
+                        <label for="deliveryPhone">연락처</label>
+                        <input type="text" id="deliveryPhone" placeholder="연락처" maxlength="20">
+                    </div>
+                </div>
+                <div class="delivery-new-form" id="deliveryNewForm" style="display: none;">
+                    <div class="form-row">
+                        <label for="deliveryNewPostcode">우편번호</label>
+                        <input type="text" id="deliveryNewPostcode" placeholder="우편번호">
+                    </div>
+                    <div class="form-row">
+                        <label for="deliveryNewAddress">주소</label>
+                        <input type="text" id="deliveryNewAddress" placeholder="주소">
+                    </div>
+                    <div class="form-row">
+                        <label for="deliveryNewDetailAddress">상세주소</label>
+                        <input type="text" id="deliveryNewDetailAddress" placeholder="상세주소" maxlength="100">
+                    </div>
+                </div>
+            </div>
+            <div class="buy-now-modal-footer">
+                <button type="button" class="btn-buy-now-cancel" id="buyNowDeliveryCancel">취소</button>
+                <button type="button" class="btn-buy-now-submit" id="buyNowDeliverySubmit">구매하기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>

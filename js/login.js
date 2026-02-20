@@ -146,6 +146,15 @@ async function handleLogin(e) {
         }
         
         // 회원 상태 확인
+        if (userData.status === 'withdrawn') {
+            alert('탈퇴한 계정입니다. 재가입 후 이용해 주세요.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '로그인';
+            }
+            window.location.href = 'signup.html';
+            return false;
+        }
         if (userData.status === '정지') {
             alert('정지된 계정입니다. 고객센터에 문의해주세요.');
             if (submitBtn) {

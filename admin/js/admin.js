@@ -433,7 +433,7 @@ function _orderMaskName(name) { return (name && name.length > 1 ? name.substring
 function _orderMaskPhone(phone) { return (phone ? phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, '$1-****-$3') : '-'); }
 function _orderPhone(order) {
     if (!order) return '-';
-    var v = order.phone || order.phoneNumber || order.tel || order.userPhone;
+    var v = order.deliveryPhone || order.phone || order.phoneNumber || order.tel || order.userPhone;
     if (v == null || v === '') return '-';
     return String(v).trim() || '-';
 }
@@ -800,9 +800,11 @@ function applySettlementRoundSearch() {
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// 주문의 주소 문자열 반환 (가능한 필드 모두 사용)
+// 주문의 주소 문자열 반환 (바로구매 배송지 우선, 그 다음 기존 필드)
 function _orderAddress(order) {
     if (!order) return '-';
+    var deliveryParts = [order.deliveryPostcode, order.deliveryAddress, order.deliveryDetailAddress].filter(Boolean);
+    if (deliveryParts.length) return deliveryParts.join(' ');
     if (order.deliveryAddress) return order.deliveryAddress;
     var parts = [order.postcode, order.address, order.detailAddress].filter(Boolean);
     if (parts.length) return parts.join(' ');
@@ -869,9 +871,12 @@ function _deliveryRegisterBuildRows(list, memberMap) {
         var dateStr = _orderFormatDate(order.createdAt);
         var addressStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
         var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
+        var buyer = order.userName || order.name || '-';
+        var recipient = order.deliveryRecipientName ? String(order.deliveryRecipientName).trim() : '';
+        var buyerDisplay = recipient && recipient !== buyer ? _orderEscapeHtml(buyer) + ' (' + _orderEscapeHtml(recipient) + ')' : _orderEscapeHtml(buyer);
         return '<tr data-order-id="' + _orderEscapeHtml(orderId) + '">' +
             '<td>' + (i + 1) + '</td>' +
-            '<td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td>' +
+            '<td>' + buyerDisplay + '</td>' +
             '<td>' + _orderEscapeHtml(order.productName || '-') + '</td>' +
             '<td>1</td>' +
             '<td>' + phoneStr + '</td>' +
@@ -1582,9 +1587,17 @@ function renderMemberInfoTable(data = null) {
         const supportAmount = member.supportAmount || 0;
         const accumulatedSupport = member.accumulatedSupport || 0;
         
-        // 상태
+        // 상태 (withdrawn → 탈퇴 표시)
         const status = member.status || '정상';
-        
+        const statusDisplay = status === 'withdrawn' ? '탈퇴' : status;
+        const statusCell = status === 'withdrawn'
+            ? `<span class="badge badge-secondary">탈퇴</span>`
+            : `<select class="status-select" onchange="changeMemberStatus('${member.id || memberId}', this.value)">
+                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
+                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
+                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
+                    </select>`;
+
         return `
             <tr>
                 <td>${startIndex + index + 1}</td>
@@ -1598,13 +1611,7 @@ function renderMemberInfoTable(data = null) {
                 <td>${escapeHtml(referralCode)}</td>
                 <td>${purchaseAmount.toLocaleString()}</td>
                 <td>${supportAmount.toLocaleString()} / ${accumulatedSupport.toLocaleString()}</td>
-                <td>
-                    <select class="status-select" onchange="changeMemberStatus('${member.id || memberId}', this.value)">
-                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
-                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
-                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
-                    </select>
-                </td>
+                <td>${statusCell}</td>
                 <td>
                     <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
                         <i class="fas fa-edit"></i>
@@ -1739,7 +1746,9 @@ function renderMemberTable(data) {
         
         const recommender = member.recommender || member.recommenderId || '';
         const status = member.status || '정상';
-        
+        const statusDisplay = status === 'withdrawn' ? '탈퇴' : status;
+        const statusBadgeClass = status === 'withdrawn' ? 'badge-secondary' : (status === '정상' ? 'badge-success' : 'badge-danger');
+
         // XSS 방지를 위한 이스케이프 (간단한 버전)
         const escapeHtml = (str) => {
             if (!str) return '';
@@ -1748,7 +1757,7 @@ function renderMemberTable(data) {
                 return map[m];
             });
         };
-        
+
         return `
         <tr>
             <td>${index + 1}</td>
@@ -1757,7 +1766,7 @@ function renderMemberTable(data) {
             <td>${escapeHtml(phone)}</td>
             <td>${escapeHtml(joinDate)}</td>
             <td>${escapeHtml(recommender)}</td>
-            <td><span class="badge ${status === '정상' ? 'badge-success' : 'badge-danger'}">${escapeHtml(status)}</span></td>
+            <td><span class="badge ${statusBadgeClass}">${escapeHtml(statusDisplay)}</span></td>
             <td>
                 <button class="btn btn-sm btn-primary" onclick="editMember('${member.id || memberId}')">수정</button>
                 <button class="btn btn-sm btn-secondary" onclick="deleteMember('${member.id || memberId}')">삭제</button>
