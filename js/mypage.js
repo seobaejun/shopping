@@ -267,30 +267,34 @@ function renderNoticeList() {
     var tbody = document.getElementById('mypageNoticeListBody');
     if (!tbody) return;
     if (!window.mypageApi || typeof window.mypageApi.getBoardPosts !== 'function') {
-        tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
         return;
     }
     window.mypageApi.getBoardPosts('notice').then(function (list) {
         if (!list || !list.length) {
-            tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
             return;
         }
         window._mypageNoticePosts = list;
         function formatDate(createdAt) {
             if (!createdAt || createdAt.seconds == null) return '-';
             var d = new Date(createdAt.seconds * 1000);
-            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            // YY-MM-DD 형식으로 변경 (연도 뒤 2자리)
+            var year = String(d.getFullYear()).slice(-2);
+            return year + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
         var html = list.map(function (p) {
             var title = (p.title || '-').replace(/</g, '&lt;');
+            var author = (p.authorName || '-').replace(/</g, '&lt;');
+            var viewCount = (p.viewCount != null ? p.viewCount : 0);
             var date = formatDate(p.createdAt);
             var content = (p.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-            return '<tr class="notice-title-row" style="border-bottom: 1px solid #eee;"><td style="padding: 10px;"><a href="#" class="notice-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td><td class="col-date" style="padding: 10px; text-align: right;">' + date + '</td></tr>' +
-                '<tr class="notice-detail-row" id="notice-detail-' + (p.id || '') + '" style="display: none;"><td colspan="2" class="notice-detail-cell">' + content + '</td></tr>';
+            return '<tr class="notice-title-row" style="border-bottom: 1px solid #eee;"><td style="padding: 10px;"><a href="#" class="notice-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td><td style="padding: 10px; text-align: center;">' + author + '</td><td style="padding: 10px; text-align: center;">' + viewCount + '</td><td class="col-date" style="padding: 10px; text-align: right;">' + date + '</td></tr>' +
+                '<tr class="notice-detail-row" id="notice-detail-' + (p.id || '') + '" style="display: none;"><td colspan="4" class="notice-detail-cell">' + content + '</td></tr>';
         }).join('');
         tbody.innerHTML = html;
     }).catch(function () {
-        tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
     });
 }
 

@@ -294,6 +294,49 @@
     margin: 0 10px;
 }
 
+/* 공지/이벤트 테이블 스타일 */
+.notice-list-wrap .mypage-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.notice-list-wrap .mypage-table thead th {
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #eee;
+    background: #fff;
+}
+
+.notice-list-wrap .mypage-table tbody td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.notice-list-wrap .mypage-table thead th:nth-child(1) {
+    text-align: left;
+}
+
+.notice-list-wrap .mypage-table thead th:nth-child(2),
+.notice-list-wrap .mypage-table tbody td:nth-child(2) {
+    text-align: center;
+    width: 100px;
+}
+
+.notice-list-wrap .mypage-table thead th:nth-child(3),
+.notice-list-wrap .mypage-table tbody td:nth-child(3) {
+    text-align: center;
+    width: 80px;
+}
+
+.notice-list-wrap .mypage-table thead th:nth-child(4),
+.notice-list-wrap .mypage-table tbody td:nth-child(4) {
+    text-align: right;
+    width: 100px;
+}
+
 /* 공지/이벤트 테이블: 작성일 한 줄 표시, 오른쪽 정렬 */
 .notice-list-wrap .mypage-table .col-date {
     white-space: nowrap;

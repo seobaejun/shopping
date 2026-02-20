@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>10쇼핑게임 - 온라인 쇼핑몰</title>
+    <title>공지사항 - 10쇼핑게임</title>
     <link rel="stylesheet" href="css/style.css?v=25">
+    <link rel="stylesheet" href="css/mypage.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -145,132 +146,33 @@
         </div>
     </div>
 
-    <!-- 메인 슬라이더 -->
-    <section class="main-slider">
-        <div class="slider-container">
-            <div class="slide active">
-                <div class="slide-content">
-                    <h2>똑똑한 쇼핑!</h2>
-                    <p>현명한 소비!</p>
-                    <a href="#" class="btn-primary">자세히 보기</a>
+    <!-- 메인 콘텐츠 -->
+    <main class="main-content" style="padding: 40px 0; min-height: 60vh;">
+        <div class="container">
+            <div class="notice-page-wrapper">
+                <div class="section-title" style="margin-bottom: 30px;">
+                    <h2 style="font-size: 28px; font-weight: 700; color: #333;">공지사항</h2>
+                    <p style="color: #666; margin-top: 8px;">중요한 공지사항을 확인하세요.</p>
+                </div>
+                
+                <div class="notice-list-wrap">
+                    <table class="mypage-table" style="width:100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #eee;">
+                                <th style="padding: 10px; text-align: left;">제목</th>
+                                <th style="padding: 10px; text-align: center; width: 100px;">글쓴이</th>
+                                <th style="padding: 10px; text-align: center; width: 80px;">조회</th>
+                                <th style="padding: 10px; text-align: right; width: 100px;">작성일</th>
+                            </tr>
+                        </thead>
+                        <tbody id="noticeListBody">
+                            <tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="slide">
-                <div class="slide-content">
-                    <h2>특별한 할인!</h2>
-                    <p>최대 50% 세일</p>
-                    <a href="#" class="btn-primary">지금 쇼핑하기</a>
-                </div>
-            </div>
         </div>
-        <button class="slider-btn prev" id="prevSlide"><i class="fas fa-chevron-left"></i></button>
-        <button class="slider-btn next" id="nextSlide"><i class="fas fa-chevron-right"></i></button>
-        <div class="slider-dots" id="sliderDots"></div>
-    </section>
-
-    <!-- 히트상품 섹션 -->
-    <section class="product-section">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-fire"></i> 히트상품 🔥</h2>
-                <p>요즘 잘나가는 인기 상품입니다.</p>
-            </div>
-            <div class="product-grid" id="hitProducts">
-                <!-- 상품 카드는 JavaScript로 동적 생성 -->
-            </div>
-            <div class="section-footer">
-                <a href="products-list.html?type=hit" class="btn-more">더보기</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- 추천상품 섹션 -->
-    <section class="product-section bg-light">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-thumbs-up"></i> 추천상품 👍</h2>
-                <p>요즘 잘나가는 추천 상품입니다.</p>
-            </div>
-            <div class="product-grid" id="recommendProducts">
-                <!-- 상품 카드는 JavaScript로 동적 생성 -->
-            </div>
-            <div class="section-footer">
-                <a href="products-list.html?type=recommend" class="btn-more">더보기</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- 최신상품 섹션 -->
-    <section class="product-section">
-        <div class="container">
-            <div class="section-header">
-                <h2>🅝 최신상품 ✨</h2>
-                <p>요즘 잘나가는 최신 상품입니다.</p>
-            </div>
-            <div class="product-grid" id="newProducts">
-                <!-- 상품 카드는 JavaScript로 동적 생성 -->
-            </div>
-            <div class="section-footer">
-                <a href="products-list.html?type=new" class="btn-more">더보기</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- 인기상품 섹션 -->
-    <section class="product-section bg-light">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-heart"></i> 인기상품 ❤️</h2>
-                <p>요즘 잘나가는 인기 상품입니다.</p>
-            </div>
-            <div class="product-grid" id="popularProducts">
-                <!-- 상품 카드는 JavaScript로 동적 생성 -->
-            </div>
-            <div class="section-footer">
-                <a href="products-list.html?type=popular" class="btn-more">더보기</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- 사용후기 섹션 -->
-    <section class="review-section">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-comment-dots"></i> 사용후기 💬</h2>
-                <p>고객님들의 소중한 후기 입니다.</p>
-            </div>
-            <div class="review-container">
-                <div class="no-review">
-                    <i class="fas fa-inbox"></i>
-                    <p>등록된 사용후기가 없습니다.</p>
-                </div>
-            </div>
-            <div class="section-footer">
-                <a href="#" class="btn-more">더보기</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- 비디오 섹션 -->
-    <section class="video-section">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-video"></i> VIDEO</h2>
-                <p>홍보 영상입니다.</p>
-            </div>
-            <div class="video-container">
-                <!-- 홍보 영상: 아래 video-id를 실제 유튜브 영상 ID로 바꾸세요. 예: youtube.com/watch?v=영상ID -->
-                <iframe width="100%" height="500" 
-                    title="홍보 영상"
-                    src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0" 
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                    allowfullscreen
-                    loading="lazy">
-                </iframe>
-            </div>
-        </div>
-    </section>
+    </main>
 
     <!-- 푸터 -->
     <footer class="footer">
@@ -309,7 +211,7 @@
                 <div class="footer-info">
                     <h3>QUICK</h3>
                     <ul>
-                        <li><a href="#">공지사항</a></li>
+                        <li><a href="notice.html">공지사항</a></li>
                         <li><a href="#">이벤트</a></li>
                         <li><a href="faq.html">FAQ</a></li>
                         <li><a href="#">1:1문의</a></li>
@@ -332,59 +234,6 @@
         </div>
     </footer>
 
-    <!-- 하단 고정 네비게이션 (모바일) -->
-    <div class="bottom-nav">
-        <a href="#" class="nav-item">
-            <i class="fas fa-th"></i>
-            <span>전체메뉴</span>
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fas fa-search"></i>
-            <span>검색</span>
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>홈</span>
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fas fa-user"></i>
-            <span>로그인</span>
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fas fa-heart"></i>
-            <span>찜</span>
-        </a>
-    </div>
-
-    <!-- 최근 본 상품 퀵메뉴 -->
-    <div class="today-viewed">
-        <button class="toggle-viewed" id="toggleViewed">
-            <i class="fas fa-clock"></i>
-            <span class="count">0</span>
-        </button>
-    </div>
-
-    <!-- 최근 본 상품 사이드 패널 -->
-    <div class="viewed-panel" id="viewedPanel">
-        <div class="viewed-panel-overlay"></div>
-        <div class="viewed-panel-content">
-            <div class="viewed-panel-header">
-                <button class="viewed-panel-close" id="viewedPanelClose">
-                    <i class="fas fa-times"></i>
-                </button>
-                <h3>최근 본 상품 <span class="viewed-count-badge" id="viewedCountBadge">0</span></h3>
-            </div>
-            <div class="viewed-panel-body">
-                <div class="viewed-list" id="viewedList">
-                    <p class="empty-message">최근 본 상품이 없습니다.</p>
-                </div>
-            </div>
-            <div class="viewed-panel-footer">
-                <button class="btn-clear-all" id="btnClearAll">전체삭제</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -394,11 +243,12 @@
     <script src="js/firebase-config.js"></script>
     <script src="js/visitor-logger.js"></script>
     
-    <!-- SNS 공유 유틸리티 -->
-    <script src="js/share-utils.js?v=4"></script>
-    
+    <!-- 공통 스크립트 -->
     <script src="js/admin-link-visibility.js"></script>
     <script src="js/script.js?v=23"></script>
+    
+    <!-- 공지사항 전용 스크립트 -->
+    <script src="js/notice.js"></script>
 </body>
 </html>
 

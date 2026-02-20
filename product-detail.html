@@ -16,6 +16,7 @@
         <div class="container">
             <ul class="top-menu">
                 <li><a href="#"><i class="fas fa-shopping-bag"></i> 주문내역</a></li>
+                <li><a href="notice.html"><i class="fas fa-bullhorn"></i> 공지사항</a></li>
                 <li><a href="faq.html"><i class="fas fa-question-circle"></i> FAQ</a></li>
                 <li><a href="#"><i class="fas fa-comment"></i> 1:1문의</a></li>
                 <li><a href="#"><i class="fas fa-star"></i> 사용후기</a></li>
@@ -34,8 +35,8 @@
                     </a>
                 </div>
                 <div class="search-bar">
-                    <form action="#" method="get">
-                        <input type="text" placeholder="검색어를 입력해주세요" required>
+                    <form id="searchForm" onsubmit="return handleSearch(event)">
+                        <input type="text" id="searchInput" placeholder="검색어를 입력해주세요" required>
                         <button type="submit"><i class="fas fa-search"></i> 검색</button>
                     </form>
                 </div>

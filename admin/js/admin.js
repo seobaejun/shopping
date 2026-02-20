@@ -68,14 +68,34 @@ async function loadCategoriesForProduct() {
         // 상품 목록 검색용 카테고리 select 업데이트
         const searchCategorySelect = document.getElementById('productSearchCategory');
         if (searchCategorySelect) {
-            searchCategorySelect.innerHTML = '<option value="">전체</option>';
-            visibleCategories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.id;
-                const levelLabel = cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차';
-                option.textContent = `${levelLabel} - ${cat.name || cat.id}`;
-                searchCategorySelect.appendChild(option);
-            });
+            // 이미 카테고리가 로드되어 있는지 확인 (옵션이 1개 이상인 경우)
+            const hasOptions = searchCategorySelect.options.length > 1;
+            
+            // 현재 선택된 값 저장
+            const currentValue = searchCategorySelect.value;
+            
+            // 카테고리 옵션이 없거나 비어있을 때만 업데이트
+            if (!hasOptions || searchCategorySelect.options.length === 1) {
+                // 카테고리 옵션 업데이트
+                searchCategorySelect.innerHTML = '<option value="">전체</option>';
+                visibleCategories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.id;
+                    const levelLabel = cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차';
+                    option.textContent = `${levelLabel} - ${cat.name || cat.id}`;
+                    searchCategorySelect.appendChild(option);
+                });
+                
+                // 이전 선택 값 복원 (옵션이 존재하는 경우에만)
+                if (currentValue && Array.from(searchCategorySelect.options).some(opt => opt.value === currentValue)) {
+                    searchCategorySelect.value = currentValue;
+                }
+            } else {
+                // 이미 로드되어 있으면 선택 값만 복원
+                if (currentValue && Array.from(searchCategorySelect.options).some(opt => opt.value === currentValue)) {
+                    searchCategorySelect.value = currentValue;
+                }
+            }
         }
         
         return categories;
@@ -304,6 +324,14 @@ async function loadPageData(pageId) {
         case 'product-list':
             // 상품 목록 페이지 로드
             console.log('🔵 상품 목록 페이지 로드 시작');
+            
+            // 카테고리 먼저 로드
+            try {
+                await loadCategoriesForProduct();
+                console.log('✅ 상품 목록 페이지: 카테고리 로드 완료');
+            } catch (error) {
+                console.error('❌ 상품 목록 페이지: 카테고리 로드 오류:', error);
+            }
             
             // loadAllProducts 함수가 로드될 때까지 대기
             let productWaitCount = 0;

@@ -99,12 +99,30 @@ async function loadAllProducts() {
 
         console.log('✅ 상품목록: Firestore에서 데이터 가져오기 완료:', products.length, '개');
 
-        if (typeof window.loadCategoriesForProduct === 'function') {
-            const categories = await window.loadCategoriesForProduct();
+        // 카테고리 맵만 업데이트 (카테고리 select는 이미 loadPageData에서 로드됨)
+        // 카테고리 select를 다시 로드하지 않도록 주의
+        try {
+            const firebaseAdmin = await waitForFirebaseAdmin();
+            const db = firebaseAdmin.db || firebase.firestore();
+            const snapshot = await db.collection('categories')
+                .orderBy('sortOrder', 'asc')
+                .get();
+            
             _productListCategoryMap = {};
-            categories.forEach(c => {
-                _productListCategoryMap[c.id] = c.name || c.id;
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const displayName = (data.name != null && String(data.name).trim() !== '')
+                    ? String(data.name).trim()
+                    : ((data.categoryName != null && String(data.categoryName).trim() !== '')
+                        ? String(data.categoryName).trim()
+                        : ((data.title != null && String(data.title).trim() !== '')
+                            ? String(data.title).trim()
+                            : doc.id));
+                _productListCategoryMap[doc.id] = displayName;
             });
+            console.log('✅ 카테고리 맵 업데이트 완료:', Object.keys(_productListCategoryMap).length, '개');
+        } catch (error) {
+            console.warn('카테고리 맵 업데이트 실패:', error);
         }
 
         document.getElementById('totalProductCount').textContent = products.length;
@@ -822,16 +840,7 @@ window.previewEditDetailImage = previewEditDetailImage;
         }
 
         // 페이지가 활성화되어 있으면 데이터 로드
-        const productListPage = document.getElementById('product-list');
-        if (productListPage && productListPage.classList.contains('active')) {
-            console.log('🔵 product-list 페이지가 활성화되어 있음, 즉시 데이터 로드');
-            setTimeout(() => {
-                if (window.loadAllProducts) {
-                    window.loadAllProducts().catch(error => {
-                        console.error('초기 상품 목록 로드 오류:', error);
-                    });
-                }
-            }, 500);
-        }
+        // 주의: loadPageData에서 이미 loadAllProducts를 호출하므로 여기서는 호출하지 않음
+        // 중복 호출을 방지하여 카테고리가 덮어쓰이지 않도록 함
     }
 })();

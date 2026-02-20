@@ -183,26 +183,101 @@ async function renderSearchResults() {
         noResults.style.display = 'block';
     }
     
-    // 카테고리 업데이트
-    updateCategoryList(results);
+    // 카테고리 업데이트 (반드시 실행되도록)
+    console.log('🔵🔵🔵 카테고리 목록 업데이트 시작 (results:', results.length, ')');
+    try {
+        await updateCategoryList(results);
+        console.log('✅✅✅ 카테고리 목록 업데이트 완료');
+    } catch (error) {
+        console.error('❌❌❌ 카테고리 목록 업데이트 실패:', error);
+        console.error('에러 스택:', error.stack);
+    }
     console.log('=== 검색 결과 렌더링 완료 ===');
 }
 
 // 카테고리 목록 업데이트
-function updateCategoryList(results) {
+let _categoryNameMapCache = null;
+async function updateCategoryList(results) {
+    console.log('🔵 updateCategoryList 호출됨, results:', results.length);
     const categoryList = document.querySelector('.filter-sidebar .category-list');
-    if (!categoryList) return;
+    if (!categoryList) {
+        console.error('❌ 카테고리 리스트 요소를 찾을 수 없습니다. selector: .filter-sidebar .category-list');
+        // 다른 selector 시도
+        const altCategoryList = document.querySelector('#filterSidebar .category-list');
+        if (altCategoryList) {
+            console.log('✅ 대체 selector로 찾음: #filterSidebar .category-list');
+            return await updateCategoryListWithElement(results, altCategoryList);
+        }
+        return;
+    }
+    return await updateCategoryListWithElement(results, categoryList);
+}
+
+async function updateCategoryListWithElement(results, categoryList) {
+    
+    // 카테고리 ID → 이름 맵 로드 (캐시 사용)
+    if (!_categoryNameMapCache || Object.keys(_categoryNameMapCache).length === 0) {
+        console.log('🔵 카테고리 이름 맵 로드 시작...');
+        _categoryNameMapCache = {};
+        try {
+            if (typeof firebase === 'undefined' || !firebase.firestore) {
+                console.error('❌ Firebase가 초기화되지 않았습니다.');
+            } else {
+                const snapshot = await firebase.firestore().collection('categories').get();
+                console.log('🔵 카테고리 문서 개수:', snapshot.size);
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const displayName = (data.name != null && String(data.name).trim() !== '')
+                        ? String(data.name).trim()
+                        : ((data.categoryName != null && String(data.categoryName).trim() !== '')
+                            ? String(data.categoryName).trim()
+                            : ((data.title != null && String(data.title).trim() !== '')
+                                ? String(data.title).trim()
+                                : doc.id));
+                    _categoryNameMapCache[doc.id] = displayName;
+                });
+                console.log('✅ 카테고리 이름 맵 로드 완료:', Object.keys(_categoryNameMapCache).length, '개');
+                console.log('카테고리 이름 맵 샘플:', Object.entries(_categoryNameMapCache).slice(0, 3));
+            }
+        } catch (error) {
+            console.error('❌ 카테고리 이름 맵 로드 실패:', error);
+        }
+    } else {
+        console.log('✅ 카테고리 이름 맵 캐시 사용:', Object.keys(_categoryNameMapCache).length, '개');
+    }
     
     // 카테고리별 개수 계산
     const categoryMap = {};
     
     results.forEach(product => {
-        const cat = product.category || '기타';
-        if (!categoryMap[cat]) {
-            categoryMap[cat] = 0;
+        const catId = product.category || '';
+        let catName = '기타';
+        
+        if (catId) {
+            // 카테고리 이름 맵에서 찾기
+            if (_categoryNameMapCache && _categoryNameMapCache[catId]) {
+                catName = _categoryNameMapCache[catId];
+            } else {
+                // 맵에 없으면 ID처럼 보이는지 확인 (Firestore 문서 ID는 보통 20자 이상의 랜덤 문자열)
+                if (catId.length >= 15 && /^[a-zA-Z0-9]+$/.test(catId)) {
+                    // ID처럼 보이는 경우 - 카테고리 이름 맵을 다시 로드 시도
+                    console.warn('카테고리 ID를 찾을 수 없음:', catId, '맵:', _categoryNameMapCache);
+                    catName = '기타';
+                } else {
+                    // 이름처럼 보이는 경우 그대로 사용
+                    catName = catId;
+                }
+            }
         }
-        categoryMap[cat]++;
+        
+        if (!categoryMap[catName]) {
+            categoryMap[catName] = 0;
+        }
+        categoryMap[catName]++;
     });
+    
+    console.log('카테고리 맵:', categoryMap);
+    console.log('카테고리 이름 맵 캐시:', _categoryNameMapCache);
     
     // 카테고리 HTML 생성
     let html = `<a href="#">전체 (${results.length})</a>`;
@@ -212,6 +287,7 @@ function updateCategoryList(results) {
     });
     
     categoryList.innerHTML = html;
+    console.log('✅ 카테고리 목록 업데이트 완료:', Object.keys(categoryMap).length, '개');
 }
 
 // 필터 토글
@@ -275,7 +351,7 @@ async function initPriceFilter() {
                 noResults.style.display = 'block';
             }
             
-            updateCategoryList(results);
+            await updateCategoryList(results);
         });
     }
 }
@@ -349,6 +425,18 @@ async function init() {
     // 검색 결과 렌더링
     await renderSearchResults();
     
+    // 최근 본 상품 초기화 (검색 결과 렌더링 후)
+    console.log('🔵🔵🔵 최근 본 상품 초기화 예약...');
+    setTimeout(() => {
+        console.log('🔵🔵🔵 최근 본 상품 초기화 시작...');
+        try {
+            initSearchResultsViewedProducts();
+        } catch (error) {
+            console.error('❌❌❌ 최근 본 상품 초기화 실패:', error);
+            console.error('에러 스택:', error.stack);
+        }
+    }, 300);
+    
     // 필터 초기화
     initFilterToggle();
     initSortChange();
@@ -358,6 +446,146 @@ async function init() {
     initShareButtonsForSearch();
     
     console.log('✅ 검색 결과 페이지 초기화 완료');
+}
+
+// 검색 결과 페이지용 최근 본 상품 초기화
+function initSearchResultsViewedProducts() {
+    console.log('🔵 initSearchResultsViewedProducts 실행 중...');
+    const toggleViewed = document.getElementById('toggleViewed');
+    const viewedPanel = document.getElementById('viewedPanel');
+    const viewedPanelClose = document.getElementById('viewedPanelClose');
+    const viewedList = document.getElementById('viewedList');
+    const viewedCountBadge = document.getElementById('viewedCountBadge');
+    const btnClearAll = document.getElementById('btnClearAll');
+    
+    console.log('🔵 DOM 요소 확인:', {
+        toggleViewed: !!toggleViewed,
+        viewedPanel: !!viewedPanel,
+        viewedPanelClose: !!viewedPanelClose,
+        viewedList: !!viewedList,
+        viewedCountBadge: !!viewedCountBadge,
+        btnClearAll: !!btnClearAll
+    });
+    
+    if (!toggleViewed || !viewedPanel) {
+        console.error('❌ 최근 본 상품 요소를 찾을 수 없습니다. toggleViewed:', !!toggleViewed, 'viewedPanel:', !!viewedPanel);
+        // 요소를 찾을 수 없으면 나중에 다시 시도
+        setTimeout(() => {
+            console.log('🔵 최근 본 상품 재시도...');
+            initSearchResultsViewedProducts();
+        }, 500);
+        return;
+    }
+    
+    console.log('✅ 최근 본 상품 요소 찾기 성공');
+
+    function updateViewedList() {
+        if (!viewedList) return;
+
+        const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
+        
+        // 중복 제거
+        const uniqueProducts = [];
+        const seenIds = new Set();
+        for (let i = 0; i < viewedProducts.length; i++) {
+            const product = viewedProducts[i];
+            if (product && product.id && !seenIds.has(product.id)) {
+                seenIds.add(product.id);
+                uniqueProducts.push(product);
+            }
+        }
+        
+        if (uniqueProducts.length !== viewedProducts.length) {
+            localStorage.setItem('todayViewedProducts', JSON.stringify(uniqueProducts));
+        }
+        
+        const count = uniqueProducts.length;
+        if (viewedCountBadge) viewedCountBadge.textContent = count;
+        if (toggleViewed) {
+            const countEl = toggleViewed.querySelector('.count');
+            if (countEl) countEl.textContent = count;
+        }
+        
+        if (uniqueProducts.length === 0) {
+            viewedList.innerHTML = '<p class="empty-message">최근 본 상품이 없습니다.</p>';
+            return;
+        }
+
+        const listHTML = uniqueProducts.map(product => `
+            <div class="viewed-item" data-product-id="${product.id || ''}" style="cursor: pointer;">
+                <img src="${product.image || 'https://via.placeholder.com/80x80'}" alt="${product.name}">
+                <div class="viewed-item-info">
+                    <p>${(product.name || '').replace(/</g, '&lt;')}</p>
+                    <span class="price">${product.price ? product.price.toLocaleString() + '원' : ''}</span>
+                </div>
+            </div>
+        `).join('');
+
+        viewedList.innerHTML = listHTML;
+
+        // 클릭 이벤트 추가
+        const viewedItems = viewedList.querySelectorAll('.viewed-item');
+        viewedItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const productId = item.getAttribute('data-product-id');
+                if (productId) {
+                    if (viewedPanel) viewedPanel.classList.remove('active');
+                    window.location.href = `product-detail.html?id=${productId}`;
+                }
+            });
+        });
+    }
+
+    function updateViewedCount() {
+        const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
+        const uniqueIds = new Set();
+        viewedProducts.forEach(product => {
+            if (product && product.id) {
+                uniqueIds.add(product.id);
+            }
+        });
+        const count = uniqueIds.size;
+        if (viewedCountBadge) viewedCountBadge.textContent = count;
+        if (toggleViewed) {
+            const countEl = toggleViewed.querySelector('.count');
+            if (countEl) countEl.textContent = count;
+        }
+    }
+
+    if (toggleViewed && viewedPanel) {
+        toggleViewed.addEventListener('click', () => {
+            viewedPanel.classList.add('active');
+            updateViewedList();
+        });
+    }
+
+    if (viewedPanelClose && viewedPanel) {
+        viewedPanelClose.addEventListener('click', () => {
+            viewedPanel.classList.remove('active');
+        });
+    }
+
+    if (viewedPanel) {
+        const overlay = viewedPanel.querySelector('.viewed-panel-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', () => {
+                viewedPanel.classList.remove('active');
+            });
+        }
+    }
+
+    if (btnClearAll) {
+        btnClearAll.addEventListener('click', () => {
+            if (confirm('최근 본 상품을 모두 삭제하시겠습니까?')) {
+                localStorage.removeItem('todayViewedProducts');
+                updateViewedList();
+                updateViewedCount();
+            }
+        });
+    }
+
+    // 초기 목록 업데이트
+    updateViewedCount();
 }
 
 // 공유 버튼 이벤트 (검색 결과 페이지용)
