@@ -80,8 +80,13 @@ function runMypageInit() {
     bindMarketingForm();
     bindAddressSection();
     bindWithdrawSection();
+    bindFaqSection();
     bindSectionNav();
     bindPostExpandClicks();
+    if (window.location.search.indexOf('section=faq') !== -1) {
+        var faqLink = document.querySelector('.mypage-nav a[data-section="faq"]');
+        showSection('faq', faqLink || null);
+    }
 
         // 정보수정 버튼: 클릭 시 회원정보 수정 섹션 표시
         var btnEdit = document.getElementById('mypageBtnInfoEdit') || document.querySelector('.btn-info-edit');
@@ -701,6 +706,84 @@ function fillProfileForm(member) {
     }
 }
 
+// 자주 묻는 질문: Q&A 게시판 연동, 4개 카테고리 탭, 아코디언
+var _faqListCache = [];
+
+function getCurrentFaqCategory() {
+    var tab = document.querySelector('.faq-tab.active');
+    return (tab && tab.getAttribute('data-faq-category')) ? tab.getAttribute('data-faq-category') : '상품구매';
+}
+
+function renderFaqList() {
+    var listEl = document.getElementById('faqAccordionList');
+    var emptyEl = document.getElementById('faqEmpty');
+    if (!listEl || !emptyEl) return;
+    var category = getCurrentFaqCategory();
+    var searchKw = (document.getElementById('faqSearchInput') && document.getElementById('faqSearchInput').value) ? document.getElementById('faqSearchInput').value.trim().toLowerCase() : '';
+    var list = _faqListCache.filter(function (p) {
+        var cat = (p.faqCategory || '상품구매').trim();
+        if (cat !== category) return false;
+        if (p.status === 'draft') return false;
+        if (searchKw) {
+            var title = (p.title || '').toLowerCase();
+            var content = (p.content || '').toLowerCase();
+            if (title.indexOf(searchKw) === -1 && content.indexOf(searchKw) === -1) return false;
+        }
+        return true;
+    });
+    listEl.innerHTML = '';
+    emptyEl.style.display = list.length ? 'none' : 'block';
+    list.forEach(function (p, idx) {
+        var li = document.createElement('li');
+        li.className = 'faq-accordion-item';
+        li.setAttribute('data-faq-id', p.id || '');
+        var title = (p.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var content = (p.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        li.innerHTML = '<div class="faq-accordion-q"><span class="faq-q-icon">Q</span><span class="faq-q-text">' + title + '</span><span class="faq-accordion-toggle"><i class="fas fa-chevron-down"></i></span></div>' +
+            '<div class="faq-accordion-a" style="display: none;"><span class="faq-a-icon">A</span><div class="faq-a-text">' + content + '</div></div>';
+        listEl.appendChild(li);
+    });
+}
+
+function bindFaqSection() {
+    var wrap = document.getElementById('faqAccordionWrap');
+    if (!wrap) return;
+    document.querySelectorAll('.faq-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('.faq-tab').forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            renderFaqList();
+        });
+    });
+    var searchInput = document.getElementById('faqSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function () { renderFaqList(); });
+        searchInput.addEventListener('keyup', function (e) { if (e.key === 'Enter') renderFaqList(); });
+    }
+    wrap.addEventListener('click', function (e) {
+        var qEl = e.target && e.target.closest ? e.target.closest('.faq-accordion-q') : null;
+        if (!qEl) return;
+        var item = qEl.closest('.faq-accordion-item');
+        if (!item) return;
+        var aEl = item.querySelector('.faq-accordion-a');
+        if (!aEl) return;
+        var isOpen = aEl.style.display !== 'none';
+        aEl.style.display = isOpen ? 'none' : 'block';
+    });
+    if (!window.mypageApi || typeof window.mypageApi.getBoardPosts !== 'function') {
+        document.getElementById('faqAccordionList').innerHTML = '';
+        document.getElementById('faqEmpty').style.display = 'block';
+        return;
+    }
+    window.mypageApi.getBoardPosts('qna', { limit: 200 }).then(function (list) {
+        _faqListCache = list || [];
+        renderFaqList();
+    }).catch(function () {
+        _faqListCache = [];
+        renderFaqList();
+    });
+}
+
 // 섹션 전환: orders, profile 표시/숨김
 function bindSectionNav() {
     document.querySelectorAll('.mypage-nav a[onclick*="showSection"]').forEach(function (link) {
@@ -722,7 +805,7 @@ function showSection(sectionName, clickedLink) {
         clickedLink = document.querySelector('.mypage-nav a[data-section="' + sectionName + '"]');
     }
     const sections = document.querySelectorAll('.mypage-section');
-    const soloSections = ['profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw'];
+    const soloSections = ['profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw', 'faq'];
     const isSolo = soloSections.indexOf(sectionName) !== -1;
     sections.forEach(function (sec) {
         const dataSection = sec.getAttribute('data-section');
@@ -747,6 +830,7 @@ function showSection(sectionName, clickedLink) {
         if (formWrap) formWrap.style.display = 'none';
         if (addWrap) addWrap.style.display = 'block';
     }
+    if (sectionName === 'faq') renderFaqList();
     const navLinks = document.querySelectorAll('.nav-group a');
     navLinks.forEach(function (link) { link.classList.remove('active'); });
     if (clickedLink) clickedLink.classList.add('active');
@@ -762,7 +846,7 @@ function showSection(sectionName, clickedLink) {
             } catch (e) { /* ignore */ }
         }
     }
-    const implemented = ['orders', 'profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw'];
+    const implemented = ['orders', 'profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw', 'faq'];
     if (implemented.indexOf(sectionName) === -1) {
         alert(sectionName + ' 기능은 추후 구현 예정입니다.');
     }

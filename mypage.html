@@ -15,7 +15,7 @@
         <div class="container">
             <ul class="top-menu">
                 <li><a href="#"><i class="fas fa-shopping-bag"></i> 주문내역</a></li>
-                <li><a href="#"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                <li><a href="faq.html"><i class="fas fa-question-circle"></i> FAQ</a></li>
                 <li><a href="#"><i class="fas fa-comment"></i> 1:1문의</a></li>
                 <li><a href="#"><i class="fas fa-star"></i> 사용후기</a></li>
                 <li><a href="#"><i class="fas fa-keyboard"></i> 상품문의</a></li>
@@ -135,7 +135,7 @@
                             <ul>
                                 <li><a href="#" data-section="notice" onclick="showSection('notice', this); return false;">공지사항 <span class="nav-badge implemented">운영</span></a></li>
                                 <li><a href="#" data-section="events" onclick="showSection('events', this); return false;">이벤트 <span class="nav-badge implemented">운영</span></a></li>
-                                <li><a href="#" onclick="showSection('faq'); return false;">자주묻는질문 <span class="nav-badge pending">준비 중</span></a></li>
+                                <li><a href="#" data-section="faq" onclick="showSection('faq', this); return false;">자주묻는질문 <span class="nav-badge implemented">운영</span></a></li>
                             </ul>
                         </div>
                     </nav>
@@ -450,6 +450,26 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- 자주 묻는 질문 (Q&A) -->
+                    <div class="content-section mypage-section" data-section="faq" id="mypageSectionFaq" style="display: none;">
+                        <div class="section-title">
+                            <h3>자주 묻는 질문</h3>
+                        </div>
+                        <div class="faq-search-wrap" style="margin-bottom: 16px;">
+                            <input type="text" id="faqSearchInput" class="form-control" placeholder="검색어를 입력해주세요" style="max-width: 400px;">
+                        </div>
+                        <div class="faq-tabs">
+                            <button type="button" class="faq-tab active" data-faq-category="상품구매">상품구매</button>
+                            <button type="button" class="faq-tab" data-faq-category="쇼핑지원금">쇼핑지원금</button>
+                            <button type="button" class="faq-tab" data-faq-category="배송 관련">배송 관련</button>
+                            <button type="button" class="faq-tab" data-faq-category="회원가입">회원가입</button>
+                        </div>
+                        <div class="faq-accordion-wrap" id="faqAccordionWrap">
+                            <ul class="faq-accordion-list" id="faqAccordionList"></ul>
+                            <p class="faq-empty" id="faqEmpty" style="display: none;">등록된 질문이 없습니다.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -494,7 +514,7 @@
                     <ul>
                         <li><a href="#">공지사항</a></li>
                         <li><a href="#">이벤트</a></li>
-                        <li><a href="#">FAQ</a></li>
+                        <li><a href="faq.html">FAQ</a></li>
                         <li><a href="#">1:1문의</a></li>
                     </ul>
                 </div>

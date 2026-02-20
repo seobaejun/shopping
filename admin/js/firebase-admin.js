@@ -615,6 +615,7 @@ const boardService = {
                 viewCount: 0,
                 status: data.status || 'published',
                 isNotice: data.isNotice === true,
+                faqCategory: data.faqCategory || '',
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });

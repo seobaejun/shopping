@@ -1992,6 +1992,8 @@ function openBoardPostModal(editId, boardType) {
     var statusSelect = document.getElementById('boardPostStatus');
     var noticeWrap = document.getElementById('boardPostNoticeWrap');
     var noticeCheck = document.getElementById('boardPostIsNotice');
+    var faqCategoryWrap = document.getElementById('boardPostFaqCategoryWrap');
+    var faqCategorySelect = document.getElementById('boardPostFaqCategory');
     if (!modal || !titleEl || !idEl || !titleInput) return;
     idEl.value = editId || '';
     if (editId && window._boardPostsList) {
@@ -2003,6 +2005,7 @@ function openBoardPostModal(editId, boardType) {
             contentInput.value = post.content || '';
             statusSelect.value = post.status === 'draft' ? 'draft' : 'published';
             noticeCheck.checked = post.isNotice === true;
+            if (faqCategorySelect) faqCategorySelect.value = post.faqCategory || '상품구매';
         } else {
             titleEl.textContent = '글 수정';
             titleInput.value = '';
@@ -2010,6 +2013,7 @@ function openBoardPostModal(editId, boardType) {
             contentInput.value = '';
             statusSelect.value = 'published';
             noticeCheck.checked = false;
+            if (faqCategorySelect) faqCategorySelect.value = '상품구매';
         }
     } else {
         titleEl.textContent = '글 작성';
@@ -2018,8 +2022,10 @@ function openBoardPostModal(editId, boardType) {
         contentInput.value = '';
         statusSelect.value = 'published';
         noticeCheck.checked = false;
+        if (faqCategorySelect) faqCategorySelect.value = '상품구매';
     }
     noticeWrap.style.display = (boardType === 'notice') ? 'block' : 'none';
+    if (faqCategoryWrap) faqCategoryWrap.style.display = (boardType === 'qna') ? 'block' : 'none';
     modal.style.display = 'flex';
 }
 
@@ -2042,26 +2048,32 @@ async function saveBoardPost() {
         alert('제목을 입력해 주세요.');
         return;
     }
+    var faqCategorySelect = document.getElementById('boardPostFaqCategory');
+    var faqCategory = (boardType === 'qna' && faqCategorySelect) ? (faqCategorySelect.value || '상품구매') : '';
     try {
         await window.firebaseAdmin.getInitPromise();
         if (postId) {
-            await window.firebaseAdmin.boardService.updatePost(postId, {
+            var updateData = {
                 title: title,
                 authorName: (authorInput && authorInput.value) ? authorInput.value.trim() : '관리자',
                 content: (contentInput && contentInput.value) ? contentInput.value : '',
                 status: (statusSelect && statusSelect.value) || 'published',
                 isNotice: (noticeCheck && noticeCheck.checked) || false
-            });
+            };
+            if (boardType === 'qna') updateData.faqCategory = faqCategory;
+            await window.firebaseAdmin.boardService.updatePost(postId, updateData);
             alert('수정되었습니다.');
         } else {
-            await window.firebaseAdmin.boardService.addPost({
+            var addData = {
                 boardType: boardType,
                 title: title,
                 authorName: (authorInput && authorInput.value) ? authorInput.value.trim() : '관리자',
                 content: (contentInput && contentInput.value) ? contentInput.value : '',
                 status: (statusSelect && statusSelect.value) || 'published',
                 isNotice: (noticeCheck && noticeCheck.checked) || false
-            });
+            };
+            if (boardType === 'qna') addData.faqCategory = faqCategory;
+            await window.firebaseAdmin.boardService.addPost(addData);
             alert('등록되었습니다.');
         }
         closeBoardPostModal();

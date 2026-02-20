@@ -2397,6 +2397,15 @@ body {
     overflow-y: auto;
 }
 
+/* 게시글 작성 모달의 입력 필드 간격 */
+#boardPostModal .modal-body .form-group {
+    margin-bottom: 20px;
+}
+
+#boardPostModal .modal-body .form-group:last-child {
+    margin-bottom: 0;
+}
+
 .modal-footer {
     padding: 15px 20px;
     border-top: 1px solid #dee2e6;
