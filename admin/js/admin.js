@@ -1899,7 +1899,7 @@ function navigateToPage(pageId) {
 // ============================================
 // 게시판 관리
 // ============================================
-const BOARD_TYPE_LABELS = { notice: '공지사항', event: '이벤트', qna: 'Q&A', review: '상품후기' };
+const BOARD_TYPE_LABELS = { notice: '공지사항', event: '이벤트', qna: 'Q&A', review: '상품후기', inquiry: '1:1문의', 'product-inquiry': '상품문의' };
 
 function getCurrentBoardType() {
     var active = document.querySelector('#board-manage .board-tab.active');
@@ -1944,6 +1944,8 @@ function formatBoardDate(createdAt) {
 }
 
 function renderBoardTable(list, boardType) {
+    // 상태 변환 로직 제거 - 실제 status 값('answered', 'pending')을 유지해야 함
+    // 표시만 문자열로 변환하여 뱃지에 표시
     var tbody = document.getElementById('boardTableBody');
     var infoText = document.getElementById('boardInfoText');
     if (!tbody) return;
@@ -1959,15 +1961,33 @@ function renderBoardTable(list, boardType) {
         var author = (p.authorName || '-').replace(/</g, '&lt;');
         var date = formatBoardDate(p.createdAt);
         var viewCount = (p.viewCount != null ? p.viewCount : 0).toLocaleString();
-        var statusBadge = (p.status === 'draft') ? '<span class="badge badge-warning">임시저장</span>' : '<span class="badge badge-success">게시중</span>';
+        var statusBadge = '';
+        if (boardType === 'inquiry' || boardType === 'product-inquiry') {
+            if (p.status === 'answered') {
+                statusBadge = '<span class="badge badge-success">답변완료</span>';
+            } else {
+                statusBadge = '<span class="badge badge-warning">답변대기</span>';
+            }
+        } else {
+            statusBadge = (p.status === 'draft') ? '<span class="badge badge-warning">임시저장</span>' : '<span class="badge badge-success">게시중</span>';
+        }
+        
+        // 상품문의일 때 상품명 표시
+        var titleCell = title;
+        if (boardType === 'product-inquiry' && p.productName) {
+            titleCell = '<span style="color: #666; font-size: 12px; margin-right: 8px;">[' + p.productName + ']</span>' + title;
+        }
+        
         html += '<tr data-post-id="' + (p.id || '') + '">' +
             '<td>' + numCell + '</td>' +
-            '<td style="text-align: left; padding-left: 15px;">' + title + '</td>' +
+            '<td style="text-align: left; padding-left: 15px;">' + titleCell + '</td>' +
             '<td>' + author + '</td>' +
             '<td>' + date + '</td>' +
             '<td>' + viewCount + '</td>' +
             '<td>' + statusBadge + '</td>' +
-            '<td><button type="button" class="btn btn-sm btn-primary btn-board-edit">수정</button> <button type="button" class="btn btn-sm btn-secondary btn-board-delete">삭제</button></td>' +
+            '<td style="white-space: nowrap;"><button type="button" class="btn btn-sm btn-primary btn-board-edit" style="margin-right: 5px;">' + 
+            ((boardType === 'inquiry' || boardType === 'product-inquiry') ? '답변하기' : '수정') + 
+            '</button><button type="button" class="btn btn-sm btn-secondary btn-board-delete">삭제</button></td>' +
             '</tr>';
     });
     tbody.innerHTML = html;
@@ -1994,26 +2014,90 @@ function openBoardPostModal(editId, boardType) {
     var noticeCheck = document.getElementById('boardPostIsNotice');
     var faqCategoryWrap = document.getElementById('boardPostFaqCategoryWrap');
     var faqCategorySelect = document.getElementById('boardPostFaqCategory');
+    var answerWrap = document.getElementById('boardPostAnswerWrap');
+    var answerInput = document.getElementById('boardPostAnswer');
     if (!modal || !titleEl || !idEl || !titleInput) return;
     idEl.value = editId || '';
     if (editId && window._boardPostsList) {
         var post = window._boardPostsList.find(function (p) { return p.id === editId; });
         if (post) {
-            titleEl.textContent = '글 수정';
-            titleInput.value = post.title || '';
-            authorInput.value = post.authorName || '관리자';
-            contentInput.value = post.content || '';
+            titleEl.textContent = (boardType === 'inquiry' || boardType === 'product-inquiry') ? '답변하기' : '글 수정';
+            
+            // 1:1문의나 상품문의일 때는 제목과 내용을 읽기 전용으로 설정
+            var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry');
+            if (isInquiry) {
+                titleInput.value = post.title || '';
+                titleInput.readOnly = true;
+                titleInput.style.backgroundColor = '#f5f5f5';
+                titleInput.style.cursor = 'not-allowed';
+                
+                if (contentInput) {
+                    contentInput.value = post.content || '';
+                    contentInput.readOnly = true;
+                    contentInput.style.backgroundColor = '#f5f5f5';
+                    contentInput.style.cursor = 'not-allowed';
+                }
+                
+                if (authorInput) {
+                    authorInput.value = post.authorName || '';
+                    authorInput.readOnly = true;
+                    authorInput.style.backgroundColor = '#f5f5f5';
+                    authorInput.style.cursor = 'not-allowed';
+                }
+                
+                // 상태 선택 필드 숨기기
+                if (statusSelect && statusSelect.parentElement) {
+                    statusSelect.parentElement.style.display = 'none';
+                }
+            } else {
+                titleInput.value = post.title || '';
+                titleInput.readOnly = false;
+                titleInput.style.backgroundColor = '';
+                titleInput.style.cursor = '';
+                
+                if (contentInput) {
+                    contentInput.value = post.content || '';
+                    contentInput.readOnly = false;
+                    contentInput.style.backgroundColor = '';
+                    contentInput.style.cursor = '';
+                }
+                
+                if (authorInput) {
+                    authorInput.value = post.authorName || '관리자';
+                    authorInput.readOnly = false;
+                    authorInput.style.backgroundColor = '';
+                    authorInput.style.cursor = '';
+                }
+                
+                // 상태 선택 필드 표시
+                if (statusSelect && statusSelect.parentElement) {
+                    statusSelect.parentElement.style.display = '';
+                }
+            }
+            
             statusSelect.value = post.status === 'draft' ? 'draft' : 'published';
             noticeCheck.checked = post.isNotice === true;
             if (faqCategorySelect) faqCategorySelect.value = post.faqCategory || '상품구매';
+            if (answerInput) answerInput.value = post.answer || '';
+            
+            // 상품문의일 때 상품 정보 표시
+            if (boardType === 'product-inquiry') {
+                var productInfoWrap = document.getElementById('boardPostProductInfoWrap');
+                var productNameEl = document.getElementById('boardPostProductName');
+                var productIdEl = document.getElementById('boardPostProductId');
+                if (productInfoWrap) productInfoWrap.style.display = 'block';
+                if (productNameEl) productNameEl.textContent = post.productName || '-';
+                if (productIdEl) productIdEl.textContent = post.productId || '-';
+            }
         } else {
-            titleEl.textContent = '글 수정';
+            titleEl.textContent = (boardType === 'inquiry' || boardType === 'product-inquiry') ? '답변하기' : '글 수정';
             titleInput.value = '';
             authorInput.value = '관리자';
             contentInput.value = '';
             statusSelect.value = 'published';
             noticeCheck.checked = false;
             if (faqCategorySelect) faqCategorySelect.value = '상품구매';
+            if (answerInput) answerInput.value = '';
         }
     } else {
         titleEl.textContent = '글 작성';
@@ -2023,15 +2107,44 @@ function openBoardPostModal(editId, boardType) {
         statusSelect.value = 'published';
         noticeCheck.checked = false;
         if (faqCategorySelect) faqCategorySelect.value = '상품구매';
+        if (answerInput) answerInput.value = '';
     }
+    var productInfoWrap = document.getElementById('boardPostProductInfoWrap');
     noticeWrap.style.display = (boardType === 'notice') ? 'block' : 'none';
     if (faqCategoryWrap) faqCategoryWrap.style.display = (boardType === 'qna') ? 'block' : 'none';
+    if (answerWrap) answerWrap.style.display = (boardType === 'inquiry' || boardType === 'product-inquiry') ? 'block' : 'none';
+    if (productInfoWrap) productInfoWrap.style.display = (boardType === 'product-inquiry') ? 'block' : 'none';
     modal.style.display = 'flex';
 }
 
 function closeBoardPostModal() {
     var modal = document.getElementById('boardPostModal');
     if (modal) modal.style.display = 'none';
+    
+    // 필드 초기화 및 읽기 전용 해제
+    var titleInput = document.getElementById('boardPostTitle');
+    var contentInput = document.getElementById('boardPostContent');
+    var authorInput = document.getElementById('boardPostAuthor');
+    var statusSelect = document.getElementById('boardPostStatus');
+    
+    if (titleInput) {
+        titleInput.readOnly = false;
+        titleInput.style.backgroundColor = '';
+        titleInput.style.cursor = '';
+    }
+    if (contentInput) {
+        contentInput.readOnly = false;
+        contentInput.style.backgroundColor = '';
+        contentInput.style.cursor = '';
+    }
+    if (authorInput) {
+        authorInput.readOnly = false;
+        authorInput.style.backgroundColor = '';
+        authorInput.style.cursor = '';
+    }
+    if (statusSelect && statusSelect.parentElement) {
+        statusSelect.parentElement.style.display = '';
+    }
 }
 
 async function saveBoardPost() {
@@ -2043,8 +2156,27 @@ async function saveBoardPost() {
     var noticeCheck = document.getElementById('boardPostIsNotice');
     var postId = (idEl && idEl.value) || '';
     var boardType = getCurrentBoardType();
+    var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry');
     var title = (titleInput && titleInput.value) ? titleInput.value.trim() : '';
-    if (!title) {
+    
+    // 1:1문의나 상품문의가 아닐 때만 제목 필수 체크
+    if (!isInquiry && !title) {
+        alert('제목을 입력해 주세요.');
+        return;
+    }
+    
+    // 1:1문의나 상품문의일 때 답변 필수 체크
+    if (isInquiry && postId) {
+        var answerInput = document.getElementById('boardPostAnswer');
+        var answer = answerInput ? answerInput.value.trim() : '';
+        if (!answer) {
+            alert('답변을 입력해 주세요.');
+            return;
+        }
+    }
+    
+    // 1:1문의나 상품문의가 아닐 때만 제목 필수 체크
+    if (!isInquiry && !title) {
         alert('제목을 입력해 주세요.');
         return;
     }
@@ -2053,16 +2185,34 @@ async function saveBoardPost() {
     try {
         await window.firebaseAdmin.getInitPromise();
         if (postId) {
-            var updateData = {
-                title: title,
-                authorName: (authorInput && authorInput.value) ? authorInput.value.trim() : '관리자',
-                content: (contentInput && contentInput.value) ? contentInput.value : '',
-                status: (statusSelect && statusSelect.value) || 'published',
-                isNotice: (noticeCheck && noticeCheck.checked) || false
-            };
-            if (boardType === 'qna') updateData.faqCategory = faqCategory;
+            var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry');
+            var updateData = {};
+            
+            // 1:1문의나 상품문의일 때는 답변만 업데이트하고, 제목/내용은 원본 데이터 유지
+            if (isInquiry) {
+                var answerInput = document.getElementById('boardPostAnswer');
+                var answer = answerInput ? answerInput.value.trim() : '';
+                updateData.answer = answer;
+                // 답변이 있으면 'answered', 없으면 'pending'으로 설정
+                updateData.status = answer ? 'answered' : 'pending';
+                console.log('1:1문의/상품문의 상태 업데이트:', {
+                    boardType: boardType,
+                    postId: postId,
+                    answer: answer,
+                    status: updateData.status
+                });
+                // 제목과 내용은 업데이트하지 않음 (고객이 작성한 원본 유지)
+            } else {
+                updateData.title = title;
+                updateData.authorName = (authorInput && authorInput.value) ? authorInput.value.trim() : '관리자';
+                updateData.content = (contentInput && contentInput.value) ? contentInput.value : '';
+                updateData.status = (statusSelect && statusSelect.value) || 'published';
+                updateData.isNotice = (noticeCheck && noticeCheck.checked) || false;
+                if (boardType === 'qna') updateData.faqCategory = faqCategory;
+            }
+            
             await window.firebaseAdmin.boardService.updatePost(postId, updateData);
-            alert('수정되었습니다.');
+            alert(isInquiry ? '답변이 저장되었습니다.' : '수정되었습니다.');
         } else {
             var addData = {
                 boardType: boardType,
@@ -2073,6 +2223,12 @@ async function saveBoardPost() {
                 isNotice: (noticeCheck && noticeCheck.checked) || false
             };
             if (boardType === 'qna') addData.faqCategory = faqCategory;
+            if (boardType === 'inquiry' || boardType === 'product-inquiry') {
+                var answerInput = document.getElementById('boardPostAnswer');
+                var answer = answerInput ? answerInput.value.trim() : '';
+                addData.answer = answer;
+                addData.status = answer ? 'answered' : 'pending';
+            }
             await window.firebaseAdmin.boardService.addPost(addData);
             alert('등록되었습니다.');
         }

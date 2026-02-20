@@ -526,6 +526,8 @@
                     <button type="button" class="board-tab" data-board-type="event">이벤트</button>
                     <button type="button" class="board-tab" data-board-type="qna">Q&A</button>
                     <button type="button" class="board-tab" data-board-type="review">상품후기</button>
+                    <button type="button" class="board-tab" data-board-type="inquiry">1:1문의</button>
+                    <button type="button" class="board-tab" data-board-type="product-inquiry">상품문의</button>
                 </div>
 
                 <!-- 검색 패널 -->
@@ -2381,52 +2383,86 @@
 
     <!-- 게시글 작성/수정 모달 -->
     <div id="boardPostModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 700px;">
-            <div class="modal-header">
-                <h3 id="boardPostModalTitle">글 작성</h3>
+        <div class="modal-content inquiry-modal-content" style="max-width: 800px; width: 90%;">
+            <div class="modal-header inquiry-modal-header">
+                <div class="inquiry-modal-title-wrap">
+                    <i class="fas fa-edit" style="color: #4A5FC1; margin-right: 10px; font-size: 20px;"></i>
+                    <h3 id="boardPostModalTitle">글 작성</h3>
+                </div>
                 <button type="button" class="modal-close" id="boardPostModalClose">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body inquiry-modal-body">
                 <input type="hidden" id="boardPostId" value="">
-                <div class="form-group">
-                    <label>제목</label>
-                    <input type="text" class="form-control" id="boardPostTitle" placeholder="제목">
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">제목</span>
+                    </label>
+                    <input type="text" class="inquiry-input" id="boardPostTitle" placeholder="제목을 입력해주세요">
                 </div>
-                <div class="form-group">
-                    <label>작성자</label>
-                    <input type="text" class="form-control" id="boardPostAuthor" placeholder="작성자" value="관리자">
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">작성자</span>
+                    </label>
+                    <input type="text" class="inquiry-input" id="boardPostAuthor" placeholder="작성자" value="관리자">
                 </div>
-                <div class="form-group" id="boardPostNoticeWrap" style="display: none;">
-                    <label><input type="checkbox" id="boardPostIsNotice"> 공지로 고정</label>
+                <div class="inquiry-form-group" id="boardPostNoticeWrap" style="display: none;">
+                    <label class="inquiry-label">
+                        <input type="checkbox" id="boardPostIsNotice" style="margin-right: 8px;"> 공지로 고정
+                    </label>
                 </div>
-                <div class="form-group" id="boardPostFaqCategoryWrap" style="display: none;">
-                    <label>카테고리</label>
-                    <select class="form-control" id="boardPostFaqCategory">
-                        <option value="상품구매">상품구매</option>
-                        <option value="쇼핑지원금">쇼핑지원금</option>
-                        <option value="배송 관련">배송 관련</option>
-                        <option value="회원가입">회원가입</option>
-                    </select>
+                <div class="inquiry-form-group" id="boardPostFaqCategoryWrap" style="display: none;">
+                    <label class="inquiry-label">
+                        <span class="label-text">카테고리</span>
+                    </label>
+                    <div class="inquiry-select-wrapper">
+                        <select class="inquiry-select" id="boardPostFaqCategory">
+                            <option value="상품구매">상품구매</option>
+                            <option value="쇼핑지원금">쇼핑지원금</option>
+                            <option value="배송 관련">배송 관련</option>
+                            <option value="회원가입">회원가입</option>
+                        </select>
+                        <i class="fas fa-chevron-down inquiry-select-icon"></i>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>내용</label>
-                    <textarea class="form-control" id="boardPostContent" rows="8" placeholder="내용"></textarea>
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">내용</span>
+                    </label>
+                    <textarea class="inquiry-textarea" id="boardPostContent" rows="8" placeholder="내용을 입력해주세요"></textarea>
                 </div>
-                <div class="form-group">
-                    <label>상태</label>
-                    <select class="form-control" id="boardPostStatus">
-                        <option value="published">게시중</option>
-                        <option value="draft">임시저장</option>
-                    </select>
+                <div class="inquiry-form-group" id="boardPostStatusWrap">
+                    <label class="inquiry-label">
+                        <span class="label-text">상태</span>
+                    </label>
+                    <div class="inquiry-select-wrapper">
+                        <select class="inquiry-select" id="boardPostStatus">
+                            <option value="published">게시중</option>
+                            <option value="draft">임시저장</option>
+                        </select>
+                        <i class="fas fa-chevron-down inquiry-select-icon"></i>
+                    </div>
+                </div>
+                <div class="inquiry-form-group" id="boardPostAnswerWrap" style="display: none;">
+                    <label class="inquiry-label">
+                        <span class="label-text">관리자 답변</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <textarea class="inquiry-textarea" id="boardPostAnswer" rows="10" placeholder="답변 내용을 자세히 입력해주세요"></textarea>
+                    <small style="color: #666; margin-top: 5px; display: block; font-size: 13px;">답변을 입력하면 자동으로 '답변완료' 상태로 변경됩니다.</small>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="boardPostModalCancel">취소</button>
-                <button type="button" class="btn btn-primary" id="boardPostModalSave">저장</button>
+            <div class="modal-footer inquiry-modal-footer">
+                <button type="button" class="btn-inquiry-cancel" id="boardPostModalCancel">
+                    <i class="fas fa-times"></i> 취소
+                </button>
+                <button type="button" class="btn-inquiry-submit" id="boardPostModalSave">
+                    <i class="fas fa-save"></i> 저장
+                </button>
             </div>
         </div>
     </div>
     
 </body>
 </html>
+
 

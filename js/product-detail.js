@@ -789,7 +789,7 @@ function initWriteButtons() {
             if (parentId === 'review') {
                 alert('사용후기 작성 페이지로 이동합니다.');
             } else if (parentId === 'qna') {
-                alert('상품문의 작성 페이지로 이동합니다.');
+                openProductInquiryModal();
             }
         });
     });
@@ -1252,6 +1252,7 @@ async function initProductDetail() {
     initBuyNowDeliveryModal();
     initWishlistActions();
     initCartModal();
+    initProductInquiry();
     initTabs();
     initZoom();
     initShareButtons();
@@ -1286,4 +1287,166 @@ if (document.readyState === 'loading') {
         }
     }, 100);
     initProductDetail();
+}
+
+// 상품문의 기능
+function initProductInquiry() {
+    const writeBtn = document.getElementById('btnProductInquiryWrite');
+    const modal = document.getElementById('productInquiryModal');
+    const closeBtn = document.getElementById('productInquiryModalClose');
+    const cancelBtn = document.getElementById('productInquiryModalCancel');
+    const saveBtn = document.getElementById('productInquiryModalSave');
+    const contentInput = document.getElementById('productInquiryContent');
+    const counterEl = document.getElementById('productInquiryContentCounter');
+
+    if (writeBtn) {
+        writeBtn.addEventListener('click', function() {
+            openProductInquiryModal();
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            closeProductInquiryModal();
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            closeProductInquiryModal();
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            saveProductInquiry();
+        });
+    }
+
+    // 텍스트 카운터
+    if (contentInput && counterEl) {
+        contentInput.addEventListener('input', function() {
+            const length = contentInput.value.length;
+            counterEl.textContent = length;
+            if (length > 1000) {
+                counterEl.style.color = '#e53e3e';
+            } else {
+                counterEl.style.color = '#667eea';
+            }
+        });
+    }
+
+    // 모달 외부 클릭 시 닫기
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeProductInquiryModal();
+            }
+        });
+    }
+}
+
+// 상품문의 모달 열기
+function openProductInquiryModal() {
+    const modal = document.getElementById('productInquiryModal');
+    const titleInput = document.getElementById('productInquiryTitle');
+    const contentInput = document.getElementById('productInquiryContent');
+    const counterEl = document.getElementById('productInquiryContentCounter');
+
+    if (!modal || !titleInput || !contentInput) return;
+
+    // 로그인 확인
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+        alert('로그인이 필요합니다.');
+        window.location.href = 'login.html';
+        return;
+    }
+
+    titleInput.value = '';
+    contentInput.value = '';
+    if (counterEl) counterEl.textContent = '0';
+    modal.style.display = 'flex';
+}
+
+// 상품문의 모달 닫기
+function closeProductInquiryModal() {
+    const modal = document.getElementById('productInquiryModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// 상품문의 저장
+function saveProductInquiry() {
+    const titleInput = document.getElementById('productInquiryTitle');
+    const contentInput = document.getElementById('productInquiryContent');
+
+    if (!titleInput || !contentInput) return;
+
+    const title = titleInput.value.trim();
+    const content = contentInput.value.trim();
+
+    if (!title) {
+        alert('제목을 입력해주세요.');
+        return;
+    }
+
+    if (!content) {
+        alert('내용을 입력해주세요.');
+        return;
+    }
+
+    if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
+        alert('상품 정보를 불러올 수 없습니다.');
+        return;
+    }
+
+    const user = (function() {
+        if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+        try {
+            const raw = localStorage.getItem('loginUser');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+
+    if (!user || !user.userId) {
+        alert('로그인이 필요합니다.');
+        window.location.href = 'login.html';
+        return;
+    }
+
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
+        alert('Firebase를 사용할 수 없습니다.');
+        return;
+    }
+
+    const db = firebase.firestore();
+    const data = {
+        boardType: 'product-inquiry',
+        title: title,
+        content: content,
+        productId: PRODUCT_INFO.id,
+        productName: PRODUCT_INFO.name || '',
+        productImage: PRODUCT_INFO.image || '',
+        authorName: user.name || user.userId,
+        authorId: user.userId,
+        status: 'pending',
+        viewCount: 0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    db.collection('posts').add(data)
+        .then(function(docRef) {
+            alert('상품문의가 등록되었습니다.');
+            closeProductInquiryModal();
+            // 마이페이지로 이동
+            if (confirm('나의 상품문의 페이지로 이동하시겠습니까?')) {
+                window.location.href = 'mypage.html?section=product-inquiry';
+            }
+        })
+        .catch(function(error) {
+            console.error('상품문의 저장 오류:', error);
+            alert('상품문의 등록에 실패했습니다.');
+        });
 }

@@ -116,9 +116,9 @@
                         <div class="nav-group">
                             <h4>활동정보</h4>
                             <ul>
-                                <li><a href="#" onclick="showSection('reviews'); return false;">나의 1:1문의 <span class="nav-badge pending">준비 중</span></a></li>
+                                <li><a href="#" data-section="inquiry" onclick="showSection('inquiry', this); return false;">나의 1:1문의 <span class="nav-badge implemented">운영</span></a></li>
                                 <li><a href="#" onclick="showSection('qna'); return false;">나의 상품후기 <span class="nav-badge pending">준비 중</span></a></li>
-                                <li><a href="#" onclick="showSection('inquiry'); return false;">나의 상품문의 <span class="nav-badge pending">준비 중</span></a></li>
+                                <li><a href="#" data-section="product-inquiry" onclick="showSection('product-inquiry', this); return false;">나의 상품문의 <span class="nav-badge implemented">운영</span></a></li>
                             </ul>
                         </div>
                         <div class="nav-group">
@@ -505,10 +505,154 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- 나의 1:1문의 -->
+                    <div class="content-section mypage-section" data-section="inquiry" id="mypageSectionInquiry" style="display: none;">
+                        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>나의 1:1문의</h3>
+                            <button type="button" class="btn btn-primary" id="btnInquiryWrite" style="padding: 10px 20px;">
+                                <i class="fas fa-plus"></i> 문의하기
+                            </button>
+                        </div>
+                        
+                        <div class="inquiry-list" id="inquiryList">
+                            <!-- JavaScript로 동적 생성 -->
+                        </div>
+                        <div class="inquiry-empty" id="inquiryEmpty" style="display: none; text-align: center; padding: 60px 20px;">
+                            <i class="fas fa-comment" style="font-size: 48px; color: #ddd; margin-bottom: 20px;"></i>
+                            <p style="color: #999; font-size: 16px;">등록된 문의가 없습니다.</p>
+                        </div>
+                    </div>
+
+                    <!-- 나의 상품문의 -->
+                    <div class="content-section mypage-section" data-section="product-inquiry" id="mypageSectionProductInquiry" style="display: none;">
+                        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>나의 상품문의</h3>
+                            <button type="button" class="btn btn-primary" id="btnProductInquiryWriteMypage" style="padding: 10px 20px;">
+                                <i class="fas fa-plus"></i> 상품문의하기
+                            </button>
+                        </div>
+                        
+                        <div class="product-inquiry-list" id="productInquiryList">
+                            <!-- JavaScript로 동적 생성 -->
+                        </div>
+                        <div class="product-inquiry-empty" id="productInquiryEmpty" style="display: none; text-align: center; padding: 60px 20px;">
+                            <i class="fas fa-shopping-bag" style="font-size: 48px; color: #ddd; margin-bottom: 20px;"></i>
+                            <p style="color: #999; font-size: 16px;">등록된 상품문의가 없습니다.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <!-- 상품문의 작성 모달 (마이페이지용) -->
+    <div id="productInquiryModalMypage" class="modal" style="display: none;">
+        <div class="modal-content inquiry-modal-content">
+            <div class="modal-header inquiry-modal-header">
+                <div class="inquiry-modal-title-wrap">
+                    <i class="fas fa-shopping-bag" style="color: #4A5FC1; margin-right: 10px; font-size: 20px;"></i>
+                    <h3>상품문의 작성</h3>
+                </div>
+                <button type="button" class="modal-close" id="productInquiryModalMypageClose">&times;</button>
+            </div>
+            <div class="modal-body inquiry-modal-body">
+                <input type="hidden" id="productInquiryMypageId" value="">
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">상품명</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <input type="text" class="inquiry-input" id="productInquiryMypageProductName" placeholder="문의하실 상품명을 입력해주세요" required>
+                    <small style="color: #666; margin-top: 5px; display: block; font-size: 13px;">상품 상세 페이지에서 작성하면 자동으로 입력됩니다.</small>
+                </div>
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">제목</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <input type="text" class="inquiry-input" id="productInquiryMypageTitle" placeholder="문의하실 내용의 제목을 입력해주세요" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">문의 내용</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <textarea class="inquiry-textarea" id="productInquiryMypageContent" rows="8" placeholder="상품에 대한 문의 내용을 자세히 입력해주세요.&#10;예: 사이즈, 색상, 재질, 배송 등" required></textarea>
+                    <div class="textarea-counter">
+                        <span id="productInquiryMypageContentCounter">0</span> / 1000자
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer inquiry-modal-footer">
+                <button type="button" class="btn-inquiry-cancel" id="productInquiryModalMypageCancel">
+                    <i class="fas fa-times"></i> 취소
+                </button>
+                <button type="button" class="btn-inquiry-submit" id="productInquiryModalMypageSave">
+                    <i class="fas fa-paper-plane"></i> 문의하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1:1문의 작성 모달 -->
+    <div id="inquiryModal" class="modal" style="display: none;">
+        <div class="modal-content inquiry-modal-content">
+            <div class="modal-header inquiry-modal-header">
+                <div class="inquiry-modal-title-wrap">
+                    <i class="fas fa-comment-dots" style="color: #4A5FC1; margin-right: 10px; font-size: 20px;"></i>
+                    <h3 id="inquiryModalTitle">1:1문의 작성</h3>
+                </div>
+                <button type="button" class="modal-close" id="inquiryModalClose">&times;</button>
+            </div>
+            <div class="modal-body inquiry-modal-body">
+                <input type="hidden" id="inquiryId" value="">
+                
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">제목</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <input type="text" class="inquiry-input" id="inquiryTitle" placeholder="문의하실 내용의 제목을 입력해주세요" required>
+                </div>
+                
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">카테고리</span>
+                    </label>
+                    <div class="inquiry-select-wrapper">
+                    <select class="inquiry-select" id="inquiryCategory">
+                        <option value="주문/결제">주문/결제</option>
+                        <option value="배송">배송</option>
+                        <option value="반품/교환/환불">반품/교환/환불</option>
+                        <option value="회원정보">회원정보</option>
+                        <option value="기타">기타</option>
+                    </select>
+                        <i class="fas fa-chevron-down inquiry-select-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">문의 내용</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <textarea class="inquiry-textarea" id="inquiryContent" rows="8" placeholder="문의하실 내용을 자세히 입력해주세요.&#10;빠른 답변을 위해 주문번호, 상품명 등을 함께 기재해주시면 도움이 됩니다." required></textarea>
+                    <div class="textarea-counter">
+                        <span id="inquiryContentCounter">0</span> / 1000자
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer inquiry-modal-footer">
+                <button type="button" class="btn-inquiry-cancel" id="inquiryModalCancel">
+                    <i class="fas fa-times"></i> 취소
+                </button>
+                <button type="button" class="btn-inquiry-submit" id="inquiryModalSave">
+                    <i class="fas fa-paper-plane"></i> 문의하기
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 푸터 -->
     <footer class="footer">

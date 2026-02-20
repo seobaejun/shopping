@@ -351,6 +351,13 @@ body {
     color: var(--text-color);
 }
 
+/* 게시판 관리 테이블의 관리 컬럼 너비 조정 */
+#board-manage .data-table th:last-child,
+#board-manage .data-table td:last-child {
+    width: 150px;
+    min-width: 150px;
+}
+
 /* 구매요청 및 승인대기 페이지: 제목(h3)만 25px로 확대 */
 #purchase-request .table-container h3 {
     font-size: 25px !important;
@@ -2404,6 +2411,197 @@ body {
 
 #boardPostModal .modal-body .form-group:last-child {
     margin-bottom: 0;
+}
+
+/* Inquiry 모달 스타일 (관리자 페이지용) */
+#boardPostModal .inquiry-modal-content {
+    max-width: 800px;
+    width: 90%;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+#boardPostModal .inquiry-modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 24px 28px;
+    border-bottom: none;
+}
+
+#boardPostModal .inquiry-modal-title-wrap {
+    display: flex;
+    align-items: center;
+}
+
+#boardPostModal .inquiry-modal-header h3 {
+    color: white;
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+#boardPostModal .inquiry-modal-header .modal-close {
+    color: white;
+    font-size: 24px;
+    opacity: 0.9;
+}
+
+#boardPostModal .inquiry-modal-header .modal-close:hover {
+    opacity: 1;
+    color: white;
+}
+
+#boardPostModal .inquiry-modal-body {
+    padding: 32px;
+    background: #fafbfc;
+}
+
+#boardPostModal .inquiry-form-group {
+    margin-bottom: 28px;
+}
+
+#boardPostModal .inquiry-form-group:last-of-type {
+    margin-bottom: 0;
+}
+
+#boardPostModal .inquiry-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+#boardPostModal .label-text {
+    color: #2d3748;
+}
+
+#boardPostModal .required-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #fee;
+    color: #e53e3e;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+#boardPostModal .inquiry-input,
+#boardPostModal .inquiry-textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 15px;
+    color: #2d3748;
+    background: white;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+#boardPostModal .inquiry-input:focus,
+#boardPostModal .inquiry-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#boardPostModal .inquiry-input::placeholder,
+#boardPostModal .inquiry-textarea::placeholder {
+    color: #a0aec0;
+}
+
+#boardPostModal .inquiry-select-wrapper {
+    position: relative;
+}
+
+#boardPostModal .inquiry-select {
+    width: 100%;
+    padding: 14px 40px 14px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 15px;
+    color: #2d3748;
+    background: white;
+    appearance: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+#boardPostModal .inquiry-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#boardPostModal .inquiry-select-icon {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #718096;
+    pointer-events: none;
+    font-size: 12px;
+}
+
+#boardPostModal .inquiry-textarea {
+    resize: vertical;
+    min-height: 180px;
+    line-height: 1.6;
+}
+
+#boardPostModal .inquiry-modal-footer {
+    padding: 20px 32px;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+#boardPostModal .btn-inquiry-cancel,
+#boardPostModal .btn-inquiry-submit {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#boardPostModal .btn-inquiry-cancel {
+    background: #f7fafc;
+    color: #4a5568;
+    border: 2px solid #e2e8f0;
+}
+
+#boardPostModal .btn-inquiry-cancel:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+}
+
+#boardPostModal .btn-inquiry-submit {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+#boardPostModal .btn-inquiry-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+#boardPostModal .btn-inquiry-submit:active {
+    transform: translateY(0);
 }
 
 .modal-footer {

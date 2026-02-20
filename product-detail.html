@@ -7,6 +7,7 @@
     <title>제주도 노지 조생귤 5kg - 10쇼핑게임</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/product-detail.css">
+    <link rel="stylesheet" href="css/mypage.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -241,7 +242,7 @@
                 <div class="tab-content" id="qna">
                     <div class="qna-header">
                         <h2>상품문의</h2>
-                        <button class="btn-write"><i class="fas fa-pen"></i> 상품문의 쓰기</button>
+                        <button class="btn-write" id="btnProductInquiryWrite"><i class="fas fa-pen"></i> 상품문의 쓰기</button>
                     </div>
                     <div class="empty-state">
                         <i class="far fa-question-circle"></i>
@@ -463,6 +464,47 @@
     <!-- SNS 공유 유틸리티 -->
     <script src="js/share-utils.js?v=4"></script>
     
+    <!-- 상품문의 작성 모달 -->
+    <div id="productInquiryModal" class="modal" style="display: none;">
+        <div class="modal-content inquiry-modal-content">
+            <div class="modal-header inquiry-modal-header">
+                <div class="inquiry-modal-title-wrap">
+                    <i class="fas fa-shopping-bag" style="color: #4A5FC1; margin-right: 10px; font-size: 20px;"></i>
+                    <h3>상품문의 작성</h3>
+                </div>
+                <button type="button" class="modal-close" id="productInquiryModalClose">&times;</button>
+            </div>
+            <div class="modal-body inquiry-modal-body">
+                <input type="hidden" id="productInquiryId" value="">
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">제목</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <input type="text" class="inquiry-input" id="productInquiryTitle" placeholder="문의하실 내용의 제목을 입력해주세요" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">문의 내용</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <textarea class="inquiry-textarea" id="productInquiryContent" rows="8" placeholder="상품에 대한 문의 내용을 자세히 입력해주세요.&#10;예: 사이즈, 색상, 재질, 배송 등" required></textarea>
+                    <div class="textarea-counter">
+                        <span id="productInquiryContentCounter">0</span> / 1000자
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer inquiry-modal-footer">
+                <button type="button" class="btn-inquiry-cancel" id="productInquiryModalCancel">
+                    <i class="fas fa-times"></i> 취소
+                </button>
+                <button type="button" class="btn-inquiry-submit" id="productInquiryModalSave">
+                    <i class="fas fa-paper-plane"></i> 문의하기
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/script.js?v=23"></script>
     <script src="js/product-detail.js?v=24"></script>
 </body>
