@@ -211,7 +211,7 @@
     /**
      * 회원 정보 수정 (마이페이지에서만 사용, 허용 필드만)
      * @param {string} docId - members 문서 id
-     * @param {object} data - name, phone, postcode, address, detailAddress, bank, accountNumber
+     * @param {object} data - name, phone, postcode, address, detailAddress, bank, accountNumber, marketingEmail, marketingSms, addresses
      * @returns {Promise<void>}
      */
     function updateMember(docId, data) {
@@ -226,8 +226,28 @@
             if (data.detailAddress !== undefined) allowed.detailAddress = data.detailAddress;
             if (data.bank !== undefined) allowed.bank = data.bank;
             if (data.accountNumber !== undefined) allowed.accountNumber = data.accountNumber;
+            if (data.marketingEmail !== undefined) allowed.marketingEmail = data.marketingEmail === true;
+            if (data.marketingSms !== undefined) allowed.marketingSms = data.marketingSms === true;
+            if (data.addresses !== undefined && Array.isArray(data.addresses)) allowed.addresses = data.addresses;
             allowed.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
             return database.collection('members').doc(docId).update(allowed);
+        });
+    }
+
+    /**
+     * 회원 탈퇴 처리 (상태만 변경, 개인정보는 보관 정책에 따라 유지 또는 삭제)
+     * @param {string} docId - members 문서 id
+     * @returns {Promise<void>}
+     */
+    function withdrawMember(docId) {
+        if (!docId) return Promise.reject(new Error('회원 정보를 확인할 수 없습니다.'));
+        return getMypageDb().then(function (database) {
+            if (!database) return Promise.reject(new Error('Firestore를 사용할 수 없습니다.'));
+            return database.collection('members').doc(docId).update({
+                status: 'withdrawn',
+                withdrawnAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
         });
     }
 
@@ -239,7 +259,8 @@
         getMyOrders: getMyOrders,
         getMyLotteryResults: getMyLotteryResults,
         getBoardPosts: getBoardPosts,
-        updateMember: updateMember
+        updateMember: updateMember,
+        withdrawMember: withdrawMember
     };
 
     if (global.window) {

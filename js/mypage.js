@@ -74,9 +74,14 @@ function runMypageInit() {
         renderOrderList(orders);
         renderNoticeList();
     fillProfileForm(member);
+    fillMarketingForm(member);
     bindBankSelectToggle();
     bindProfileForm();
+    bindMarketingForm();
+    bindAddressSection();
+    bindWithdrawSection();
     bindSectionNav();
+    bindPostExpandClicks();
 
         // 정보수정 버튼: 클릭 시 회원정보 수정 섹션 표시
         var btnEdit = document.getElementById('mypageBtnInfoEdit') || document.querySelector('.btn-info-edit');
@@ -204,6 +209,7 @@ function renderNoticeList() {
             tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
             return;
         }
+        window._mypageNoticePosts = list;
         function formatDate(createdAt) {
             if (!createdAt || createdAt.seconds == null) return '-';
             var d = new Date(createdAt.seconds * 1000);
@@ -212,7 +218,9 @@ function renderNoticeList() {
         var html = list.map(function (p) {
             var title = (p.title || '-').replace(/</g, '&lt;');
             var date = formatDate(p.createdAt);
-            return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;"><a href="#" class="notice-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td><td style="padding: 10px; text-align: center;">' + date + '</td></tr>';
+            var content = (p.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            return '<tr class="notice-title-row" style="border-bottom: 1px solid #eee;"><td style="padding: 10px;"><a href="#" class="notice-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td><td class="col-date" style="padding: 10px; text-align: right;">' + date + '</td></tr>' +
+                '<tr class="notice-detail-row" id="notice-detail-' + (p.id || '') + '" style="display: none;"><td colspan="2" class="notice-detail-cell">' + content + '</td></tr>';
         }).join('');
         tbody.innerHTML = html;
     }).catch(function () {
@@ -233,6 +241,7 @@ function renderEventsList() {
             tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 이벤트가 없습니다.</td></tr>';
             return;
         }
+        window._mypageEventPosts = list;
         function formatDate(createdAt) {
             if (!createdAt || createdAt.seconds == null) return '-';
             var d = new Date(createdAt.seconds * 1000);
@@ -241,7 +250,9 @@ function renderEventsList() {
         var html = list.map(function (p) {
             var title = (p.title || '-').replace(/</g, '&lt;');
             var date = formatDate(p.createdAt);
-            return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;"><a href="#" class="event-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td><td style="padding: 10px; text-align: center;">' + date + '</td></tr>';
+            var content = (p.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            return '<tr class="event-title-row" style="border-bottom: 1px solid #eee;"><td style="padding: 10px;"><a href="#" class="event-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td><td class="col-date" style="padding: 10px; text-align: right;">' + date + '</td></tr>' +
+                '<tr class="event-detail-row" id="event-detail-' + (p.id || '') + '" style="display: none;"><td colspan="2" class="notice-detail-cell">' + content + '</td></tr>';
         }).join('');
         tbody.innerHTML = html;
     }).catch(function () {
@@ -308,6 +319,282 @@ function renderOrderList(orders) {
         html += '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + date + '</td><td style="padding: 10px;">' + name + '</td><td style="padding: 10px; text-align: right;">' + price + '원</td><td style="padding: 10px; text-align: right;">' + support + '원</td><td style="padding: 10px; text-align: center;">' + status + '</td></tr>';
     });
     tbody.innerHTML = html;
+}
+
+// 마케팅 수신동의 폼 채우기
+function fillMarketingForm(member) {
+    if (!member) return;
+    var emailEl = document.getElementById('marketingEmail');
+    var smsEl = document.getElementById('marketingSms');
+    if (emailEl) emailEl.checked = member.marketingEmail === true;
+    if (smsEl) smsEl.checked = member.marketingSms === true;
+}
+
+// 마케팅 수신동의 폼 바인딩
+function bindMarketingForm() {
+    var form = document.getElementById('mypageMarketingForm');
+    var saveBtn = document.getElementById('mypageMarketingSave');
+    if (!form || !window.mypageApi) return;
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var ids = await window.mypageApi.getCurrentMemberId();
+        if (!ids || !ids.docId) {
+            alert('로그인 정보를 확인할 수 없습니다.');
+            return;
+        }
+        var emailEl = document.getElementById('marketingEmail');
+        var smsEl = document.getElementById('marketingSms');
+        var data = {
+            marketingEmail: emailEl ? emailEl.checked : false,
+            marketingSms: smsEl ? smsEl.checked : false
+        };
+        if (saveBtn) saveBtn.disabled = true;
+        try {
+            await window.mypageApi.updateMember(ids.docId, data);
+            alert('저장되었습니다.');
+        } catch (err) {
+            console.error(err);
+            alert('저장에 실패했습니다.');
+        }
+        if (saveBtn) saveBtn.disabled = false;
+    });
+}
+
+// 배송지 목록 렌더
+function renderAddressList() {
+    var listEl = document.getElementById('addressList');
+    var emptyEl = document.getElementById('addressEmpty');
+    var addWrap = document.getElementById('addressAddWrap');
+    if (!listEl || !emptyEl) return;
+    listEl.innerHTML = '';
+    if (!window.mypageApi) {
+        emptyEl.style.display = 'block';
+        if (addWrap) addWrap.style.display = 'block';
+        return;
+    }
+    window.mypageApi.getCurrentMember().then(function (member) {
+        var addresses = (member && member.addresses && Array.isArray(member.addresses)) ? member.addresses : [];
+        if (!addresses.length) {
+            listEl.innerHTML = '';
+            emptyEl.style.display = 'block';
+            if (addWrap) addWrap.style.display = 'block';
+            return;
+        }
+        emptyEl.style.display = 'none';
+        addresses.forEach(function (addr, idx) {
+            var rec = (addr.recipientName || '').trim() || '수령인';
+            var phone = (addr.phone || '').trim() || '';
+            var post = (addr.postcode || '').trim();
+            var addr1 = (addr.address || '').trim();
+            var addr2 = (addr.detailAddress || '').trim();
+            var fullAddr = [post, addr1, addr2].filter(Boolean).join(' ');
+            var isDef = addr.isDefault === true;
+            var li = document.createElement('li');
+            li.className = 'address-item' + (isDef ? ' is-default' : '');
+            li.innerHTML = '<div class="address-item-body">' +
+                '<span class="address-recipient">' + escapeHtml(rec) + '</span>' +
+                (isDef ? ' <span class="address-default-badge">기본</span>' : '') +
+                '<p class="address-detail">' + escapeHtml(phone) + '</p>' +
+                '<p class="address-detail">' + escapeHtml(fullAddr) + '</p>' +
+                '</div>' +
+                '<div class="address-item-actions">' +
+                (isDef ? '' : '<button type="button" class="btn-address-set-default" data-index="' + idx + '">기본배송지</button>') +
+                '<button type="button" class="btn-address-edit" data-index="' + idx + '">수정</button>' +
+                '<button type="button" class="btn-address-delete" data-index="' + idx + '">삭제</button>' +
+                '</div>';
+            listEl.appendChild(li);
+        });
+        if (addWrap) addWrap.style.display = 'block';
+    }).catch(function () {
+        emptyEl.style.display = 'block';
+        if (addWrap) addWrap.style.display = 'block';
+    });
+}
+
+function escapeHtml(s) {
+    if (s == null) return '';
+    var div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+}
+
+// 배송지 섹션 바인딩 (추가/수정/삭제/기본)
+function bindAddressSection() {
+    var addBtn = document.getElementById('addressAddBtn');
+    var cancelBtn = document.getElementById('addressCancelBtn');
+    var formWrap = document.getElementById('addressFormWrap');
+    var addWrap = document.getElementById('addressAddWrap');
+    var form = document.getElementById('mypageAddressForm');
+    var formTitle = document.getElementById('addressFormTitle');
+    var editIndexEl = document.getElementById('addressEditIndex');
+    if (!addBtn || !formWrap || !form || !window.mypageApi) return;
+
+    function showForm(isEdit, index) {
+        formTitle.textContent = isEdit ? '배송지 수정' : '배송지 추가';
+        if (editIndexEl) editIndexEl.value = isEdit ? String(index) : '';
+        clearAddressForm();
+        if (isEdit && index >= 0) {
+            window.mypageApi.getCurrentMember().then(function (member) {
+                var addrs = (member && member.addresses) ? member.addresses : [];
+                var addr = addrs[index];
+                if (addr) {
+                    setAddressFormValue(addr);
+                }
+            });
+        }
+        formWrap.style.display = 'block';
+        if (addWrap) addWrap.style.display = 'none';
+    }
+
+    function hideForm() {
+        formWrap.style.display = 'none';
+        if (addWrap) addWrap.style.display = 'block';
+        clearAddressForm();
+        if (editIndexEl) editIndexEl.value = '';
+    }
+
+    addBtn.addEventListener('click', function () { showForm(false, -1); });
+    if (cancelBtn) cancelBtn.addEventListener('click', hideForm);
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var ids = await window.mypageApi.getCurrentMemberId();
+        if (!ids || !ids.docId) {
+            alert('로그인 정보를 확인할 수 없습니다.');
+            return;
+        }
+        var member = await window.mypageApi.getCurrentMember();
+        var addresses = (member && member.addresses && Array.isArray(member.addresses)) ? member.addresses.slice() : [];
+        var rec = (document.getElementById('addrRecipientName') && document.getElementById('addrRecipientName').value.trim()) || '';
+        var phone = (document.getElementById('addrPhone') && document.getElementById('addrPhone').value.trim()) || '';
+        var postcode = (document.getElementById('addrPostcode') && document.getElementById('addrPostcode').value.trim()) || '';
+        var address = (document.getElementById('addrAddress') && document.getElementById('addrAddress').value.trim()) || '';
+        var detailAddress = (document.getElementById('addrDetailAddress') && document.getElementById('addrDetailAddress').value.trim()) || '';
+        var isDefault = document.getElementById('addrIsDefault') ? document.getElementById('addrIsDefault').checked : false;
+        if (!rec) {
+            alert('수령인을 입력해주세요.');
+            return;
+        }
+        var payload = { recipientName: rec, phone: phone, postcode: postcode, address: address, detailAddress: detailAddress, isDefault: !!isDefault };
+        var editIdx = editIndexEl && editIndexEl.value !== '' ? parseInt(editIndexEl.value, 10) : -1;
+        if (editIdx >= 0 && editIdx < addresses.length) {
+            if (isDefault) {
+                addresses = addresses.map(function (a, i) { return { ...a, isDefault: i === editIdx }; });
+            }
+            addresses[editIdx] = payload;
+        } else {
+            if (isDefault) {
+                addresses = addresses.map(function (a) { return { ...a, isDefault: false }; });
+            }
+            addresses.push(payload);
+        }
+        try {
+            await window.mypageApi.updateMember(ids.docId, { addresses: addresses });
+            alert('저장되었습니다.');
+            hideForm();
+            renderAddressList();
+        } catch (err) {
+            console.error(err);
+            alert('저장에 실패했습니다.');
+        }
+    });
+
+    document.getElementById('addressListWrap').addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t || !t.classList) return;
+        var idx = t.getAttribute('data-index');
+        if (idx == null) return;
+        idx = parseInt(idx, 10);
+        if (t.classList.contains('btn-address-edit')) {
+            showForm(true, idx);
+        } else if (t.classList.contains('btn-address-delete')) {
+            if (!confirm('이 배송지를 삭제할까요?')) return;
+            window.mypageApi.getCurrentMemberId().then(function (ids) {
+                if (!ids || !ids.docId) return;
+                return window.mypageApi.getCurrentMember().then(function (member) {
+                    var addrs = (member && member.addresses) ? member.addresses.slice() : [];
+                    addrs.splice(idx, 1);
+                    return window.mypageApi.updateMember(ids.docId, { addresses: addrs });
+                }).then(function () {
+                    renderAddressList();
+                });
+            });
+        } else if (t.classList.contains('btn-address-set-default')) {
+            window.mypageApi.getCurrentMemberId().then(function (ids) {
+                if (!ids || !ids.docId) return;
+                return window.mypageApi.getCurrentMember().then(function (member) {
+                    var addrs = (member && member.addresses) ? member.addresses.slice() : [];
+                    addrs = addrs.map(function (a, i) { return { ...a, isDefault: i === idx }; });
+                    return window.mypageApi.updateMember(ids.docId, { addresses: addrs });
+                }).then(function () {
+                    renderAddressList();
+                });
+            });
+        }
+    });
+}
+
+function clearAddressForm() {
+    var ids = ['addrRecipientName', 'addrPhone', 'addrPostcode', 'addrAddress', 'addrDetailAddress'];
+    ids.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    var def = document.getElementById('addrIsDefault');
+    if (def) def.checked = false;
+}
+
+function setAddressFormValue(addr) {
+    var set = function (id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+    set('addrRecipientName', addr.recipientName);
+    set('addrPhone', addr.phone);
+    set('addrPostcode', addr.postcode);
+    set('addrAddress', addr.address);
+    set('addrDetailAddress', addr.detailAddress);
+    var def = document.getElementById('addrIsDefault');
+    if (def) def.checked = addr.isDefault === true;
+}
+
+// 회원탈퇴 섹션 바인딩
+function bindWithdrawSection() {
+    var form = document.getElementById('mypageWithdrawForm');
+    var confirmCheck = document.getElementById('withdrawConfirm');
+    var submitBtn = document.getElementById('mypageWithdrawBtn');
+    if (!form || !confirmCheck || !submitBtn || !window.mypageApi) return;
+
+    function updateButtonState() {
+        submitBtn.disabled = !confirmCheck.checked;
+    }
+    confirmCheck.addEventListener('change', updateButtonState);
+    updateButtonState();
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (!confirmCheck.checked) {
+            alert('탈퇴 동의에 체크해주세요.');
+            return;
+        }
+        if (!confirm('회원탈퇴를 진행합니다. 되돌릴 수 없습니다. 계속하시겠습니까?')) return;
+        var ids = await window.mypageApi.getCurrentMemberId();
+        if (!ids || !ids.docId) {
+            alert('로그인 정보를 확인할 수 없습니다.');
+            return;
+        }
+        submitBtn.disabled = true;
+        try {
+            await window.mypageApi.withdrawMember(ids.docId);
+            try {
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('loginUser');
+            } catch (e) { /* ignore */ }
+            alert('탈퇴되었습니다. 이용해 주셔서 감사합니다.');
+            window.location.href = 'index.html';
+        } catch (err) {
+            console.error(err);
+            alert('탈퇴 처리에 실패했습니다.');
+            submitBtn.disabled = false;
+        }
+    });
 }
 
 // 회원정보 수정 폼 바인딩
@@ -429,13 +716,13 @@ function bindSectionNav() {
     });
 }
 
-// 섹션 전환 함수 (orders/notice 함께, profile/support/coupons 단독 표시)
+// 섹션 전환 함수 (orders/notice 함께, profile/support/coupons/marketing/address/withdraw 단독 표시)
 function showSection(sectionName, clickedLink) {
     if (!clickedLink) {
         clickedLink = document.querySelector('.mypage-nav a[data-section="' + sectionName + '"]');
     }
     const sections = document.querySelectorAll('.mypage-section');
-    const soloSections = ['profile', 'support', 'coupons', 'notice', 'events'];
+    const soloSections = ['profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw'];
     const isSolo = soloSections.indexOf(sectionName) !== -1;
     sections.forEach(function (sec) {
         const dataSection = sec.getAttribute('data-section');
@@ -448,6 +735,18 @@ function showSection(sectionName, clickedLink) {
     if (sectionName === 'coupons') renderLotteryList();
     if (sectionName === 'notice') renderNoticeList();
     if (sectionName === 'events') renderEventsList();
+    if (sectionName === 'marketing') {
+        if (window.mypageApi) {
+            window.mypageApi.getCurrentMember().then(function (member) { fillMarketingForm(member); });
+        }
+    }
+    if (sectionName === 'address') {
+        renderAddressList();
+        var formWrap = document.getElementById('addressFormWrap');
+        var addWrap = document.getElementById('addressAddWrap');
+        if (formWrap) formWrap.style.display = 'none';
+        if (addWrap) addWrap.style.display = 'block';
+    }
     const navLinks = document.querySelectorAll('.nav-group a');
     navLinks.forEach(function (link) { link.classList.remove('active'); });
     if (clickedLink) clickedLink.classList.add('active');
@@ -463,10 +762,29 @@ function showSection(sectionName, clickedLink) {
             } catch (e) { /* ignore */ }
         }
     }
-    const implemented = ['orders', 'profile', 'support', 'coupons', 'notice', 'events'];
+    const implemented = ['orders', 'profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw'];
     if (implemented.indexOf(sectionName) === -1) {
         alert(sectionName + ' 기능은 추후 구현 예정입니다.');
     }
+}
+
+// 공지/이벤트 제목 클릭 시 아래 행 펼치기/접기
+function bindPostExpandClicks() {
+    document.addEventListener('click', function (e) {
+        var link = e.target && e.target.closest ? e.target.closest('a.notice-title-link, a.event-title-link') : null;
+        if (!link) return;
+        e.preventDefault();
+        var id = link.getAttribute('data-id') || '';
+        var isEvent = link.classList.contains('event-title-link');
+        var table = link.closest('table');
+        if (!table) return;
+        var detailRow = document.getElementById(isEvent ? 'event-detail-' + id : 'notice-detail-' + id);
+        if (!detailRow) return;
+        var isOpen = detailRow.style.display !== 'none';
+        var allDetailRows = table.querySelectorAll(isEvent ? '.event-detail-row' : '.notice-detail-row');
+        allDetailRows.forEach(function (row) { row.style.display = 'none'; });
+        if (!isOpen) detailRow.style.display = '';
+    });
 }
 
 // 전역 함수로 노출

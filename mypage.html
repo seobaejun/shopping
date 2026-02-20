@@ -125,9 +125,9 @@
                             <h4>회원정보</h4>
                             <ul>
                                 <li><a href="#" data-section="profile" onclick="showSection('profile'); return false;">회원정보 수정 <span class="nav-badge implemented">운영</span></a></li>
-                                <li><a href="#" onclick="showSection('marketing'); return false;">마케팅 수신동의 <span class="nav-badge pending">준비 중</span></a></li>
-                                <li><a href="#" onclick="showSection('address'); return false;">배송지 관리 <span class="nav-badge pending">준비 중</span></a></li>
-                                <li><a href="#" onclick="showSection('password'); return false;">회원탈퇴 <span class="nav-badge pending">준비 중</span></a></li>
+                                <li><a href="#" data-section="marketing" onclick="showSection('marketing'); return false;">마케팅 수신동의 <span class="nav-badge implemented">운영</span></a></li>
+                                <li><a href="#" data-section="address" onclick="showSection('address'); return false;">배송지 관리 <span class="nav-badge implemented">운영</span></a></li>
+                                <li><a href="#" data-section="withdraw" onclick="showSection('withdraw'); return false;">회원탈퇴 <span class="nav-badge implemented">운영</span></a></li>
                             </ul>
                         </div>
                         <div class="nav-group">
@@ -260,6 +260,110 @@
                         </form>
                     </div>
 
+                    <!-- 마케팅 수신동의 -->
+                    <div class="content-section mypage-section mypage-marketing-section" data-section="marketing" id="mypageSectionMarketing" style="display: none;">
+                        <div class="section-title">
+                            <h3>마케팅 수신동의</h3>
+                        </div>
+                        <p class="info-text">이벤트 및 프로모션 안내를 위한 수신 동의를 설정할 수 있습니다.</p>
+                        <form id="mypageMarketingForm" class="mypage-profile-form">
+                            <div class="profile-form-card marketing-form-card">
+                                <div class="form-row form-row-checkbox">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="marketingEmail" name="marketingEmail">
+                                        <span>이메일 수신 동의</span>
+                                    </label>
+                                </div>
+                                <div class="form-row form-row-checkbox">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="marketingSms" name="marketingSms">
+                                        <span>SMS 수신 동의</span>
+                                    </label>
+                                </div>
+                                <div class="profile-form-actions">
+                                    <button type="submit" class="btn-mypage-save" id="mypageMarketingSave">저장</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 배송지 관리 -->
+                    <div class="content-section mypage-section mypage-address-section" data-section="address" id="mypageSectionAddress" style="display: none;">
+                        <div class="section-title">
+                            <h3>배송지 관리</h3>
+                        </div>
+                        <p class="info-text">등록된 배송지를 관리합니다. 기본 배송지는 주문 시 기본 선택됩니다.</p>
+                        <div class="address-list-wrap" id="addressListWrap">
+                            <ul class="address-list" id="addressList"></ul>
+                            <div class="address-empty" id="addressEmpty" style="display: none;">등록된 배송지가 없습니다.</div>
+                        </div>
+                        <div class="address-form-wrap" id="addressFormWrap" style="display: none;">
+                            <h4 class="address-form-title" id="addressFormTitle">배송지 추가</h4>
+                            <form id="mypageAddressForm" class="mypage-profile-form">
+                                <input type="hidden" id="addressEditIndex" value="">
+                                <div class="profile-form-card">
+                                    <div class="form-row">
+                                        <label for="addrRecipientName">수령인</label>
+                                        <input type="text" id="addrRecipientName" class="form-control" placeholder="수령인 이름" maxlength="30">
+                                    </div>
+                                    <div class="form-row">
+                                        <label for="addrPhone">연락처</label>
+                                        <input type="text" id="addrPhone" class="form-control" placeholder="연락처" maxlength="20">
+                                    </div>
+                                    <div class="form-row">
+                                        <label for="addrPostcode">우편번호</label>
+                                        <input type="text" id="addrPostcode" class="form-control" placeholder="우편번호">
+                                    </div>
+                                    <div class="form-row">
+                                        <label for="addrAddress">주소</label>
+                                        <input type="text" id="addrAddress" class="form-control" placeholder="주소">
+                                    </div>
+                                    <div class="form-row">
+                                        <label for="addrDetailAddress">상세주소</label>
+                                        <input type="text" id="addrDetailAddress" class="form-control" placeholder="상세주소" maxlength="100">
+                                    </div>
+                                    <div class="form-row form-row-checkbox">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="addrIsDefault" name="addrIsDefault">
+                                            <span>기본 배송지로 설정</span>
+                                        </label>
+                                    </div>
+                                    <div class="profile-form-actions address-form-actions">
+                                        <button type="button" class="btn-address-cancel" id="addressCancelBtn">취소</button>
+                                        <button type="submit" class="btn-mypage-save">저장</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="address-add-wrap" id="addressAddWrap">
+                            <button type="button" class="btn-address-add" id="addressAddBtn"><i class="fas fa-plus"></i> 배송지 추가</button>
+                        </div>
+                    </div>
+
+                    <!-- 회원탈퇴 -->
+                    <div class="content-section mypage-section mypage-withdraw-section" data-section="withdraw" id="mypageSectionWithdraw" style="display: none;">
+                        <div class="section-title">
+                            <h3>회원탈퇴</h3>
+                        </div>
+                        <div class="withdraw-notice">
+                            <p>회원탈퇴 시 보유한 쇼핑지원금 및 주문 정보가 삭제되며, 동일 아이디로 재가입할 수 없을 수 있습니다.</p>
+                            <p>정말 탈퇴하시겠습니까?</p>
+                        </div>
+                        <form id="mypageWithdrawForm" class="mypage-profile-form">
+                            <div class="profile-form-card withdraw-form-card">
+                                <div class="form-row form-row-checkbox">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="withdrawConfirm" name="withdrawConfirm">
+                                        <span>위 내용을 확인했으며, 탈퇴에 동의합니다.</span>
+                                    </label>
+                                </div>
+                                <div class="profile-form-actions">
+                                    <button type="submit" class="btn-withdraw" id="mypageWithdrawBtn" disabled>탈퇴하기</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
                     <!-- 쇼핑지원금 내역 -->
                     <div class="content-section mypage-section" data-section="support" id="mypageSectionSupport" style="display: none;">
                         <div class="section-title">
@@ -316,7 +420,7 @@
                                 <thead>
                                     <tr style="border-bottom: 2px solid #eee;">
                                         <th style="padding: 10px; text-align: left;">제목</th>
-                                        <th style="padding: 10px; width: 100px;">작성일</th>
+                                        <th class="col-date" style="padding: 10px; text-align: right;">작성일</th>
                                     </tr>
                                 </thead>
                                 <tbody id="mypageNoticeListBody">
@@ -337,7 +441,7 @@
                                 <thead>
                                     <tr style="border-bottom: 2px solid #eee;">
                                         <th style="padding: 10px; text-align: left;">제목</th>
-                                        <th style="padding: 10px; width: 100px;">작성일</th>
+                                        <th class="col-date" style="padding: 10px; text-align: right;">작성일</th>
                                     </tr>
                                 </thead>
                                 <tbody id="mypageEventsListBody">
