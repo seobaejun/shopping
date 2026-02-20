@@ -3,6 +3,32 @@
 // DOM 요소 (나중에 초기화됨)
 let menuToggle, adminSidebar, navLinks, contentPages;
 
+// 알림 생성 헬퍼 함수
+async function createNotificationForUser(userId, type, title, message, link) {
+    try {
+        if (!window.firebaseAdmin || !window.firebaseAdmin.collections) {
+            console.warn('알림 생성 실패: Firebase Admin 초기화 안됨');
+            return;
+        }
+
+        var notificationData = {
+            userId: userId,
+            type: type,
+            title: title || '알림',
+            message: message || '',
+            link: link || '',
+            read: false,
+            metadata: {},
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await window.firebaseAdmin.collections.notifications().add(notificationData);
+        console.log('✅ 알림 생성 완료:', userId, type);
+    } catch (error) {
+        console.error('❌ 알림 생성 오류:', error);
+    }
+}
+
 // 사이드바 토글 (나중에 초기화됨)
 
 // 페이지 전환 (나중에 초기화됨)
@@ -1152,11 +1178,54 @@ document.addEventListener('click', (e) => {
         (async function () {
             try {
                 if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
+                    // 주문 정보 가져오기
+                    var prevDeliveryStatus = 'ready';
+                    try {
+                        var orderDoc = await window.firebaseAdmin.collections.orders().doc(orderId).get();
+                        if (orderDoc.exists) {
+                            var orderData = orderDoc.data();
+                            prevDeliveryStatus = orderData.deliveryStatus || 'ready';
+                        }
+                    } catch (e) {
+                        console.warn('주문 정보 조회 실패 (무시됨):', e);
+                    }
+
                     await window.firebaseAdmin.orderService.updateOrder(orderId, {
                         deliveryStatus: deliveryStatus,
                         deliveryCompany: deliveryCompany,
                         trackingNumber: trackingNumber
                     });
+
+                    // 배송 상태 변경 시 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
+                    if (prevDeliveryStatus !== deliveryStatus) {
+                        try {
+                            var orderDoc = await window.firebaseAdmin.collections.orders().doc(orderId).get();
+                            if (orderDoc.exists) {
+                                var orderData = orderDoc.data();
+                                var userId = orderData.userId;
+                                if (userId) {
+                                    var notificationType = 'order_shipped';
+                                    var notificationTitle = '배송이 시작되었습니다';
+                                    var notificationMessage = '주문하신 상품의 배송이 시작되었습니다.';
+                                    
+                                    if (deliveryStatus === 'complete') {
+                                        notificationType = 'order_delivered';
+                                        notificationTitle = '배송이 완료되었습니다';
+                                        notificationMessage = '주문하신 상품의 배송이 완료되었습니다.';
+                                    }
+
+                                    if (deliveryCompany && trackingNumber) {
+                                        notificationMessage += '\\n배송사: ' + deliveryCompany + ', 운송장번호: ' + trackingNumber;
+                                    }
+
+                                    await createNotificationForUser(userId, notificationType, notificationTitle, notificationMessage, 'mypage.html?section=orders');
+                                }
+                            }
+                        } catch (notifError) {
+                            console.error('알림 생성 오류 (무시됨):', notifError);
+                        }
+                    }
+
                     if (typeof loadDeliveryRegister === 'function') loadDeliveryRegister();
                     var searchContainer = document.getElementById('deliveryRegisterSearchResultsContainer');
                     if (searchContainer && searchContainer.style.display !== 'none' && typeof applyDeliveryRegisterSearch === 'function') {
@@ -1179,6 +1248,21 @@ document.addEventListener('click', (e) => {
             try {
                 if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
                     await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'approved' });
+                    
+                    // 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
+                    try {
+                        var orderDoc = await window.firebaseAdmin.collections.orders().doc(orderId).get();
+                        if (orderDoc.exists) {
+                            var orderData = orderDoc.data();
+                            var userId = orderData.userId;
+                            if (userId) {
+                                await createNotificationForUser(userId, 'order_approved', '주문이 승인되었습니다', '구매 요청이 승인되었습니다. 입금 확인 후 배송이 시작됩니다.', 'mypage.html?section=orders');
+                            }
+                        }
+                    } catch (notifError) {
+                        console.error('알림 생성 오류 (무시됨):', notifError);
+                    }
+                    
                     alert('승인되었습니다.');
                     await loadPurchaseRequests();
                 }
@@ -2258,6 +2342,29 @@ async function saveBoardPost() {
             }
             
             await window.firebaseAdmin.boardService.updatePost(postId, updateData);
+            
+            // 문의 답변 시 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
+            if (isInquiry && answer) {
+                try {
+                    var postDoc = await window.firebaseAdmin.collections.posts().doc(postId).get();
+                    if (postDoc.exists) {
+                        var postData = postDoc.data();
+                        var inquiryUserId = postData.userId || postData.authorId;
+                        
+                        if (inquiryUserId) {
+                            var notificationType = (boardType === 'inquiry') ? 'inquiry_answered' : 'product_inquiry_answered';
+                            var notificationTitle = (boardType === 'inquiry') ? '1:1문의에 답변이 등록되었습니다' : '상품문의에 답변이 등록되었습니다';
+                            var notificationMessage = '문의하신 내용에 대한 답변이 등록되었습니다.';
+                            var notificationLink = (boardType === 'inquiry') ? 'mypage.html?section=inquiry' : 'mypage.html?section=product-inquiry';
+                            
+                            await createNotificationForUser(inquiryUserId, notificationType, notificationTitle, notificationMessage, notificationLink);
+                        }
+                    }
+                } catch (notifError) {
+                    console.error('알림 생성 오류 (무시됨):', notifError);
+                }
+            }
+            
             alert(isInquiry ? '답변이 저장되었습니다.' : '수정되었습니다.');
         } else {
             // product-detail-inquiry는 실제로 product-inquiry로 저장
@@ -2277,7 +2384,41 @@ async function saveBoardPost() {
                 addData.answer = answer;
                 addData.status = answer ? 'answered' : 'pending';
             }
-            await window.firebaseAdmin.boardService.addPost(addData);
+            var newPostId = await window.firebaseAdmin.boardService.addPost(addData);
+            
+            // 공지사항 등록 시 모든 회원에게 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
+            if (boardType === 'notice' && (noticeCheck && noticeCheck.checked)) {
+                // 비동기로 처리하여 게시글 등록이 지연되지 않도록 함
+                (async function() {
+                    try {
+                        var allMembers = await window.firebaseAdmin.memberService.getMembers();
+                        var notificationPromises = [];
+                        
+                        allMembers.forEach(function(member) {
+                            if (member.userId && member.status !== 'withdrawn') {
+                                notificationPromises.push(
+                                    createNotificationForUser(
+                                        member.userId,
+                                        'notice',
+                                        '새로운 공지사항이 등록되었습니다',
+                                        title || '새로운 공지사항이 등록되었습니다.',
+                                        'notice.html'
+                                    ).catch(function(err) {
+                                        console.error('개별 알림 생성 오류 (무시됨):', err);
+                                    })
+                                );
+                            }
+                        });
+                        
+                        // 모든 알림 생성 (병렬 처리, 실패해도 계속 진행)
+                        await Promise.allSettled(notificationPromises);
+                        console.log('✅ 공지사항 알림 생성 완료:', notificationPromises.length, '명');
+                    } catch (error) {
+                        console.error('❌ 공지사항 알림 생성 오류 (무시됨):', error);
+                    }
+                })();
+            }
+            
             alert('등록되었습니다.');
         }
         closeBoardPostModal();
@@ -3532,6 +3673,31 @@ function togglePaymentStatus(resultId) {
         // 지급대기 → 지급완료
         if (confirm(`${result.name}님에게 ${result.support.toLocaleString()}원을 지급하시겠습니까?`)) {
             result.paymentStatus = 'paid';
+            
+            // 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
+            if (result.orderId) {
+                (async function() {
+                    try {
+                        var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
+                        if (orderDoc.exists) {
+                            var orderData = orderDoc.data();
+                            var userId = orderData.userId;
+                            if (userId) {
+                                await createNotificationForUser(
+                                    userId,
+                                    'support_paid',
+                                    '쇼핑지원금이 지급되었습니다',
+                                    result.support.toLocaleString() + '원의 쇼핑지원금이 지급되었습니다.',
+                                    'mypage.html?section=support'
+                                );
+                            }
+                        }
+                    } catch (error) {
+                        console.error('쇼핑지원금 알림 생성 오류 (무시됨):', error);
+                    }
+                })();
+            }
+            
             alert(`${result.name}님에게 ${result.support.toLocaleString()}원이 지급되었습니다.`);
             renderConfirmResults();
             updateConfirmSummary();
@@ -3618,6 +3784,50 @@ function completeDailyPayment() {
         dailyPaymentResults.forEach(result => {
             result.paymentStatus = 'paid';
         });
+        
+        // 알림 생성 (비동기로 처리하여 지급 처리가 지연되지 않도록 함)
+        (async function() {
+            try {
+                var notificationPromises = [];
+                for (var i = 0; i < dailyPaymentResults.length; i++) {
+                    var result = dailyPaymentResults[i];
+                    
+                    // 알림 생성 (orderId로 주문 정보 조회하여 userId 찾기)
+                    if (result.orderId) {
+                        try {
+                            var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
+                            if (orderDoc.exists) {
+                                var orderData = orderDoc.data();
+                                var userId = orderData.userId;
+                                if (userId) {
+                                    notificationPromises.push(
+                                        createNotificationForUser(
+                                            userId,
+                                            'support_paid',
+                                            '쇼핑지원금이 지급되었습니다',
+                                            result.support.toLocaleString() + '원의 쇼핑지원금이 지급되었습니다.',
+                                            'mypage.html?section=support'
+                                        ).catch(function(err) {
+                                            console.error('개별 알림 생성 오류 (무시됨):', err);
+                                        })
+                                    );
+                                }
+                            }
+                        } catch (error) {
+                            console.error('주문 조회 오류 (무시됨):', error);
+                        }
+                    }
+                }
+                
+                // 모든 알림 생성 (병렬 처리, 실패해도 계속 진행)
+                if (notificationPromises.length > 0) {
+                    await Promise.allSettled(notificationPromises);
+                    console.log('✅ 쇼핑지원금 알림 생성 완료:', notificationPromises.length, '명');
+                }
+            } catch (error) {
+                console.error('쇼핑지원금 알림 생성 오류 (무시됨):', error);
+            }
+        })();
         
         // 지급 대상 목록 초기화
         dailyPaymentResults = [];

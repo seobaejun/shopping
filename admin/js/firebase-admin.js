@@ -138,6 +138,10 @@ const collections = {
     posts: () => {
         if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
         return db.collection('posts');
+    },
+    notifications: () => {
+        if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+        return db.collection('notifications');
     }
 };
 

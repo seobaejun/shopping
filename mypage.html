@@ -73,15 +73,20 @@
                         </div>
                         <button type="button" class="btn-info-edit" id="mypageBtnInfoEdit">정보수정</button>
                         <div class="user-stats">
-                            <div class="stat-item" id="wishlistStatItem">
+                            <div class="stat-item" id="wishlistStatItem" onclick="showWishlistSection()">
                                 <i class="fas fa-heart"></i>
                                 <span>관심상품</span>
                                 <strong id="wishlistCount">0</strong>
                             </div>
-                            <div class="stat-item" id="cartStatItem">
+                            <div class="stat-item" id="cartStatItem" onclick="showCartSection()">
                                 <i class="fas fa-shopping-cart"></i>
                                 <span>장바구니</span>
                                 <strong id="cartCount">0</strong>
+                            </div>
+                            <div class="stat-item notification-item" id="notificationStatItem" onclick="showNotificationPanel()">
+                                <i class="fas fa-bell"><span class="notification-badge" id="notificationBadge" style="display: none;">0</span></i>
+                                <span>알림</span>
+                                <strong id="notificationCount">0</strong>
                             </div>
                         </div>
                     </div>
@@ -137,6 +142,7 @@
                                 <li><a href="#" data-section="notice" onclick="showSection('notice', this); return false;">공지사항 <span class="nav-badge implemented">운영</span></a></li>
                                 <li><a href="#" data-section="events" onclick="showSection('events', this); return false;">이벤트 <span class="nav-badge implemented">운영</span></a></li>
                                 <li><a href="#" data-section="faq" onclick="showSection('faq', this); return false;">자주묻는질문 <span class="nav-badge implemented">운영</span></a></li>
+                                <li><a href="#" data-section="notifications" onclick="showSection('notifications', this); return false;">알림 <span class="nav-badge implemented">운영</span></a></li>
                             </ul>
                         </div>
                     </nav>
@@ -559,6 +565,24 @@
                             <p style="color: #999; font-size: 16px;">등록된 상품문의가 없습니다.</p>
                         </div>
                     </div>
+
+                    <!-- 알림 섹션 -->
+                    <div class="content-section mypage-section" data-section="notifications" id="mypageSectionNotifications" style="display: none;">
+                        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>알림</h3>
+                            <button type="button" class="btn btn-secondary" id="btnMarkAllRead" style="padding: 8px 16px; font-size: 14px;">
+                                <i class="fas fa-check-double"></i> 모두 읽음
+                            </button>
+                        </div>
+                        
+                        <div class="notification-list" id="notificationList">
+                            <!-- JavaScript로 동적 생성 -->
+                        </div>
+                        <div class="notification-empty" id="notificationEmpty" style="display: none; text-align: center; padding: 60px 20px;">
+                            <i class="fas fa-bell-slash" style="font-size: 48px; color: #ddd; margin-bottom: 20px;"></i>
+                            <p style="color: #999; font-size: 16px;">알림이 없습니다.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -812,6 +836,7 @@
     <script src="js/admin-link-visibility.js"></script>
     <!-- 마이페이지 전용 Firestore 조회 (로그인 사용자 식별 통일) -->
     <script src="js/mypage-api.js"></script>
+    <script src="js/notifications.js"></script>
     <!-- 마이페이지 스크립트 -->
     <script src="js/mypage.js?v=2"></script>
 </body>

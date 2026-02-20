@@ -113,25 +113,8 @@
             var id = link.getAttribute('data-id');
             if (!id) return;
 
-            var detailRow = document.getElementById('notice-detail-' + id);
-            if (!detailRow) return;
-
-            // 다른 모든 상세 행 닫기
-            var allDetailRows = table.querySelectorAll('.notice-detail-row');
-            allDetailRows.forEach(function(row) {
-                if (row.id !== 'notice-detail-' + id) {
-                    row.style.display = 'none';
-                }
-            });
-
-            // 현재 행 토글
-            var isOpen = detailRow.style.display !== 'none';
-            detailRow.style.display = isOpen ? 'none' : 'table-row';
-
-            // 조회수 증가 (중복 방지)
-            if (!isOpen) {
-                updateViewCount(id);
-            }
+            // 상세 페이지로 이동
+            window.location.href = 'notice.html?id=' + id;
         });
     }
 
@@ -213,6 +196,63 @@
     }
 
     /**
+     * URL 파라미터에서 ID 가져오기
+     */
+    function getNoticeIdFromUrl() {
+        var params = new URLSearchParams(window.location.search);
+        return params.get('id');
+    }
+
+    /**
+     * 공지사항 상세 내용 표시
+     */
+    function renderNoticeDetail(noticeId) {
+        if (!db || !noticeId) {
+            console.warn('공지사항 상세: Firestore를 사용할 수 없습니다.');
+            return;
+        }
+
+        var listWrapper = document.getElementById('noticeListWrapper');
+        var detailWrapper = document.getElementById('noticeDetailWrapper');
+        
+        if (!listWrapper || !detailWrapper) return;
+
+        // 목록 숨기고 상세 표시
+        listWrapper.style.display = 'none';
+        detailWrapper.style.display = 'block';
+
+        // Firestore에서 공지사항 데이터 가져오기
+        db.collection('posts').doc(noticeId).get().then(function(doc) {
+            if (!doc.exists) {
+                alert('공지사항을 찾을 수 없습니다.');
+                window.location.href = 'notice.html';
+                return;
+            }
+
+            var data = doc.data();
+            var title = (data.title || '-').replace(/</g, '&lt;');
+            var author = (data.authorName || '-').replace(/</g, '&lt;');
+            var viewCount = data.viewCount != null ? data.viewCount : 0;
+            var date = formatDate(data.createdAt);
+            var content = (data.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+
+            // 상세 내용 렌더링
+            document.getElementById('noticeDetailTitle').textContent = title;
+            document.getElementById('noticeDetailAuthor').querySelector('span').textContent = author;
+            document.getElementById('noticeDetailViews').querySelector('span').textContent = viewCount + '회';
+            document.getElementById('noticeDetailDate').querySelector('span').textContent = date;
+            document.getElementById('noticeDetailContent').innerHTML = content;
+
+            // 조회수 증가 (중복 방지)
+            updateViewCount(noticeId);
+        }).catch(function(error) {
+            console.error('공지사항 상세 로드 오류:', error);
+            alert('공지사항을 불러오는 중 오류가 발생했습니다.');
+            window.location.href = 'notice.html';
+        });
+    }
+
+    /**
      * 페이지 초기화
      */
     function init() {
@@ -220,8 +260,16 @@
         
         // Firebase 초기화
         initFirebase().then(function() {
-            // 공지사항 데이터 로드
-            loadNoticeData();
+            // URL 파라미터에서 ID 확인
+            var noticeId = getNoticeIdFromUrl();
+            
+            if (noticeId) {
+                // 상세 페이지 표시
+                renderNoticeDetail(noticeId);
+            } else {
+                // 목록 페이지 표시
+                loadNoticeData();
+            }
         });
     }
 
@@ -232,4 +280,5 @@
         init();
     }
 })();
+
 

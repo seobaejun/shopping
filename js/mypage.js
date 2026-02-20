@@ -74,6 +74,25 @@ function runMypageInit() {
         renderOrderSteps(orders);
         renderOrderList(orders);
         renderNoticeList();
+        
+        // 알림 시스템 초기화
+        if (window.notificationService && typeof window.notificationService.init === 'function') {
+            window.notificationService.init();
+        }
+        
+        // 알림 카운트 업데이트
+        if (user && user.userId && window.notificationService && typeof window.notificationService.getUnreadCount === 'function') {
+            window.notificationService.getUnreadCount(user.userId).then(function(count) {
+                if (window.notificationService && typeof window.notificationService.updateNotificationBadge === 'function') {
+                    window.notificationService.updateNotificationBadge(count);
+                }
+                // notificationCount 요소도 업데이트
+                var notificationCountEl = document.getElementById('notificationCount');
+                if (notificationCountEl) {
+                    notificationCountEl.textContent = count;
+                }
+            });
+        }
     fillProfileForm(member);
     fillMarketingForm(member);
     bindBankSelectToggle();
@@ -911,6 +930,10 @@ function showSection(sectionName, clickedLink) {
         renderProductInquiryList();
         bindProductInquirySection();
     }
+    if (sectionName === 'notifications') {
+        renderNotificationList();
+        bindNotificationSection();
+    }
     const navLinks = document.querySelectorAll('.nav-group a');
     navLinks.forEach(function (link) { link.classList.remove('active'); });
     if (clickedLink) clickedLink.classList.add('active');
@@ -926,7 +949,7 @@ function showSection(sectionName, clickedLink) {
             } catch (e) { /* ignore */ }
         }
     }
-    const implemented = ['orders', 'profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw', 'faq', 'wishlist-cart', 'inquiry', 'product-inquiry', 'review'];
+    const implemented = ['orders', 'profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw', 'faq', 'wishlist-cart', 'inquiry', 'product-inquiry', 'review', 'notifications'];
     if (implemented.indexOf(sectionName) === -1) {
         alert(sectionName + ' 기능은 추후 구현 예정입니다.');
     }
@@ -1082,22 +1105,31 @@ function removeFromCart(index) {
 window.removeFromWishlist = removeFromWishlist;
 window.removeFromCart = removeFromCart;
 
-// 공지/이벤트 제목 클릭 시 아래 행 펼치기/접기
+// 공지/이벤트 제목 클릭 시 상세 페이지로 이동
 function bindPostExpandClicks() {
     document.addEventListener('click', function (e) {
         var link = e.target && e.target.closest ? e.target.closest('a.notice-title-link, a.event-title-link') : null;
         if (!link) return;
         e.preventDefault();
         var id = link.getAttribute('data-id') || '';
+        if (!id) return;
+        
         var isEvent = link.classList.contains('event-title-link');
-        var table = link.closest('table');
-        if (!table) return;
-        var detailRow = document.getElementById(isEvent ? 'event-detail-' + id : 'notice-detail-' + id);
-        if (!detailRow) return;
-        var isOpen = detailRow.style.display !== 'none';
-        var allDetailRows = table.querySelectorAll(isEvent ? '.event-detail-row' : '.notice-detail-row');
-        allDetailRows.forEach(function (row) { row.style.display = 'none'; });
-        if (!isOpen) detailRow.style.display = '';
+        
+        // 공지사항은 notice.html로, 이벤트는 이벤트 상세 페이지로 이동 (현재는 이벤트도 펼치기 유지)
+        if (isEvent) {
+            var table = link.closest('table');
+            if (!table) return;
+            var detailRow = document.getElementById('event-detail-' + id);
+            if (!detailRow) return;
+            var isOpen = detailRow.style.display !== 'none';
+            var allDetailRows = table.querySelectorAll('.event-detail-row');
+            allDetailRows.forEach(function (row) { row.style.display = 'none'; });
+            if (!isOpen) detailRow.style.display = '';
+        } else {
+            // 공지사항은 상세 페이지로 이동
+            window.location.href = 'notice.html?id=' + id;
+        }
     });
 }
 
@@ -2178,11 +2210,180 @@ function deleteReview(reviewId) {
     });
 }
 
+// 현재 사용자 정보 가져오기
+function getCurrentUser() {
+    try {
+        var raw = localStorage.getItem('loginUser');
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// 알림 목록 렌더링
+function renderNotificationList() {
+    var listContainer = document.getElementById('notificationList');
+    var emptyState = document.getElementById('notificationEmpty');
+    if (!listContainer) return;
+
+    var user = getCurrentUser();
+    if (!user || !user.userId) {
+        listContainer.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+    }
+
+    if (window.notificationService && typeof window.notificationService.getNotifications === 'function') {
+        window.notificationService.getNotifications(user.userId, 50).then(function (notifications) {
+            if (!notifications || notifications.length === 0) {
+                listContainer.innerHTML = '';
+                if (emptyState) emptyState.style.display = 'block';
+                return;
+            }
+
+            if (emptyState) emptyState.style.display = 'none';
+
+            function formatDate(createdAt) {
+                if (!createdAt || createdAt.seconds == null) return '-';
+                var d = new Date(createdAt.seconds * 1000);
+                var now = new Date();
+                var diff = now - d;
+                var minutes = Math.floor(diff / 60000);
+                var hours = Math.floor(diff / 3600000);
+                var days = Math.floor(diff / 86400000);
+
+                if (minutes < 1) return '방금 전';
+                if (minutes < 60) return minutes + '분 전';
+                if (hours < 24) return hours + '시간 전';
+                if (days < 7) return days + '일 전';
+
+                var year = String(d.getFullYear()).slice(-2);
+                return year + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            }
+
+            var html = notifications.map(function (notif) {
+                var readClass = notif.read ? 'read' : 'unread';
+                var iconClass = 'fas fa-bell';
+                if (notif.type === 'order_approved' || notif.type === 'order_shipped' || notif.type === 'order_delivered') {
+                    iconClass = 'fas fa-shopping-bag';
+                } else if (notif.type === 'inquiry_answered' || notif.type === 'product_inquiry_answered') {
+                    iconClass = 'fas fa-comment-dots';
+                } else if (notif.type === 'notice') {
+                    iconClass = 'fas fa-bullhorn';
+                } else if (notif.type === 'support_paid') {
+                    iconClass = 'fas fa-won-sign';
+                }
+
+                return '<div class="notification-item ' + readClass + '" data-id="' + (notif.id || '') + '" onclick="markNotificationAsRead(\'' + (notif.id || '') + '\', \'' + (notif.link || '') + '\')">' +
+                    '<div class="notification-icon"><i class="' + iconClass + '"></i></div>' +
+                    '<div class="notification-content">' +
+                    '<div class="notification-title">' + (notif.title || '알림').replace(/</g, '&lt;') + '</div>' +
+                    '<div class="notification-message">' + (notif.message || '').replace(/</g, '&lt;') + '</div>' +
+                    '<div class="notification-date">' + formatDate(notif.createdAt) + '</div>' +
+                    '</div>' +
+                    (!notif.read ? '<div class="notification-unread-dot"></div>' : '') +
+                    '</div>';
+            }).join('');
+
+            listContainer.innerHTML = html;
+        }).catch(function (error) {
+            console.error('알림 목록 로드 오류:', error);
+            listContainer.innerHTML = '';
+            if (emptyState) emptyState.style.display = 'block';
+        });
+    } else {
+        listContainer.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+    }
+}
+
+// 알림 섹션 바인딩
+function bindNotificationSection() {
+    var btnMarkAllRead = document.getElementById('btnMarkAllRead');
+    if (btnMarkAllRead) {
+        btnMarkAllRead.addEventListener('click', function () {
+            var user = getCurrentUser();
+            if (!user || !user.userId) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+
+            if (window.notificationService && typeof window.notificationService.markAllAsRead === 'function') {
+                window.notificationService.markAllAsRead(user.userId).then(function () {
+                    renderNotificationList();
+                    if (window.notificationService && typeof window.notificationService.getUnreadCount === 'function') {
+                        window.notificationService.getUnreadCount(user.userId).then(function (count) {
+                            if (window.notificationService && typeof window.notificationService.updateNotificationBadge === 'function') {
+                                window.notificationService.updateNotificationBadge(count);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+}
+
+// 알림 읽음 처리 및 링크 이동
+function markNotificationAsRead(notificationId, link) {
+    if (window.notificationService && typeof window.notificationService.markAsRead === 'function') {
+        window.notificationService.markAsRead(notificationId).then(function () {
+            renderNotificationList();
+            var user = getCurrentUser();
+            if (user && user.userId && window.notificationService && typeof window.notificationService.getUnreadCount === 'function') {
+                window.notificationService.getUnreadCount(user.userId).then(function (count) {
+                    if (window.notificationService && typeof window.notificationService.updateNotificationBadge === 'function') {
+                        window.notificationService.updateNotificationBadge(count);
+                    }
+                });
+            }
+        });
+    }
+
+    if (link) {
+        window.location.href = link;
+    }
+}
+
+// 알림 패널 표시 (사이드바 알림 아이콘 클릭 시)
+function showNotificationPanel() {
+    showSection('notifications');
+}
+
+// 관심상품 섹션 표시 (사이드바 관심상품 아이콘 클릭 시)
+function showWishlistSection() {
+    showSection('wishlist-cart');
+    // 관심상품 탭 활성화
+    setTimeout(function() {
+        const wishlistTab = document.querySelector('.wishlist-cart-tab[data-tab="wishlist"]');
+        if (wishlistTab) {
+            wishlistTab.click();
+        }
+    }, 100);
+}
+
+// 장바구니 섹션 표시 (사이드바 장바구니 아이콘 클릭 시)
+function showCartSection() {
+    showSection('wishlist-cart');
+    // 장바구니 탭 활성화
+    setTimeout(function() {
+        const cartTab = document.querySelector('.wishlist-cart-tab[data-tab="cart"]');
+        if (cartTab) {
+            cartTab.click();
+        }
+    }, 100);
+}
+
 // 전역 함수로 노출
 window.showSection = showSection;
+window.showNotificationPanel = showNotificationPanel;
+window.showWishlistSection = showWishlistSection;
+window.showCartSection = showCartSection;
 window.deleteReview = deleteReview;
 window.deleteInquiry = deleteInquiry;
 window.removeFromWishlist = removeFromWishlist;
 window.removeFromCart = removeFromCart;
 window.deleteProductInquiry = deleteProductInquiry;
 window.openReviewModalForProduct = openReviewModalForProduct;
+window.markNotificationAsRead = markNotificationAsRead;
+window.showNotificationPanel = showNotificationPanel;
