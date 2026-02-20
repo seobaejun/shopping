@@ -653,12 +653,28 @@ function updateViewedList() {
 
     const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
     
-    if (viewedProducts.length === 0) {
+    // 중복 제거: 같은 ID의 상품이 여러 개 있으면 첫 번째 것만 유지
+    const uniqueProducts = [];
+    const seenIds = new Set();
+    for (let i = 0; i < viewedProducts.length; i++) {
+        const product = viewedProducts[i];
+        if (product && product.id && !seenIds.has(product.id)) {
+            seenIds.add(product.id);
+            uniqueProducts.push(product);
+        }
+    }
+    
+    // 중복 제거된 목록을 localStorage에 다시 저장
+    if (uniqueProducts.length !== viewedProducts.length) {
+        localStorage.setItem('todayViewedProducts', JSON.stringify(uniqueProducts));
+    }
+    
+    if (uniqueProducts.length === 0) {
         elements.viewedList.innerHTML = '<p class="empty-message">최근 본 상품이 없습니다.</p>';
         return;
     }
 
-    const listHTML = viewedProducts.map(product => `
+    const listHTML = uniqueProducts.map(product => `
         <div class="viewed-item" data-product-id="${product.id || ''}" style="cursor: pointer;">
             <img src="${product.image || 'https://via.placeholder.com/80x80'}" alt="${product.name}">
             <div class="viewed-item-info">
@@ -690,7 +706,14 @@ function updateViewedList() {
 // 최근 본 상품 개수 업데이트
 function updateViewedCount() {
     const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
-    const count = viewedProducts.length;
+    // 중복 제거된 개수 계산
+    const uniqueIds = new Set();
+    viewedProducts.forEach(product => {
+        if (product && product.id) {
+            uniqueIds.add(product.id);
+        }
+    });
+    const count = uniqueIds.size;
 
     // 퀵메뉴 뱃지 업데이트
     if (elements.toggleViewed) {
@@ -1250,6 +1273,63 @@ function handleLogout() {
         // 메인 페이지로 이동
         window.location.href = 'index.html';
     }
+}
+
+// 상단 유틸 메뉴 네비게이션 클릭 이벤트
+function initTopMenuNavigation() {
+    const topMenuLinks = document.querySelectorAll('.top-menu a');
+    
+    topMenuLinks.forEach(link => {
+        const icon = link.querySelector('i');
+        if (!icon) return;
+        
+        const iconClass = icon.className;
+        let section = null;
+        
+        // 아이콘 클래스로 섹션 판별
+        if (iconClass.includes('fa-shopping-bag')) {
+            // 주문내역
+            section = 'orders';
+        } else if (iconClass.includes('fa-question-circle')) {
+            // FAQ는 이미 링크가 있으므로 처리하지 않음
+            return;
+        } else if (iconClass.includes('fa-comment')) {
+            // 1:1문의
+            section = 'inquiry';
+        } else if (iconClass.includes('fa-star')) {
+            // 사용후기
+            section = 'review';
+        } else if (iconClass.includes('fa-keyboard')) {
+            // 상품문의
+            section = 'product-inquiry';
+        }
+        
+        if (section) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // 로그인 체크
+                const loginUser = localStorage.getItem('loginUser');
+                const isLoggedIn = localStorage.getItem('isLoggedIn');
+                
+                if (!loginUser || isLoggedIn !== 'true') {
+                    alert('로그인이 필요합니다. 로그인 후 이용해주세요.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                // 마이페이지 해당 섹션으로 이동
+                window.location.href = `mypage.html?section=${section}`;
+            });
+        }
+    });
+}
+
+// 페이지 로드 시 네비게이션 초기화
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTopMenuNavigation);
+} else {
+    initTopMenuNavigation();
 }
 
 // 전역으로 노출

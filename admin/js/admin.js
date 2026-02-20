@@ -1899,7 +1899,7 @@ function navigateToPage(pageId) {
 // ============================================
 // 게시판 관리
 // ============================================
-const BOARD_TYPE_LABELS = { notice: '공지사항', event: '이벤트', qna: 'Q&A', review: '상품후기', inquiry: '1:1문의', 'product-inquiry': '상품문의' };
+const BOARD_TYPE_LABELS = { notice: '공지사항', event: '이벤트', qna: 'Q&A', review: '상품후기', inquiry: '1:1문의', 'product-inquiry': '상품문의', 'product-detail-inquiry': '상품상세 상품문의' };
 
 function getCurrentBoardType() {
     var active = document.querySelector('#board-manage .board-tab.active');
@@ -1924,7 +1924,25 @@ async function loadBoardPosts(boardType) {
     try {
         await window.firebaseAdmin.getInitPromise();
         var filters = getBoardFilters();
-        var list = await window.firebaseAdmin.boardService.getPosts(boardType, filters);
+        
+        // 상품상세 상품문의일 때는 product-inquiry 타입이면서 productId가 있는 것만 조회
+        if (boardType === 'product-detail-inquiry') {
+            // product-inquiry 타입으로 조회
+            var detailList = await window.firebaseAdmin.boardService.getPosts('product-inquiry', filters);
+            list = detailList.filter(function(item) {
+                return item.productId && item.productId.trim() !== '';
+            });
+        } else {
+            list = await window.firebaseAdmin.boardService.getPosts(boardType, filters);
+            
+            // 일반 상품문의일 때는 productId가 없는 것만 표시 (마이페이지에서 작성한 문의만)
+            if (boardType === 'product-inquiry') {
+                list = list.filter(function(item) {
+                    return !item.productId || item.productId.trim() === '';
+                });
+            }
+        }
+        
         window._boardPostsList = list;
         renderBoardTable(list, boardType);
         if (infoText) infoText.textContent = '총 ' + (list.length) + '개의 게시글이 있습니다.';
@@ -1962,7 +1980,7 @@ function renderBoardTable(list, boardType) {
         var date = formatBoardDate(p.createdAt);
         var viewCount = (p.viewCount != null ? p.viewCount : 0).toLocaleString();
         var statusBadge = '';
-        if (boardType === 'inquiry' || boardType === 'product-inquiry') {
+        if (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') {
             if (p.status === 'answered') {
                 statusBadge = '<span class="badge badge-success">답변완료</span>';
             } else {
@@ -1974,7 +1992,7 @@ function renderBoardTable(list, boardType) {
         
         // 상품문의일 때 상품명 표시
         var titleCell = title;
-        if (boardType === 'product-inquiry' && p.productName) {
+        if ((boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') && p.productName) {
             titleCell = '<span style="color: #666; font-size: 12px; margin-right: 8px;">[' + p.productName + ']</span>' + title;
         }
         
@@ -1986,7 +2004,7 @@ function renderBoardTable(list, boardType) {
             '<td>' + viewCount + '</td>' +
             '<td>' + statusBadge + '</td>' +
             '<td style="white-space: nowrap;"><button type="button" class="btn btn-sm btn-primary btn-board-edit" style="margin-right: 5px;">' + 
-            ((boardType === 'inquiry' || boardType === 'product-inquiry') ? '답변하기' : '수정') + 
+            ((boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? '답변하기' : '수정') + 
             '</button><button type="button" class="btn btn-sm btn-secondary btn-board-delete">삭제</button></td>' +
             '</tr>';
     });
@@ -2021,10 +2039,10 @@ function openBoardPostModal(editId, boardType) {
     if (editId && window._boardPostsList) {
         var post = window._boardPostsList.find(function (p) { return p.id === editId; });
         if (post) {
-            titleEl.textContent = (boardType === 'inquiry' || boardType === 'product-inquiry') ? '답변하기' : '글 수정';
+            titleEl.textContent = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? '답변하기' : '글 수정';
             
             // 1:1문의나 상품문의일 때는 제목과 내용을 읽기 전용으로 설정
-            var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry');
+            var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry');
             if (isInquiry) {
                 titleInput.value = post.title || '';
                 titleInput.readOnly = true;
@@ -2081,7 +2099,7 @@ function openBoardPostModal(editId, boardType) {
             if (answerInput) answerInput.value = post.answer || '';
             
             // 상품문의일 때 상품 정보 표시
-            if (boardType === 'product-inquiry') {
+            if (boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') {
                 var productInfoWrap = document.getElementById('boardPostProductInfoWrap');
                 var productNameEl = document.getElementById('boardPostProductName');
                 var productIdEl = document.getElementById('boardPostProductId');
@@ -2090,7 +2108,7 @@ function openBoardPostModal(editId, boardType) {
                 if (productIdEl) productIdEl.textContent = post.productId || '-';
             }
         } else {
-            titleEl.textContent = (boardType === 'inquiry' || boardType === 'product-inquiry') ? '답변하기' : '글 수정';
+            titleEl.textContent = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? '답변하기' : '글 수정';
             titleInput.value = '';
             authorInput.value = '관리자';
             contentInput.value = '';
@@ -2112,8 +2130,8 @@ function openBoardPostModal(editId, boardType) {
     var productInfoWrap = document.getElementById('boardPostProductInfoWrap');
     noticeWrap.style.display = (boardType === 'notice') ? 'block' : 'none';
     if (faqCategoryWrap) faqCategoryWrap.style.display = (boardType === 'qna') ? 'block' : 'none';
-    if (answerWrap) answerWrap.style.display = (boardType === 'inquiry' || boardType === 'product-inquiry') ? 'block' : 'none';
-    if (productInfoWrap) productInfoWrap.style.display = (boardType === 'product-inquiry') ? 'block' : 'none';
+    if (answerWrap) answerWrap.style.display = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? 'block' : 'none';
+    if (productInfoWrap) productInfoWrap.style.display = (boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? 'block' : 'none';
     modal.style.display = 'flex';
 }
 
@@ -2156,7 +2174,7 @@ async function saveBoardPost() {
     var noticeCheck = document.getElementById('boardPostIsNotice');
     var postId = (idEl && idEl.value) || '';
     var boardType = getCurrentBoardType();
-    var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry');
+    var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry');
     var title = (titleInput && titleInput.value) ? titleInput.value.trim() : '';
     
     // 1:1문의나 상품문의가 아닐 때만 제목 필수 체크
@@ -2185,7 +2203,7 @@ async function saveBoardPost() {
     try {
         await window.firebaseAdmin.getInitPromise();
         if (postId) {
-            var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry');
+            var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry');
             var updateData = {};
             
             // 1:1문의나 상품문의일 때는 답변만 업데이트하고, 제목/내용은 원본 데이터 유지
@@ -2214,8 +2232,10 @@ async function saveBoardPost() {
             await window.firebaseAdmin.boardService.updatePost(postId, updateData);
             alert(isInquiry ? '답변이 저장되었습니다.' : '수정되었습니다.');
         } else {
+            // product-detail-inquiry는 실제로 product-inquiry로 저장
+            var actualBoardType = (boardType === 'product-detail-inquiry') ? 'product-inquiry' : boardType;
             var addData = {
-                boardType: boardType,
+                boardType: actualBoardType,
                 title: title,
                 authorName: (authorInput && authorInput.value) ? authorInput.value.trim() : '관리자',
                 content: (contentInput && contentInput.value) ? contentInput.value : '',
@@ -2223,7 +2243,7 @@ async function saveBoardPost() {
                 isNotice: (noticeCheck && noticeCheck.checked) || false
             };
             if (boardType === 'qna') addData.faqCategory = faqCategory;
-            if (boardType === 'inquiry' || boardType === 'product-inquiry') {
+            if (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') {
                 var answerInput = document.getElementById('boardPostAnswer');
                 var answer = answerInput ? answerInput.value.trim() : '';
                 addData.answer = answer;

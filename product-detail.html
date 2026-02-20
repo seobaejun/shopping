@@ -153,12 +153,10 @@
 
                     <div class="product-stats">
                         <div class="stat-item">
-                            <i class="fas fa-star"></i>
-                            <span>사용후기 (<span id="reviewCount">0</span>)</span>
+                            <span><i class="fas fa-star"></i> 사용후기 (<span id="reviewCount">0</span>) <span class="review-rating-display"></span></span>
                         </div>
                         <div class="stat-item">
-                            <i class="fas fa-heart"></i>
-                            <span id="likeStatus">이 상품을 좋아하는 회원이 없습니다.</span>
+                            <span><i class="fas fa-heart"></i> <span id="likeStatus">이 상품을 좋아하는 회원이 없습니다.</span></span>
                         </div>
                     </div>
 
@@ -229,9 +227,15 @@
                         <h2>사용후기</h2>
                         <button class="btn-write"><i class="fas fa-pen"></i> 사용후기 쓰기</button>
                     </div>
-                    <div class="empty-state">
+                    <div class="review-list-container" id="reviewListContainer">
+                        <!-- 후기 목록이 여기에 동적으로 표시됩니다 -->
+                    </div>
+                    <div class="empty-state" id="reviewEmptyState" style="display: none;">
                         <i class="far fa-comment-dots"></i>
                         <p>사용후기가 없습니다.</p>
+                    </div>
+                    <div class="pagination-container" id="reviewPaginationContainer" style="display: none; text-align: center; margin-top: 20px; padding: 20px;">
+                        <!-- 페이지네이션이 여기에 동적으로 표시됩니다 -->
                     </div>
                     <div class="review-footer">
                         <a href="#" class="btn-view-all">전체보기</a>
@@ -244,9 +248,15 @@
                         <h2>상품문의</h2>
                         <button class="btn-write" id="btnProductInquiryWrite"><i class="fas fa-pen"></i> 상품문의 쓰기</button>
                     </div>
-                    <div class="empty-state">
+                    <div class="qna-list-container" id="productInquiryListContainer">
+                        <!-- 상품문의 목록이 여기에 동적으로 표시됩니다 -->
+                    </div>
+                    <div class="empty-state" id="productInquiryEmptyState">
                         <i class="far fa-question-circle"></i>
                         <p>상품문의가 없습니다.</p>
+                    </div>
+                    <div class="pagination-container" id="inquiryPaginationContainer" style="display: none; text-align: center; margin-top: 20px; padding: 20px;">
+                        <!-- 페이지네이션이 여기에 동적으로 표시됩니다 -->
                     </div>
                     <div class="qna-footer">
                         <a href="#" class="btn-view-all">전체보기</a>
@@ -464,6 +474,64 @@
     <!-- SNS 공유 유틸리티 -->
     <script src="js/share-utils.js?v=4"></script>
     
+    <!-- 상품후기 작성 모달 -->
+    <div id="reviewModal" class="modal" style="display: none;">
+        <div class="modal-content inquiry-modal-content">
+            <div class="modal-header inquiry-modal-header">
+                <div class="inquiry-modal-title-wrap">
+                    <i class="fas fa-star" style="color: #4A5FC1; margin-right: 10px; font-size: 20px;"></i>
+                    <h3>상품후기 작성</h3>
+                </div>
+                <button type="button" class="modal-close" id="reviewModalClose">&times;</button>
+            </div>
+            <div class="modal-body inquiry-modal-body">
+                <input type="hidden" id="reviewId" value="">
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">평점</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <div class="rating-input" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                        <div class="star-rating" id="reviewRating" style="display: flex; gap: 5px;">
+                            <i class="far fa-star star-icon" data-rating="1" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="2" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="3" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="4" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="5" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                        </div>
+                        <span id="reviewRatingText" style="color: #666; font-size: 14px; margin-left: 10px;">평점을 선택해주세요</span>
+                        <input type="hidden" id="reviewRatingValue" value="0" required>
+                    </div>
+                </div>
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">제목</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <input type="text" class="inquiry-input" id="reviewTitle" placeholder="후기 제목을 입력해주세요" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">후기 내용</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <textarea class="inquiry-textarea" id="reviewContent" rows="8" placeholder="상품에 대한 후기를 자세히 입력해주세요.&#10;예: 사용감, 품질, 만족도 등" required></textarea>
+                    <div class="textarea-counter">
+                        <span id="reviewContentCounter">0</span> / 1000자
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer inquiry-modal-footer">
+                <button type="button" class="btn-inquiry-cancel" id="reviewModalCancel">
+                    <i class="fas fa-times"></i> 취소
+                </button>
+                <button type="button" class="btn-inquiry-submit" id="reviewModalSave">
+                    <i class="fas fa-paper-plane"></i> 후기 작성
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 상품문의 작성 모달 -->
     <div id="productInquiryModal" class="modal" style="display: none;">
         <div class="modal-content inquiry-modal-content">

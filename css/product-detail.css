@@ -191,18 +191,40 @@
     padding: 15px 0;
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
+    flex-wrap: nowrap;
 }
 
 .stat-item {
     display: flex;
     align-items: center;
-    gap: 8px;
     font-size: 14px;
     color: var(--text-light);
 }
 
+.stat-item > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
+
 .stat-item i {
     color: var(--primary-color);
+    display: inline-block;
+}
+
+.stat-item .review-rating-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 10px;
+    white-space: nowrap;
+}
+
+.stat-item #likeStatus {
+    white-space: nowrap;
+    display: inline;
 }
 
 .product-options {

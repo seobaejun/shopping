@@ -136,6 +136,11 @@ async function getCategoryNameMap() {
     }
 }
 
+// 페이지네이션 상태
+let currentReviewPage = 1;
+let currentInquiryPage = 1;
+const ITEMS_PER_PAGE = 10;
+
 // DOM 요소
 const productDetailElements = {
     mainImage: document.getElementById('mainImage'),
@@ -655,6 +660,9 @@ function initWishlistActions() {
                 alert('관심상품에서 제거되었습니다.');
             }
             
+            // 관심상품 개수 업데이트
+            updateWishlistCount();
+            
             // 마이페이지의 관심상품 개수 업데이트 (페이지가 열려있을 경우)
             if (typeof updateWishlistAndCartCount === 'function') {
                 updateWishlistAndCartCount();
@@ -689,22 +697,41 @@ function initCartModal() {
 
 // 탭 전환
 function initTabs() {
-    productDetailElements.tabBtns.forEach(btn => {
+    // DOM 요소를 다시 찾기 (동적 로드 대비)
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    if (!tabBtns || tabBtns.length === 0) {
+        console.warn('탭 버튼을 찾을 수 없습니다.');
+        return;
+    }
+    
+    tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetTab = btn.dataset.tab;
             
+            if (!targetTab) {
+                console.warn('탭 데이터 속성이 없습니다.');
+                return;
+            }
+            
             // 모든 탭 버튼 비활성화
-            productDetailElements.tabBtns.forEach(b => b.classList.remove('active'));
+            tabBtns.forEach(b => b.classList.remove('active'));
             // 현재 탭 버튼 활성화
             btn.classList.add('active');
             
             // 모든 탭 컨텐츠 숨기기
-            productDetailElements.tabContents.forEach(content => {
+            tabContents.forEach(content => {
                 content.classList.remove('active');
             });
             
             // 선택한 탭 컨텐츠 표시
-            document.getElementById(targetTab).classList.add('active');
+            const targetContent = document.getElementById(targetTab);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            } else {
+                console.warn('탭 컨텐츠를 찾을 수 없습니다:', targetTab);
+            }
         });
     });
 }
@@ -787,7 +814,7 @@ function initWriteButtons() {
             const parentId = btn.closest('.tab-content').id;
             
             if (parentId === 'review') {
-                alert('사용후기 작성 페이지로 이동합니다.');
+                openReviewModal();
             } else if (parentId === 'qna') {
                 openProductInquiryModal();
             }
@@ -881,12 +908,28 @@ function updateViewedListDetail() {
 
     const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
     
-    if (viewedProducts.length === 0) {
+    // 중복 제거: 같은 ID의 상품이 여러 개 있으면 첫 번째 것만 유지
+    const uniqueProducts = [];
+    const seenIds = new Set();
+    for (let i = 0; i < viewedProducts.length; i++) {
+        const product = viewedProducts[i];
+        if (product && product.id && !seenIds.has(product.id)) {
+            seenIds.add(product.id);
+            uniqueProducts.push(product);
+        }
+    }
+    
+    // 중복 제거된 목록을 localStorage에 다시 저장
+    if (uniqueProducts.length !== viewedProducts.length) {
+        localStorage.setItem('todayViewedProducts', JSON.stringify(uniqueProducts));
+    }
+    
+    if (uniqueProducts.length === 0) {
         viewedList.innerHTML = '<p class="empty-message">최근 본 상품이 없습니다.</p>';
         return;
     }
 
-    const listHTML = viewedProducts.map(product => `
+    const listHTML = uniqueProducts.map(product => `
         <div class="viewed-item" data-product-id="${product.id || ''}" style="cursor: pointer;">
             <img src="${product.image || 'https://via.placeholder.com/80x80'}" alt="${product.name}">
             <div class="viewed-item-info">
@@ -919,7 +962,14 @@ function updateViewedListDetail() {
 // 최근 본 상품 개수 업데이트 (product-detail.js용)
 function updateViewedCountDetail() {
     const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
-    const count = viewedProducts.length;
+    // 중복 제거된 개수 계산
+    const uniqueIds = new Set();
+    viewedProducts.forEach(product => {
+        if (product && product.id) {
+            uniqueIds.add(product.id);
+        }
+    });
+    const count = uniqueIds.size;
 
     // 퀵메뉴 뱃지 업데이트
     const toggleViewed = document.getElementById('toggleViewed');
@@ -1254,6 +1304,12 @@ async function initProductDetail() {
     initCartModal();
     initProductInquiry();
     initTabs();
+    // 페이지네이션 초기화
+    currentReviewPage = 1;
+    currentInquiryPage = 1;
+    loadProductReviews();
+    loadProductInquiries();
+    updateWishlistCount();
     initZoom();
     initShareButtons();
     initWriteButtons();
@@ -1440,13 +1496,986 @@ function saveProductInquiry() {
         .then(function(docRef) {
             alert('상품문의가 등록되었습니다.');
             closeProductInquiryModal();
-            // 마이페이지로 이동
-            if (confirm('나의 상품문의 페이지로 이동하시겠습니까?')) {
-                window.location.href = 'mypage.html?section=product-inquiry';
-            }
+            // 상품문의 목록 새로고침
+            loadProductInquiries();
+            // 현재 페이지에 머무름 (마이페이지로 이동하지 않음)
         })
         .catch(function(error) {
             console.error('상품문의 저장 오류:', error);
             alert('상품문의 등록에 실패했습니다.');
         });
 }
+
+// ============================================
+// 상품후기 관련 함수
+// ============================================
+
+// 상품후기 모달 열기
+function openReviewModal() {
+    // 관리자 체크
+    const user = (function() {
+        if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+        try {
+            const raw = localStorage.getItem('loginUser');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+    
+    // localStorage의 isAdmin 또는 userId/role로 관리자 확인
+    const isAdmin = localStorage.getItem('isAdmin') === 'true' || 
+                    (user && user.userId && (user.userId === 'admin' || user.role === 'admin'));
+    
+    console.log('관리자 체크:', {
+        isAdmin: isAdmin,
+        isAdminStorage: localStorage.getItem('isAdmin'),
+        userId: user ? user.userId : null,
+        role: user ? user.role : null
+    });
+    
+    // 관리자가 아니면 구매 및 배송 완료 여부 확인
+    if (!isAdmin) {
+        checkPurchaseAndDeliveryStatus().then(function(canWrite) {
+            if (!canWrite) {
+                alert('상품후기는 배송 완료된 상품에 대해서만 작성할 수 있습니다.\n구매하신 상품의 배송이 완료된 후 후기를 작성해주세요.');
+                return;
+            }
+            openReviewModalInternal();
+        }).catch(function(error) {
+            console.error('구매 확인 오류:', error);
+            alert('구매 정보를 확인하는 중 오류가 발생했습니다.');
+        });
+    } else {
+        // 관리자는 바로 모달 열기
+        openReviewModalInternal();
+    }
+}
+
+// 상품후기 모달 열기 (내부 함수)
+function openReviewModalInternal() {
+
+        const modal = document.getElementById('reviewModal');
+        const titleInput = document.getElementById('reviewTitle');
+        const contentInput = document.getElementById('reviewContent');
+        const counterEl = document.getElementById('reviewContentCounter');
+        const ratingValueInput = document.getElementById('reviewRatingValue');
+        const ratingText = document.getElementById('reviewRatingText');
+        const ratingStars = document.querySelectorAll('#reviewRating .star-icon');
+
+        if (!modal || !titleInput || !contentInput) return;
+
+        // 상품 정보 자동 입력
+        if (PRODUCT_INFO && PRODUCT_INFO.name) {
+            // 상품명은 모달에 없으므로 저장 시 사용
+        }
+
+        titleInput.value = '';
+        contentInput.value = '';
+        if (ratingValueInput) ratingValueInput.value = '0';
+        if (ratingText) ratingText.textContent = '평점을 선택해주세요';
+        if (counterEl) counterEl.textContent = '0';
+        
+        // 별점 초기화
+        if (ratingStars && ratingStars.length > 0) {
+            ratingStars.forEach(function(star) {
+                star.classList.remove('fas');
+                star.classList.add('far');
+                star.style.color = '#ddd';
+            });
+        }
+
+        // 평점 선택 기능 바인딩
+        if (ratingStars && ratingStars.length > 0) {
+            ratingStars.forEach(function(star) {
+                star.onclick = function() {
+                    const rating = parseInt(star.getAttribute('data-rating'));
+                    setReviewRating(rating);
+                };
+
+                star.onmouseenter = function() {
+                    const rating = parseInt(star.getAttribute('data-rating'));
+                    highlightReviewStars(rating);
+                };
+            });
+
+            const ratingContainer = document.getElementById('reviewRating');
+            if (ratingContainer) {
+                ratingContainer.onmouseleave = function() {
+                    const currentRating = ratingValueInput ? parseInt(ratingValueInput.value) : 0;
+                    highlightReviewStars(currentRating);
+                };
+            }
+        }
+
+        // 모달 닫기/저장 버튼 바인딩
+        const closeBtn = document.getElementById('reviewModalClose');
+        const cancelBtn = document.getElementById('reviewModalCancel');
+        const saveBtn = document.getElementById('reviewModalSave');
+
+        if (closeBtn) {
+            closeBtn.onclick = closeReviewModal;
+        }
+        if (cancelBtn) {
+            cancelBtn.onclick = closeReviewModal;
+        }
+        if (saveBtn) {
+            saveBtn.onclick = saveReview;
+        }
+
+        // 텍스트 카운터
+        if (contentInput && counterEl) {
+            contentInput.oninput = function() {
+                const length = contentInput.value.length;
+                counterEl.textContent = length;
+                if (length > 1000) {
+                    counterEl.style.color = '#e53e3e';
+                } else {
+                    counterEl.style.color = '#667eea';
+                }
+            };
+        }
+
+    modal.style.display = 'flex';
+}
+
+// 상품후기 모달 닫기
+function closeReviewModal() {
+    const modal = document.getElementById('reviewModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// 평점 설정 함수
+function setReviewRating(rating) {
+    const ratingValueInput = document.getElementById('reviewRatingValue');
+    const ratingText = document.getElementById('reviewRatingText');
+    
+    if (ratingValueInput) ratingValueInput.value = rating;
+    highlightReviewStars(rating);
+    if (ratingText) {
+        const ratingLabels = ['', '매우 불만족', '불만족', '보통', '만족', '매우 만족'];
+        ratingText.textContent = rating > 0 ? ratingLabels[rating] : '평점을 선택해주세요';
+    }
+}
+
+// 별점 하이라이트 함수
+function highlightReviewStars(rating) {
+    const ratingStars = document.querySelectorAll('#reviewRating .star-icon');
+    if (!ratingStars || ratingStars.length === 0) return;
+    
+    ratingStars.forEach(function(star, index) {
+        const starRating = index + 1;
+        if (starRating <= rating) {
+            star.classList.remove('far');
+            star.classList.add('fas');
+            star.style.color = '#FFD700';
+        } else {
+            star.classList.remove('fas');
+            star.classList.add('far');
+            star.style.color = '#ddd';
+        }
+    });
+}
+
+// 상품후기 저장
+function saveReview() {
+    // 관리자 체크
+    const user = (function() {
+        if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+        try {
+            const raw = localStorage.getItem('loginUser');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+    
+    // localStorage의 isAdmin 또는 userId/role로 관리자 확인
+    const isAdmin = localStorage.getItem('isAdmin') === 'true' || 
+                    (user && user.userId && (user.userId === 'admin' || user.role === 'admin'));
+    
+    // 관리자가 아니면 구매 및 배송 완료 여부 재확인
+    if (!isAdmin) {
+        checkPurchaseAndDeliveryStatus().then(function(canWrite) {
+            if (!canWrite) {
+                alert('상품후기는 배송 완료된 상품에 대해서만 작성할 수 있습니다.\n구매하신 상품의 배송이 완료된 후 후기를 작성해주세요.');
+                return;
+            }
+            saveReviewInternal();
+        }).catch(function(error) {
+            console.error('구매 확인 오류:', error);
+            alert('구매 정보를 확인하는 중 오류가 발생했습니다.');
+        });
+    } else {
+        // 관리자는 바로 저장
+        saveReviewInternal();
+    }
+}
+
+// 상품후기 저장 (내부 함수)
+function saveReviewInternal() {
+
+    const titleInput = document.getElementById('reviewTitle');
+    const contentInput = document.getElementById('reviewContent');
+    const ratingValueInput = document.getElementById('reviewRatingValue');
+
+    if (!titleInput || !contentInput || !ratingValueInput) return;
+
+        const title = titleInput.value.trim();
+        const content = contentInput.value.trim();
+        const rating = parseInt(ratingValueInput.value) || 0;
+
+        if (!rating || rating < 1 || rating > 5) {
+            alert('평점을 선택해주세요.');
+            return;
+        }
+
+        if (!title) {
+            alert('제목을 입력해주세요.');
+            return;
+        }
+
+        if (!content) {
+            alert('내용을 입력해주세요.');
+            return;
+        }
+
+        if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
+            alert('상품 정보를 불러올 수 없습니다.');
+            return;
+        }
+
+        const user = (function() {
+            if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+            try {
+                const raw = localStorage.getItem('loginUser');
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                return null;
+            }
+        })();
+
+        if (!user || !user.userId) {
+            alert('로그인이 필요합니다.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (typeof firebase === 'undefined' || !firebase.firestore) {
+            alert('Firebase를 사용할 수 없습니다.');
+            return;
+        }
+
+        const db = firebase.firestore();
+        const data = {
+            boardType: 'review',
+            title: title,
+            content: content,
+            productId: String(PRODUCT_INFO.id), // 문자열로 변환
+            productName: PRODUCT_INFO.name || '',
+            productImage: PRODUCT_INFO.image || '',
+            rating: rating,
+            authorName: user.name || user.userId,
+            authorId: user.userId,
+            status: 'published',
+            viewCount: 0,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        db.collection('posts').add(data)
+            .then(function(docRef) {
+                alert('상품후기가 등록되었습니다.');
+                closeReviewModal();
+                // 페이지네이션을 1페이지로 초기화
+                currentReviewPage = 1;
+                // 후기 목록 새로고침
+                loadProductReviews();
+                // 마이페이지로 이동하지 않고 현재 페이지에 머무름
+            })
+            .catch(function(error) {
+                console.error('상품후기 저장 오류:', error);
+                alert('상품후기 등록에 실패했습니다.');
+            });
+}
+
+// ============================================
+// 구매 및 배송 완료 확인
+// ============================================
+
+// 구매 및 배송 완료 여부 확인
+function checkPurchaseAndDeliveryStatus() {
+    return new Promise(function(resolve, reject) {
+        if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
+            resolve(false);
+            return;
+        }
+
+        const user = (function() {
+            if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+            try {
+                const raw = localStorage.getItem('loginUser');
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                return null;
+            }
+        })();
+
+        if (!user || !user.userId) {
+            resolve(false);
+            return;
+        }
+
+        // mypageApi를 통해 주문 목록 가져오기
+        if (window.mypageApi && typeof window.mypageApi.getMyOrders === 'function') {
+            window.mypageApi.getMyOrders().then(function(orders) {
+                if (!orders || !Array.isArray(orders)) {
+                    resolve(false);
+                    return;
+                }
+
+                const productId = PRODUCT_INFO.id;
+                const productName = PRODUCT_INFO.name || '';
+
+                // 해당 상품을 구매하고 배송 완료된 주문이 있는지 확인
+                const hasCompletedOrder = orders.some(function(order) {
+                    const orderProductId = order.productId || '';
+                    const orderProductName = order.productName || '';
+                    const isSameProduct = (orderProductId && orderProductId === productId) || 
+                                         (!orderProductId && orderProductName === productName);
+                    return isSameProduct && order.deliveryStatus === 'complete';
+                });
+
+                resolve(hasCompletedOrder);
+            }).catch(function(error) {
+                console.error('주문 목록 조회 오류:', error);
+                resolve(false);
+            });
+        } else {
+            // mypageApi가 없으면 Firestore에서 직접 조회
+            if (typeof firebase === 'undefined' || !firebase.firestore) {
+                resolve(false);
+                return;
+            }
+
+            const db = firebase.firestore();
+            const productId = PRODUCT_INFO.id;
+            const productName = PRODUCT_INFO.name || '';
+
+            // 주문 컬렉션에서 해당 사용자의 배송 완료된 주문 조회
+            db.collection('orders')
+                .where('userId', '==', user.userId)
+                .where('deliveryStatus', '==', 'complete')
+                .get()
+                .then(function(snap) {
+                    let hasCompletedOrder = false;
+                    snap.docs.forEach(function(doc) {
+                        const order = doc.data();
+                        const orderProductId = order.productId || '';
+                        const orderProductName = order.productName || '';
+                        const isSameProduct = (orderProductId && orderProductId === productId) || 
+                                             (!orderProductId && orderProductName === productName);
+                        if (isSameProduct) {
+                            hasCompletedOrder = true;
+                        }
+                    });
+                    resolve(hasCompletedOrder);
+                })
+                .catch(function(error) {
+                    console.error('주문 조회 오류:', error);
+                    resolve(false);
+                });
+        }
+    });
+}
+
+// ============================================
+// 상품후기 목록 로드 및 표시
+// ============================================
+
+// 상품후기 목록 로드
+function loadProductReviews() {
+    if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
+        return;
+    }
+
+    const productId = PRODUCT_INFO.id;
+    const reviewListContainer = document.getElementById('reviewListContainer');
+    const reviewEmptyState = document.getElementById('reviewEmptyState');
+    const reviewCountEl = document.getElementById('reviewCount');
+    const reviewTabCountEl = document.querySelector('.tab-btn[data-tab="review"] .count');
+
+    if (!reviewListContainer || !reviewEmptyState) return;
+
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
+        if (reviewEmptyState) reviewEmptyState.style.display = 'block';
+        if (reviewListContainer) reviewListContainer.innerHTML = '';
+        if (reviewCountEl) reviewCountEl.textContent = '0';
+        if (reviewTabCountEl) reviewTabCountEl.textContent = '0';
+        return;
+    }
+
+    const db = firebase.firestore();
+    
+    // 상품 ID를 문자열로 변환하여 비교
+    const productIdStr = String(productId);
+    
+    // 상품 ID로 후기 조회
+    db.collection('posts')
+        .where('boardType', '==', 'review')
+        .where('productId', '==', productIdStr)
+        .get()
+        .then(function(snap) {
+            const reviews = [];
+            let totalRating = 0;
+            
+            snap.docs.forEach(function(d) {
+                const review = { id: d.id, ...d.data() };
+                reviews.push(review);
+                if (review.rating) {
+                    totalRating += review.rating;
+                }
+            });
+            
+            // createdAt으로 정렬 (orderBy를 사용하지 않으므로 클라이언트에서 정렬)
+            reviews.sort(function(a, b) {
+                const at = (a.createdAt && a.createdAt.seconds != null) ? a.createdAt.seconds : 0;
+                const bt = (b.createdAt && b.createdAt.seconds != null) ? b.createdAt.seconds : 0;
+                return bt - at; // 내림차순
+            });
+
+            // 후기 개수 표시
+            if (reviewCountEl) {
+                reviewCountEl.textContent = reviews.length;
+            }
+            if (reviewTabCountEl) {
+                reviewTabCountEl.textContent = reviews.length;
+            }
+
+            // 평균 평점 계산 및 표시
+            const avgRating = reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : 0;
+            updateReviewRatingDisplay(avgRating, reviews.length);
+
+            if (reviews.length === 0) {
+                if (reviewListContainer) reviewListContainer.innerHTML = '';
+                if (reviewEmptyState) reviewEmptyState.style.display = 'block';
+                return;
+            }
+
+            if (reviewEmptyState) reviewEmptyState.style.display = 'none';
+            
+            // 페이지네이션 처리
+            const totalPages = Math.ceil(reviews.length / ITEMS_PER_PAGE);
+            const startIndex = (currentReviewPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            const currentReviews = reviews.slice(startIndex, endIndex);
+            
+            // 현재 사용자 확인
+            const user = (function() {
+                if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+                try {
+                    const raw = localStorage.getItem('loginUser');
+                    return raw ? JSON.parse(raw) : null;
+                } catch (e) {
+                    return null;
+                }
+            })();
+            const currentUserId = user ? user.userId : null;
+            
+            // 후기 목록 렌더링
+            if (reviewListContainer) {
+                reviewListContainer.innerHTML = currentReviews.map(function(review) {
+                    const date = review.createdAt && review.createdAt.seconds 
+                        ? new Date(review.createdAt.seconds * 1000).toLocaleDateString('ko-KR')
+                        : '-';
+                    const rating = review.rating || 0;
+                    const authorName = review.authorName || '익명';
+                    const authorId = review.authorId || '';
+                    const isMyReview = currentUserId && authorId === currentUserId;
+                    
+                    // 평점 별표 표시
+                    let starsHtml = '';
+                    for (let i = 1; i <= 5; i++) {
+                        if (i <= rating) {
+                            starsHtml += '<i class="fas fa-star" style="color: #FFD700;"></i>';
+                        } else {
+                            starsHtml += '<i class="far fa-star" style="color: #ddd;"></i>';
+                        }
+                    }
+                    
+                    // 삭제 버튼 (내가 쓴 글일 때만 표시)
+                    const deleteButton = isMyReview 
+                        ? '<button onclick="deleteProductReview(\'' + review.id + '\')" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">삭제</button>'
+                        : '';
+                    
+                    return '<div class="review-item" style="border-bottom: 1px solid #e0e0e0; padding: 20px 0;">' +
+                        '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">' +
+                        '<div style="flex: 1;">' +
+                        '<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">' +
+                        '<strong style="font-size: 15px; color: #333;">' + (review.title || '제목 없음') + '</strong>' +
+                        '<div style="display: flex; align-items: center; gap: 3px;">' + starsHtml + '</div>' +
+                        '</div>' +
+                        '<div style="display: flex; gap: 15px; font-size: 13px; color: #666;">' +
+                        '<span>' + authorName + '</span>' +
+                        '<span>' + date + '</span>' +
+                        '</div>' +
+                        '</div>' +
+                        (deleteButton ? '<div style="margin-left: 10px;">' + deleteButton + '</div>' : '') +
+                        '</div>' +
+                        '<div style="margin-top: 10px;">' +
+                        '<p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">' + (review.content || '') + '</p>' +
+                        '</div>' +
+                        '</div>';
+                }).join('');
+            }
+            
+            // 페이지네이션 UI 렌더링
+            renderReviewPagination(totalPages, reviews.length);
+        })
+        .catch(function(error) {
+            console.error('후기 목록 로드 오류:', error);
+            if (reviewListContainer) reviewListContainer.innerHTML = '';
+            if (reviewEmptyState) reviewEmptyState.style.display = 'block';
+            if (reviewCountEl) reviewCountEl.textContent = '0';
+            if (reviewTabCountEl) reviewTabCountEl.textContent = '0';
+        });
+}
+
+// 평점 표시 업데이트 (상단 통계 영역)
+function updateReviewRatingDisplay(avgRating, reviewCount) {
+    // 평점을 별표로 표시할 영역 찾기
+    const ratingDisplay = document.querySelector('.product-stats .review-rating-display');
+    
+    // 상단 통계 영역에 평점 표시
+    if (ratingDisplay) {
+        if (reviewCount > 0 && avgRating > 0) {
+            let starsHtml = '';
+            const rating = Math.round(parseFloat(avgRating));
+            for (let i = 1; i <= 5; i++) {
+                if (i <= rating) {
+                    starsHtml += '<i class="fas fa-star" style="color: #FFD700; font-size: 14px;"></i>';
+                } else {
+                    starsHtml += '<i class="far fa-star" style="color: #ddd; font-size: 14px;"></i>';
+                }
+            }
+            ratingDisplay.innerHTML = starsHtml + '<span style="color: #666; font-size: 13px; margin-left: 5px; display: inline; white-space: nowrap;">(' + avgRating + ')</span>';
+            ratingDisplay.style.display = 'inline-flex';
+            ratingDisplay.style.whiteSpace = 'nowrap';
+            ratingDisplay.style.verticalAlign = 'middle';
+            ratingDisplay.style.flexWrap = 'nowrap';
+        } else {
+            ratingDisplay.style.display = 'none';
+        }
+    }
+}
+
+// 관심상품 개수 업데이트
+function updateWishlistCount() {
+    if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
+        console.log('updateWishlistCount: PRODUCT_INFO 없음');
+        return;
+    }
+    
+    const productId = String(PRODUCT_INFO.id);
+    let wishlist = [];
+    
+    try {
+        const wishlistStr = localStorage.getItem('wishlist');
+        if (wishlistStr) {
+            wishlist = JSON.parse(wishlistStr);
+        }
+    } catch (e) {
+        console.error('관심상품 목록 파싱 오류:', e);
+        wishlist = [];
+    }
+    
+    console.log('updateWishlistCount:', {
+        productId: productId,
+        wishlist: wishlist,
+        wishlistLength: wishlist.length
+    });
+    
+    // 현재 상품이 관심상품에 있는지 확인
+    const wishlistCount = wishlist.filter(function(item) {
+        const itemId = String(item.id || item.productId || '');
+        return itemId === productId;
+    }).length;
+    
+    console.log('관심상품 개수:', wishlistCount);
+    
+    const likeStatusEl = document.getElementById('likeStatus');
+    if (likeStatusEl) {
+        if (wishlistCount > 0) {
+            likeStatusEl.textContent = '이 상품을 좋아하는 회원 ' + wishlistCount + '명';
+        } else {
+            likeStatusEl.textContent = '이 상품을 좋아하는 회원이 없습니다.';
+        }
+        console.log('likeStatus 업데이트:', likeStatusEl.textContent);
+    } else {
+        console.warn('likeStatus 요소를 찾을 수 없습니다.');
+    }
+}
+
+// ============================================
+// 상품문의 목록 로드 및 표시
+// ============================================
+
+// 상품문의 목록 로드
+function loadProductInquiries() {
+    if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
+        return;
+    }
+
+    const productId = PRODUCT_INFO.id;
+    const inquiryListContainer = document.getElementById('productInquiryListContainer');
+    const inquiryEmptyState = document.getElementById('productInquiryEmptyState');
+    const inquiryTabCountEl = document.querySelector('.tab-btn[data-tab="qna"] .count');
+
+    if (!inquiryListContainer || !inquiryEmptyState) return;
+
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
+        if (inquiryEmptyState) inquiryEmptyState.style.display = 'block';
+        if (inquiryListContainer) inquiryListContainer.innerHTML = '';
+        if (inquiryTabCountEl) inquiryTabCountEl.textContent = '0';
+        return;
+    }
+
+    const db = firebase.firestore();
+    
+    // 상품 ID로 문의 조회 (상품 상세 페이지에서 작성한 문의만)
+    // productId를 문자열로 변환하여 비교
+    const productIdStr = String(productId);
+    
+    db.collection('posts')
+        .where('boardType', '==', 'product-inquiry')
+        .where('productId', '==', productIdStr)
+        .get()
+        .then(function(snap) {
+            const inquiries = [];
+            
+            snap.docs.forEach(function(d) {
+                const inquiry = { id: d.id, ...d.data() };
+                inquiries.push(inquiry);
+            });
+            
+            // createdAt으로 정렬 (orderBy를 사용하지 않으므로 클라이언트에서 정렬)
+            inquiries.sort(function(a, b) {
+                const at = (a.createdAt && a.createdAt.seconds != null) ? a.createdAt.seconds : 0;
+                const bt = (b.createdAt && b.createdAt.seconds != null) ? b.createdAt.seconds : 0;
+                return bt - at; // 내림차순
+            });
+
+            // 문의 개수 표시
+            if (inquiryTabCountEl) {
+                inquiryTabCountEl.textContent = inquiries.length;
+            }
+
+            if (inquiries.length === 0) {
+                if (inquiryListContainer) inquiryListContainer.innerHTML = '';
+                if (inquiryEmptyState) inquiryEmptyState.style.display = 'block';
+                return;
+            }
+
+            if (inquiryEmptyState) inquiryEmptyState.style.display = 'none';
+            
+            // 페이지네이션 처리
+            const totalPages = Math.ceil(inquiries.length / ITEMS_PER_PAGE);
+            const startIndex = (currentInquiryPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            const currentInquiries = inquiries.slice(startIndex, endIndex);
+            
+            // 현재 사용자 확인
+            const user = (function() {
+                if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+                try {
+                    const raw = localStorage.getItem('loginUser');
+                    return raw ? JSON.parse(raw) : null;
+                } catch (e) {
+                    return null;
+                }
+            })();
+            const currentUserId = user ? user.userId : null;
+            
+            // 문의 목록 렌더링
+            if (inquiryListContainer) {
+                inquiryListContainer.innerHTML = currentInquiries.map(function(inquiry) {
+                    const date = inquiry.createdAt && inquiry.createdAt.seconds 
+                        ? new Date(inquiry.createdAt.seconds * 1000).toLocaleDateString('ko-KR')
+                        : '-';
+                    // authorId를 사용하되, 없으면 authorName 사용
+                    const authorId = inquiry.authorId || inquiry.authorName || '익명';
+                    const inquiryAuthorId = inquiry.authorId || '';
+                    const isMyInquiry = currentUserId && inquiryAuthorId === currentUserId;
+                    const answer = inquiry.answer || '';
+                    const status = inquiry.status || 'pending';
+                    const statusText = status === 'answered' ? '답변완료' : '답변대기';
+                    const statusClass = status === 'answered' ? 'status-answered' : 'status-waiting';
+                    
+                    // 삭제 버튼 (내가 쓴 글일 때만 표시)
+                    const deleteButton = isMyInquiry 
+                        ? '<button onclick="deleteProductInquiryDetail(\'' + inquiry.id + '\')" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 10px;">삭제</button>'
+                        : '';
+                    
+                    return '<div class="inquiry-item" style="border-bottom: 1px solid #e0e0e0; padding: 20px 0;">' +
+                        '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; padding-left: 20px; padding-right: 20px;">' +
+                        '<div style="flex: 1;">' +
+                        '<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">' +
+                        '<strong style="font-size: 15px; color: #333; display: block;">' + (inquiry.title || '제목 없음') + '</strong>' +
+                        '<span class="' + statusClass + '" style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; ' +
+                        (status === 'answered' ? 'background: #e6f7e6; color: #2d7d32;' : 'background: #fff3cd; color: #856404;') + '">' +
+                        statusText + '</span>' +
+                        '</div>' +
+                        '<div style="display: flex; gap: 15px; font-size: 13px; color: #666; margin-top: 8px;">' +
+                        '<span>' + authorId + '</span>' +
+                        '<span>' + date + '</span>' +
+                        '</div>' +
+                        '</div>' +
+                        deleteButton +
+                        '</div>' +
+                        '<div style="margin-top: 15px; padding-left: 20px; padding-right: 20px;">' +
+                        '<p style="margin: 0 0 15px 0; color: #666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">' + (inquiry.content || '') + '</p>' +
+                        (answer ? '<div style="margin-top: 15px; padding: 20px; background: #f5f5f5; border-radius: 4px; border-left: 3px solid #667eea;">' +
+                        '<strong style="color: #667eea; display: block; margin-bottom: 12px;">관리자 답변:</strong>' +
+                        '<p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">' + answer + '</p>' +
+                        '</div>' : '') +
+                        '</div>' +
+                        '</div>';
+                }).join('');
+            }
+            
+            // 페이지네이션 UI 렌더링
+            renderInquiryPagination(totalPages, inquiries.length);
+        })
+        .catch(function(error) {
+            console.error('상품문의 목록 로드 오류:', error);
+            if (inquiryListContainer) inquiryListContainer.innerHTML = '';
+            if (inquiryEmptyState) inquiryEmptyState.style.display = 'block';
+            if (inquiryTabCountEl) inquiryTabCountEl.textContent = '0';
+        });
+}
+
+// ============================================
+// 페이지네이션 함수
+// ============================================
+
+// 사용후기 페이지네이션 렌더링
+function renderReviewPagination(totalPages, totalItems) {
+    const paginationContainer = document.getElementById('reviewPaginationContainer');
+    if (!paginationContainer) return;
+    
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    paginationContainer.style.display = 'block';
+    
+    let paginationHtml = '<div style="display: flex; justify-content: center; align-items: center; gap: 5px;">';
+    
+    // 이전 버튼
+    if (currentReviewPage > 1) {
+        paginationHtml += '<button onclick="goToReviewPage(' + (currentReviewPage - 1) + ')" style="padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">이전</button>';
+    } else {
+        paginationHtml += '<button disabled style="padding: 8px 12px; border: 1px solid #ddd; background: #f5f5f5; border-radius: 4px; cursor: not-allowed; color: #999;">이전</button>';
+    }
+    
+    // 페이지 번호 버튼
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === currentReviewPage) {
+            paginationHtml += '<button onclick="goToReviewPage(' + i + ')" style="padding: 8px 12px; border: 1px solid #667eea; background: #667eea; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">' + i + '</button>';
+        } else {
+            paginationHtml += '<button onclick="goToReviewPage(' + i + ')" style="padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">' + i + '</button>';
+        }
+    }
+    
+    // 다음 버튼
+    if (currentReviewPage < totalPages) {
+        paginationHtml += '<button onclick="goToReviewPage(' + (currentReviewPage + 1) + ')" style="padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">다음</button>';
+    } else {
+        paginationHtml += '<button disabled style="padding: 8px 12px; border: 1px solid #ddd; background: #f5f5f5; border-radius: 4px; cursor: not-allowed; color: #999;">다음</button>';
+    }
+    
+    paginationHtml += '</div>';
+    paginationContainer.innerHTML = paginationHtml;
+}
+
+// 사용후기 페이지 이동
+function goToReviewPage(page) {
+    currentReviewPage = page;
+    loadProductReviews();
+    // 페이지 상단으로 스크롤
+    const reviewSection = document.getElementById('review');
+    if (reviewSection) {
+        reviewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// 상품문의 페이지네이션 렌더링
+function renderInquiryPagination(totalPages, totalItems) {
+    const paginationContainer = document.getElementById('inquiryPaginationContainer');
+    if (!paginationContainer) return;
+    
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    paginationContainer.style.display = 'block';
+    
+    let paginationHtml = '<div style="display: flex; justify-content: center; align-items: center; gap: 5px;">';
+    
+    // 이전 버튼
+    if (currentInquiryPage > 1) {
+        paginationHtml += '<button onclick="goToInquiryPage(' + (currentInquiryPage - 1) + ')" style="padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">이전</button>';
+    } else {
+        paginationHtml += '<button disabled style="padding: 8px 12px; border: 1px solid #ddd; background: #f5f5f5; border-radius: 4px; cursor: not-allowed; color: #999;">이전</button>';
+    }
+    
+    // 페이지 번호 버튼
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === currentInquiryPage) {
+            paginationHtml += '<button onclick="goToInquiryPage(' + i + ')" style="padding: 8px 12px; border: 1px solid #667eea; background: #667eea; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">' + i + '</button>';
+        } else {
+            paginationHtml += '<button onclick="goToInquiryPage(' + i + ')" style="padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">' + i + '</button>';
+        }
+    }
+    
+    // 다음 버튼
+    if (currentInquiryPage < totalPages) {
+        paginationHtml += '<button onclick="goToInquiryPage(' + (currentInquiryPage + 1) + ')" style="padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">다음</button>';
+    } else {
+        paginationHtml += '<button disabled style="padding: 8px 12px; border: 1px solid #ddd; background: #f5f5f5; border-radius: 4px; cursor: not-allowed; color: #999;">다음</button>';
+    }
+    
+    paginationHtml += '</div>';
+    paginationContainer.innerHTML = paginationHtml;
+}
+
+// 상품문의 페이지 이동
+function goToInquiryPage(page) {
+    currentInquiryPage = page;
+    loadProductInquiries();
+    // 페이지 상단으로 스크롤
+    const inquirySection = document.getElementById('qna');
+    if (inquirySection) {
+        inquirySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// ============================================
+// 삭제 함수
+// ============================================
+
+// 상품후기 삭제
+function deleteProductReview(reviewId) {
+    if (!reviewId || !confirm('이 후기를 삭제하시겠습니까?')) return;
+    
+    const user = (function() {
+        if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+        try {
+            const raw = localStorage.getItem('loginUser');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+    
+    if (!user || !user.userId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
+        alert('Firebase를 사용할 수 없습니다.');
+        return;
+    }
+    
+    const db = firebase.firestore();
+    
+    // 후기 확인 및 삭제
+    db.collection('posts').doc(reviewId).get()
+        .then(function(doc) {
+            if (!doc.exists) {
+                alert('후기를 찾을 수 없습니다.');
+                return;
+            }
+            
+            const review = doc.data();
+            // 작성자 확인
+            if (review.authorId !== user.userId) {
+                alert('본인이 작성한 후기만 삭제할 수 있습니다.');
+                return;
+            }
+            
+            // 삭제 실행
+            return db.collection('posts').doc(reviewId).delete();
+        })
+        .then(function() {
+            alert('후기가 삭제되었습니다.');
+            loadProductReviews();
+        })
+        .catch(function(error) {
+            console.error('후기 삭제 오류:', error);
+            alert('후기 삭제에 실패했습니다.');
+        });
+}
+
+// 상품문의 삭제 (상품 상세 페이지)
+function deleteProductInquiryDetail(inquiryId) {
+    if (!inquiryId || !confirm('이 문의를 삭제하시겠습니까?')) return;
+    
+    const user = (function() {
+        if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+        try {
+            const raw = localStorage.getItem('loginUser');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+    
+    if (!user || !user.userId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
+        alert('Firebase를 사용할 수 없습니다.');
+        return;
+    }
+    
+    const db = firebase.firestore();
+    
+    // 문의 확인 및 삭제
+    db.collection('posts').doc(inquiryId).get()
+        .then(function(doc) {
+            if (!doc.exists) {
+                alert('문의를 찾을 수 없습니다.');
+                return;
+            }
+            
+            const inquiry = doc.data();
+            // 작성자 확인
+            if (inquiry.authorId !== user.userId) {
+                alert('본인이 작성한 문의만 삭제할 수 있습니다.');
+                return;
+            }
+            
+            // 삭제 실행
+            return db.collection('posts').doc(inquiryId).delete();
+        })
+        .then(function() {
+            alert('문의가 삭제되었습니다.');
+            loadProductInquiries();
+        })
+        .catch(function(error) {
+            console.error('문의 삭제 오류:', error);
+            alert('문의 삭제에 실패했습니다.');
+        });
+}
+
+// 전역 함수로 등록
+window.goToReviewPage = goToReviewPage;
+window.goToInquiryPage = goToInquiryPage;
+window.deleteProductReview = deleteProductReview;
+window.deleteProductInquiryDetail = deleteProductInquiryDetail;

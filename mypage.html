@@ -117,7 +117,7 @@
                             <h4>활동정보</h4>
                             <ul>
                                 <li><a href="#" data-section="inquiry" onclick="showSection('inquiry', this); return false;">나의 1:1문의 <span class="nav-badge implemented">운영</span></a></li>
-                                <li><a href="#" onclick="showSection('qna'); return false;">나의 상품후기 <span class="nav-badge pending">준비 중</span></a></li>
+                                <li><a href="#" data-section="review" onclick="showSection('review', this); return false;">나의 상품후기 <span class="nav-badge implemented">운영</span></a></li>
                                 <li><a href="#" data-section="product-inquiry" onclick="showSection('product-inquiry', this); return false;">나의 상품문의 <span class="nav-badge implemented">운영</span></a></li>
                             </ul>
                         </div>
@@ -524,6 +524,21 @@
                         </div>
                     </div>
 
+                    <!-- 나의 상품후기 -->
+                    <div class="content-section mypage-section" data-section="review" id="mypageSectionReview" style="display: none;">
+                        <div class="section-title" style="margin-bottom: 20px;">
+                            <h3>나의 상품후기</h3>
+                        </div>
+                        
+                        <div class="completed-products-list" id="completedProductsList">
+                            <!-- 배송 완료된 상품 목록 (JavaScript로 동적 생성) -->
+                        </div>
+                        <div class="completed-products-empty" id="completedProductsEmpty" style="display: none; text-align: center; padding: 60px 20px;">
+                            <i class="fas fa-shipping-fast" style="font-size: 48px; color: #ddd; margin-bottom: 20px;"></i>
+                            <p style="color: #999; font-size: 16px;">배송 완료된 상품이 없습니다.</p>
+                        </div>
+                    </div>
+
                     <!-- 나의 상품문의 -->
                     <div class="content-section mypage-section" data-section="product-inquiry" id="mypageSectionProductInquiry" style="display: none;">
                         <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -590,6 +605,73 @@
                 </button>
                 <button type="button" class="btn-inquiry-submit" id="productInquiryModalMypageSave">
                     <i class="fas fa-paper-plane"></i> 문의하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상품후기 작성 모달 (마이페이지용) -->
+    <div id="reviewModalMypage" class="modal" style="display: none;">
+        <div class="modal-content inquiry-modal-content">
+            <div class="modal-header inquiry-modal-header">
+                <div class="inquiry-modal-title-wrap">
+                    <i class="fas fa-star" style="color: #4A5FC1; margin-right: 10px; font-size: 20px;"></i>
+                    <h3>상품후기 작성</h3>
+                </div>
+                <button type="button" class="modal-close" id="reviewModalMypageClose">&times;</button>
+            </div>
+            <div class="modal-body inquiry-modal-body">
+                <input type="hidden" id="reviewMypageId" value="">
+                <input type="hidden" id="reviewMypageProductId" value="">
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">상품명</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <input type="text" class="inquiry-input" id="reviewMypageProductName" placeholder="후기를 작성할 상품명을 입력해주세요" required>
+                    <small style="color: #666; margin-top: 5px; display: block; font-size: 13px;">상품 상세 페이지에서 작성하면 자동으로 입력됩니다.</small>
+                </div>
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">평점</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <div class="rating-input" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                        <div class="star-rating" id="reviewMypageRating" style="display: flex; gap: 5px;">
+                            <i class="far fa-star star-icon" data-rating="1" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="2" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="3" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="4" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="5" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                        </div>
+                        <span id="reviewMypageRatingText" style="color: #666; font-size: 14px; margin-left: 10px;">평점을 선택해주세요</span>
+                        <input type="hidden" id="reviewMypageRatingValue" value="0" required>
+                    </div>
+                </div>
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">제목</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <input type="text" class="inquiry-input" id="reviewMypageTitle" placeholder="후기 제목을 입력해주세요" required>
+                </div>
+                <div class="inquiry-form-group">
+                    <label class="inquiry-label">
+                        <span class="label-text">후기 내용</span>
+                        <span class="required-badge">필수</span>
+                    </label>
+                    <textarea class="inquiry-textarea" id="reviewMypageContent" rows="8" placeholder="상품에 대한 후기를 자세히 입력해주세요.&#10;예: 사용감, 품질, 만족도 등" required></textarea>
+                    <div class="textarea-counter">
+                        <span id="reviewMypageContentCounter">0</span> / 1000자
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer inquiry-modal-footer">
+                <button type="button" class="btn-inquiry-cancel" id="reviewModalMypageCancel">
+                    <i class="fas fa-times"></i> 취소
+                </button>
+                <button type="button" class="btn-inquiry-submit" id="reviewModalMypageSave">
+                    <i class="fas fa-paper-plane"></i> 후기 작성
                 </button>
             </div>
         </div>
