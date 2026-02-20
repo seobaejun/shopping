@@ -312,6 +312,11 @@ function initCartActions() {
             
             localStorage.setItem('cart', JSON.stringify(cart));
             
+            // 마이페이지의 장바구니 개수 업데이트 (페이지가 열려있을 경우)
+            if (typeof updateWishlistAndCartCount === 'function') {
+                updateWishlistAndCartCount();
+            }
+            
             // 모달 표시
             productDetailElements.cartModal.classList.add('active');
         });
@@ -591,20 +596,68 @@ function initBuyNowDeliveryModal() {
 // 관심상품
 function initWishlistActions() {
     const wishlistBtns = document.querySelectorAll('.btn-wishlist');
-    let isWishlisted = false;
+    
+    // 현재 상품이 관심상품에 있는지 확인
+    const currentProductId = PRODUCT_INFO && PRODUCT_INFO.id ? PRODUCT_INFO.id : null;
+    const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    let isWishlisted = currentProductId && wishlist.some(item => item.id === currentProductId);
+    
+    // 초기 상태 설정
+    wishlistBtns.forEach(btn => {
+        if (isWishlisted) {
+            btn.innerHTML = '<i class="fas fa-heart"></i> 관심상품';
+            btn.style.color = 'var(--danger-color)';
+            btn.style.borderColor = 'var(--danger-color)';
+        }
+    });
     
     wishlistBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (!currentProductId) {
+                alert('상품 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
             isWishlisted = !isWishlisted;
+            const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
             
             if (isWishlisted) {
+                // 관심상품에 추가
+                const productData = {
+                    id: currentProductId,
+                    name: PRODUCT_INFO.name || '',
+                    price: PRODUCT_INFO.price || 0,
+                    image: PRODUCT_INFO.image || '',
+                    addedAt: new Date().toISOString()
+                };
+                
+                // 중복 체크
+                const exists = wishlist.some(item => item.id === currentProductId);
+                if (!exists) {
+                    wishlist.push(productData);
+                    localStorage.setItem('wishlist', JSON.stringify(wishlist));
+                }
+                
                 btn.innerHTML = '<i class="fas fa-heart"></i> 관심상품';
                 btn.style.color = 'var(--danger-color)';
                 btn.style.borderColor = 'var(--danger-color)';
+                
+                // 관심상품 추가 후 마이페이지로 이동
+                window.location.href = 'mypage.html?section=wishlist-cart&tab=wishlist';
             } else {
+                // 관심상품에서 제거
+                const filtered = wishlist.filter(item => item.id !== currentProductId);
+                localStorage.setItem('wishlist', JSON.stringify(filtered));
+                
                 btn.innerHTML = '<i class="far fa-heart"></i> 관심상품';
                 btn.style.color = '';
                 btn.style.borderColor = '';
+                alert('관심상품에서 제거되었습니다.');
+            }
+            
+            // 마이페이지의 관심상품 개수 업데이트 (페이지가 열려있을 경우)
+            if (typeof updateWishlistAndCartCount === 'function') {
+                updateWishlistAndCartCount();
             }
         });
     });
@@ -622,9 +675,8 @@ function initCartModal() {
     });
     
     productDetailElements.goCartBtn.addEventListener('click', () => {
-        // 장바구니 페이지로 이동
-        alert('장바구니 페이지로 이동합니다.');
-        // window.location.href = 'cart.html';
+        // 마이페이지의 장바구니 섹션으로 이동
+        window.location.href = 'mypage.html?section=wishlist-cart&tab=cart';
     });
     
     // 배경 클릭 시 닫기

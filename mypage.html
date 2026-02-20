@@ -72,15 +72,15 @@
                         </div>
                         <button type="button" class="btn-info-edit" id="mypageBtnInfoEdit">정보수정</button>
                         <div class="user-stats">
-                            <div class="stat-item">
-                                <i class="fas fa-envelope"></i>
-                                <span>쪽지</span>
-                                <strong>0</strong>
+                            <div class="stat-item" id="wishlistStatItem">
+                                <i class="fas fa-heart"></i>
+                                <span>관심상품</span>
+                                <strong id="wishlistCount">0</strong>
                             </div>
-                            <div class="stat-item">
-                                <i class="fas fa-bookmark"></i>
-                                <span>스크랩</span>
-                                <strong>0</strong>
+                            <div class="stat-item" id="cartStatItem">
+                                <i class="fas fa-shopping-cart"></i>
+                                <span>장바구니</span>
+                                <strong id="cartCount">0</strong>
                             </div>
                         </div>
                     </div>
@@ -103,7 +103,7 @@
                             <h4>나의 쇼핑 정보</h4>
                             <ul>
                                 <li><a href="#" onclick="showSection('orders'); return false;">주문/배송조회 내역 <span class="nav-badge implemented">운영</span></a></li>
-                                <li><a href="#" onclick="showSection('wishlist'); return false;">위시/관심상품 내역 <span class="nav-badge pending">준비 중</span></a></li>
+                                <li><a href="#" data-section="wishlist-cart" onclick="showSection('wishlist-cart', this); return false;">관심상품/장바구니 내역 <span class="nav-badge implemented">운영</span></a></li>
                             </ul>
                         </div>
                         <div class="nav-group">
@@ -468,6 +468,41 @@
                         <div class="faq-accordion-wrap" id="faqAccordionWrap">
                             <ul class="faq-accordion-list" id="faqAccordionList"></ul>
                             <p class="faq-empty" id="faqEmpty" style="display: none;">등록된 질문이 없습니다.</p>
+                        </div>
+                    </div>
+
+                    <!-- 관심상품/장바구니 내역 -->
+                    <div class="content-section mypage-section" data-section="wishlist-cart" id="mypageSectionWishlistCart" style="display: none;">
+                        <div class="section-title">
+                            <h3>관심상품/장바구니 내역</h3>
+                        </div>
+                        
+                        <!-- 탭 메뉴 -->
+                        <div class="wishlist-cart-tabs" style="margin-bottom: 30px; border-bottom: 2px solid #e0e0e0;">
+                            <button type="button" class="wishlist-cart-tab active" data-tab="wishlist">관심상품</button>
+                            <button type="button" class="wishlist-cart-tab" data-tab="cart">장바구니</button>
+                        </div>
+
+                        <!-- 관심상품 탭 -->
+                        <div class="wishlist-tab-content" id="wishlistTabContent">
+                            <div class="wishlist-list" id="wishlistList">
+                                <!-- JavaScript로 동적 생성 -->
+                            </div>
+                            <div class="wishlist-empty" id="wishlistEmpty" style="display: none; text-align: center; padding: 60px 20px;">
+                                <i class="fas fa-heart" style="font-size: 48px; color: #ddd; margin-bottom: 20px;"></i>
+                                <p style="color: #999; font-size: 16px;">관심상품이 없습니다.</p>
+                            </div>
+                        </div>
+
+                        <!-- 장바구니 탭 -->
+                        <div class="cart-tab-content" id="cartTabContent" style="display: none;">
+                            <div class="cart-list" id="cartList">
+                                <!-- JavaScript로 동적 생성 -->
+                            </div>
+                            <div class="cart-empty" id="cartEmpty" style="display: none; text-align: center; padding: 60px 20px;">
+                                <i class="fas fa-shopping-cart" style="font-size: 48px; color: #ddd; margin-bottom: 20px;"></i>
+                                <p style="color: #999; font-size: 16px;">장바구니가 비어있습니다.</p>
+                            </div>
                         </div>
                     </div>
                 </div>

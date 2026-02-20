@@ -70,6 +70,7 @@ function runMypageInit() {
         }
         window._mypageOrders = orders || [];
         displayUserInfo(user, member, orders);
+        updateWishlistAndCartCount();
         renderOrderSteps(orders);
         renderOrderList(orders);
         renderNoticeList();
@@ -86,6 +87,20 @@ function runMypageInit() {
     if (window.location.search.indexOf('section=faq') !== -1) {
         var faqLink = document.querySelector('.mypage-nav a[data-section="faq"]');
         showSection('faq', faqLink || null);
+    }
+    if (window.location.search.indexOf('section=wishlist-cart') !== -1) {
+        var wishlistCartLink = document.querySelector('.mypage-nav a[data-section="wishlist-cart"]');
+        showSection('wishlist-cart', wishlistCartLink || null);
+        
+        // URL 파라미터에서 탭 정보 확인
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab === 'cart') {
+            setTimeout(function() {
+                const cartTab = document.querySelector('.wishlist-cart-tab[data-tab="cart"]');
+                if (cartTab) cartTab.click();
+            }, 100);
+        }
     }
 
         // 정보수정 버튼: 클릭 시 회원정보 수정 섹션 표시
@@ -144,6 +159,40 @@ function displayUserInfo(user, member, orders) {
     const supportStr = totalSupport.toLocaleString() + '원';
     if (totalSupportEl) totalSupportEl.textContent = supportStr;
     if (currentSupportEl) currentSupportEl.textContent = supportStr;
+    
+    // 관심상품과 장바구니 개수 업데이트
+    updateWishlistAndCartCount();
+}
+
+// 관심상품과 장바구니 개수 업데이트
+function updateWishlistAndCartCount() {
+    // 장바구니 개수
+    try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const cartCount = cart.length || 0;
+        const cartCountEl = document.getElementById('cartCount');
+        if (cartCountEl) {
+            cartCountEl.textContent = cartCount;
+        }
+    } catch (e) {
+        console.warn('장바구니 개수 업데이트 실패:', e);
+        const cartCountEl = document.getElementById('cartCount');
+        if (cartCountEl) cartCountEl.textContent = '0';
+    }
+    
+    // 관심상품 개수 (localStorage에서 wishlist 키 확인)
+    try {
+        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        const wishlistCount = wishlist.length || 0;
+        const wishlistCountEl = document.getElementById('wishlistCount');
+        if (wishlistCountEl) {
+            wishlistCountEl.textContent = wishlistCount;
+        }
+    } catch (e) {
+        console.warn('관심상품 개수 업데이트 실패:', e);
+        const wishlistCountEl = document.getElementById('wishlistCount');
+        if (wishlistCountEl) wishlistCountEl.textContent = '0';
+    }
 }
 
 // 주문 단계별 건수 (주문/입금/준비/배송/완료)
@@ -831,6 +880,9 @@ function showSection(sectionName, clickedLink) {
         if (addWrap) addWrap.style.display = 'block';
     }
     if (sectionName === 'faq') renderFaqList();
+    if (sectionName === 'wishlist-cart') {
+        renderWishlistCartSection();
+    }
     const navLinks = document.querySelectorAll('.nav-group a');
     navLinks.forEach(function (link) { link.classList.remove('active'); });
     if (clickedLink) clickedLink.classList.add('active');
@@ -846,11 +898,161 @@ function showSection(sectionName, clickedLink) {
             } catch (e) { /* ignore */ }
         }
     }
-    const implemented = ['orders', 'profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw', 'faq'];
+    const implemented = ['orders', 'profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw', 'faq', 'wishlist-cart'];
     if (implemented.indexOf(sectionName) === -1) {
         alert(sectionName + ' 기능은 추후 구현 예정입니다.');
     }
 }
+
+// 관심상품/장바구니 섹션 렌더링
+function renderWishlistCartSection() {
+    renderWishlistList();
+    renderCartList();
+    bindWishlistCartTabs();
+}
+
+// 관심상품 목록 렌더링
+function renderWishlistList() {
+    const listEl = document.getElementById('wishlistList');
+    const emptyEl = document.getElementById('wishlistEmpty');
+    if (!listEl || !emptyEl) return;
+
+    try {
+        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        
+        if (wishlist.length === 0) {
+            listEl.innerHTML = '';
+            emptyEl.style.display = 'block';
+            return;
+        }
+
+        emptyEl.style.display = 'none';
+        listEl.innerHTML = wishlist.map(function(item) {
+            return '<div class="wishlist-item" style="display: flex; align-items: center; padding: 20px; border-bottom: 1px solid #e0e0e0;">' +
+                '<div style="width: 100px; height: 100px; margin-right: 20px; background: #f5f5f5; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden;">' +
+                (item.image ? '<img src="' + item.image + '" style="width: 100%; height: 100%; object-fit: cover;">' : '<i class="fas fa-image" style="font-size: 32px; color: #ddd;"></i>') +
+                '</div>' +
+                '<div style="flex: 1;">' +
+                '<h4 style="margin: 0 0 8px 0; font-size: 16px; color: #333;">' + (item.name || '상품명 없음') + '</h4>' +
+                '<p style="margin: 0; color: #666; font-size: 14px;">' + (item.price ? item.price.toLocaleString() + '원' : '가격 정보 없음') + '</p>' +
+                '</div>' +
+                '<div style="display: flex; gap: 10px;">' +
+                '<button type="button" class="btn btn-secondary" onclick="removeFromWishlist(\'' + item.id + '\')" style="padding: 8px 16px; font-size: 14px;">삭제</button>' +
+                '<a href="product-detail.html?id=' + item.id + '" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; display: inline-block;">상세보기</a>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+    } catch (e) {
+        console.error('관심상품 목록 렌더링 오류:', e);
+        listEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+    }
+}
+
+// 장바구니 목록 렌더링
+function renderCartList() {
+    const listEl = document.getElementById('cartList');
+    const emptyEl = document.getElementById('cartEmpty');
+    if (!listEl || !emptyEl) return;
+
+    try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        
+        if (cart.length === 0) {
+            listEl.innerHTML = '';
+            emptyEl.style.display = 'block';
+            return;
+        }
+
+        emptyEl.style.display = 'none';
+        listEl.innerHTML = cart.map(function(item, index) {
+            return '<div class="cart-item" style="display: flex; align-items: center; padding: 20px; border-bottom: 1px solid #e0e0e0;">' +
+                '<div style="width: 100px; height: 100px; margin-right: 20px; background: #f5f5f5; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden;">' +
+                (item.image ? '<img src="' + item.image + '" style="width: 100%; height: 100%; object-fit: cover;">' : '<i class="fas fa-image" style="font-size: 32px; color: #ddd;"></i>') +
+                '</div>' +
+                '<div style="flex: 1;">' +
+                '<h4 style="margin: 0 0 8px 0; font-size: 16px; color: #333;">' + (item.productName || '상품명 없음') + '</h4>' +
+                '<p style="margin: 0 0 4px 0; color: #666; font-size: 14px;">옵션: ' + (item.optionName || '기본') + '</p>' +
+                '<p style="margin: 0; color: #666; font-size: 14px;">수량: ' + (item.quantity || 1) + '개 | ' + (item.price ? item.price.toLocaleString() + '원' : '가격 정보 없음') + '</p>' +
+                '</div>' +
+                '<div style="display: flex; gap: 10px;">' +
+                '<button type="button" class="btn btn-secondary" onclick="removeFromCart(' + index + ')" style="padding: 8px 16px; font-size: 14px;">삭제</button>' +
+                '<a href="product-detail.html?id=' + item.productId + '" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; display: inline-block;">상세보기</a>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+    } catch (e) {
+        console.error('장바구니 목록 렌더링 오류:', e);
+        listEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+    }
+}
+
+// 관심상품/장바구니 탭 전환
+function bindWishlistCartTabs() {
+    const tabs = document.querySelectorAll('.wishlist-cart-tab');
+    const wishlistContent = document.getElementById('wishlistTabContent');
+    const cartContent = document.getElementById('cartTabContent');
+
+    tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            const tabType = tab.getAttribute('data-tab');
+            
+            // 탭 활성화
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            
+            // 콘텐츠 표시/숨김
+            if (tabType === 'wishlist') {
+                wishlistContent.style.display = 'block';
+                cartContent.style.display = 'none';
+            } else {
+                wishlistContent.style.display = 'none';
+                cartContent.style.display = 'block';
+            }
+        });
+    });
+}
+
+// 관심상품에서 제거
+function removeFromWishlist(productId) {
+    if (!confirm('관심상품에서 제거하시겠습니까?')) return;
+    
+    try {
+        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        const filtered = wishlist.filter(function(item) { return item.id !== productId; });
+        localStorage.setItem('wishlist', JSON.stringify(filtered));
+        
+        renderWishlistList();
+        updateWishlistAndCartCount();
+        alert('관심상품에서 제거되었습니다.');
+    } catch (e) {
+        console.error('관심상품 제거 오류:', e);
+        alert('오류가 발생했습니다.');
+    }
+}
+
+// 장바구니에서 제거
+function removeFromCart(index) {
+    if (!confirm('장바구니에서 제거하시겠습니까?')) return;
+    
+    try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        cart.splice(index, 1);
+        localStorage.setItem('cart', JSON.stringify(cart));
+        
+        renderCartList();
+        updateWishlistAndCartCount();
+        alert('장바구니에서 제거되었습니다.');
+    } catch (e) {
+        console.error('장바구니 제거 오류:', e);
+        alert('오류가 발생했습니다.');
+    }
+}
+
+// 전역 함수로 노출
+window.removeFromWishlist = removeFromWishlist;
+window.removeFromCart = removeFromCart;
 
 // 공지/이벤트 제목 클릭 시 아래 행 펼치기/접기
 function bindPostExpandClicks() {
