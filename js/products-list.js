@@ -337,10 +337,18 @@ async function updatePageInfo() {
     const config = PAGE_CONFIG[currentType];
     
     if (config) {
-        listElements.pageTitle.textContent = `${config.breadcrumb} - 10쇼핑게임`;
-        listElements.pageHeading.innerHTML = `<i class="fas ${config.icon}"></i> ${config.title}`;
-        listElements.pageDescription.textContent = config.description;
-        listElements.breadcrumbCurrent.textContent = config.breadcrumb;
+        if (listElements.pageTitle) {
+            listElements.pageTitle.textContent = `${config.breadcrumb} - 10쇼핑게임`;
+        }
+        if (listElements.pageHeading) {
+            listElements.pageHeading.innerHTML = `<i class="fas ${config.icon}"></i> ${config.title}`;
+        }
+        if (listElements.pageDescription) {
+            listElements.pageDescription.textContent = config.description;
+        }
+        if (listElements.breadcrumbCurrent) {
+            listElements.breadcrumbCurrent.textContent = config.breadcrumb;
+        }
         
         // 페이지 헤더에 타입 데이터 속성 추가
         const pageHeader = document.querySelector('.page-header');
@@ -411,13 +419,31 @@ async function loadProducts() {
                             console.log(`✅ 카테고리 매칭: 상품 ${product.name} (카테고리: ${productCategory}, 현재: ${currentCategory})`);
                         }
                     } else if (currentType) {
-                        // 타입 모드인 경우 (currentType이 있을 때만)
-                        const displayCategories = Array.isArray(product.displayCategory) 
-                            ? product.displayCategory 
-                            : [product.displayCategory || 'all'];
+                        // 타입 모드인 경우 - 메인 페이지와 완전히 동일한 로직 사용
+                        // displayCategory가 없거나 undefined/null이면 'all'로 처리
+                        let displayCategories;
+                        if (!product.displayCategory) {
+                            // displayCategory가 없으면 'all'로 처리 (모든 타입에 포함)
+                            displayCategories = ['all'];
+                        } else if (Array.isArray(product.displayCategory)) {
+                            displayCategories = product.displayCategory.length > 0 ? product.displayCategory : ['all'];
+                        } else {
+                            displayCategories = [product.displayCategory];
+                        }
                         
-                        if (displayCategories.includes('all') || displayCategories.includes(currentType)) {
-                            shouldInclude = true;
+                        // 메인 페이지 로직: displayCategories.forEach로 각 카테고리를 확인
+                        displayCategories.forEach(category => {
+                            // 'all'이거나 현재 타입이면 포함
+                            if (category === 'all' || category === currentType) {
+                                shouldInclude = true;
+                            }
+                        });
+                        
+                        // 디버깅 로그
+                        if (shouldInclude && firestoreProducts.length < 5) {
+                            console.log(`✅ 타입 매칭: 상품 ${product.name} (displayCategory: ${JSON.stringify(product.displayCategory)}, 처리된 categories: ${JSON.stringify(displayCategories)}, 현재 타입: ${currentType})`);
+                        } else if (!shouldInclude && firestoreProducts.length < 5) {
+                            console.log(`❌ 타입 불일치: 상품 ${product.name} (displayCategory: ${JSON.stringify(product.displayCategory)}, 처리된 categories: ${JSON.stringify(displayCategories)}, 현재 타입: ${currentType})`);
                         }
                     }
                     
@@ -452,6 +478,15 @@ async function loadProducts() {
                     }
                 } else if (currentType) {
                     console.log(`🔍 타입 필터링 결과: ${firestoreProducts.length}개 상품 (타입: ${currentType})`);
+                    console.log(`   전체 상품 수: ${allProducts.length}`);
+                    if (firestoreProducts.length === 0 && allProducts.length > 0) {
+                        console.warn('⚠️ 필터링된 상품이 없습니다. displayCategory 필드를 확인하세요.');
+                        // 샘플 상품의 displayCategory 확인
+                        const sampleProducts = allProducts.slice(0, 3);
+                        sampleProducts.forEach((p, idx) => {
+                            console.log(`   샘플 상품 ${idx + 1}: ${p.name}, displayCategory: ${JSON.stringify(p.displayCategory)}`);
+                        });
+                    }
                 }
                 
                 if (firestoreProducts.length > 0) {
