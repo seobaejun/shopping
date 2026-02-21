@@ -966,6 +966,96 @@ img {
     }
 }
 
+/* 히어로 바로 아래 안내 카드 (쇼핑지원금 / 참여방법) */
+.promo-cards-section {
+    padding: 48px 0;
+    background: var(--bg-white);
+}
+
+.promo-cards {
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+}
+
+.promo-card {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 48px 28px;
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--text-dark);
+    transition: var(--transition);
+    min-height: 200px;
+}
+
+.promo-card:hover {
+    opacity: 0.95;
+    transform: translateY(-2px);
+}
+
+.promo-card--pink {
+    background: #FFB6C1;
+}
+
+.promo-card--blue {
+    background: #87CEEB;
+}
+
+.promo-card__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.promo-card__top {
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--text-dark);
+    margin-bottom: 12px;
+}
+
+.promo-card__main {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--text-dark);
+    line-height: 1.3;
+}
+
+.promo-card__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 40px;
+    background: #333;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 28px;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-left: 16px;
+    flex-shrink: 0;
+}
+
+.promo-card:hover .promo-card__btn {
+    background: #000;
+}
+
+@media (max-width: 768px) {
+    .promo-cards {
+        flex-direction: column;
+    }
+    .promo-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .promo-card__btn {
+        margin-left: 0;
+    }
+}
+
 .btn-primary {
     display: inline-block;
     padding: 15px 40px;
