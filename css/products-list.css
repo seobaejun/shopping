@@ -181,11 +181,9 @@
     font-size: 17px;
     font-weight: 500;
     margin-bottom: 10px;
-    height: 51px;
     overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     line-height: 1.5;
 }
 
