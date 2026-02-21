@@ -508,6 +508,7 @@ function createProductCard(product, index, type) {
             <div class="product-info">
                 <a href="product-detail.html?id=${productId}" class="product-title">${product.title}</a>
                 <div class="product-option">${product.option || ''}</div>
+                <div class="product-price">${product.price ? product.price.toLocaleString() + '원' : ''}</div>
                 <div class="product-support">쇼핑지원금 ${product.support}</div>
                 <div class="product-footer">
                     <div class="product-rating">
@@ -1025,6 +1026,7 @@ async function loadProductsFromFirestore() {
                 id: product.id,
                 title: product.name,
                 option: product.shortDesc || '',
+                price: product.price || 0,
                 support: `${(product.price * (product.supportRate || 5) / 100).toLocaleString()}원`,
                 badge: [],
                 image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image'
@@ -1194,7 +1196,7 @@ function renderCategoryMenu(categoryTree) {
         html += `<li${hasChildren ? ' class="has-submenu"' : ''}>`;
         
         if (hasChildren) {
-            // 하위 카테고리가 있으면 클릭으로 펼치기
+            // 하위 카테고리가 있으면 클릭으로 펼치기 (하위 카테고리로 이동)
             html += `<a href="#" onclick="toggleSubmenu(event, this)">${(cat1.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
         } else {
             // 하위 카테고리가 없으면 링크로 이동
@@ -1210,7 +1212,7 @@ function renderCategoryMenu(categoryTree) {
                 html += `<li${hasGrandChildren ? ' class="has-submenu"' : ''}>`;
                 
                 if (hasGrandChildren) {
-                    // 3차 카테고리가 있으면 클릭으로 펼치기
+                    // 3차 카테고리가 있으면 클릭으로 펼치기 (하위 카테고리로 이동)
                     html += `<a href="#" onclick="toggleSubmenu(event, this)">${(cat2.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
                 } else {
                     // 3차 카테고리가 없으면 링크로 이동

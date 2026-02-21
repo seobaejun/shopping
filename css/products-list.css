@@ -1,5 +1,115 @@
 /* 상품 목록 페이지 전용 스타일 */
 
+/* 카테고리 브레드크럼 */
+.category-breadcrumb {
+    background: var(--bg-light);
+    padding: 15px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.category-breadcrumb ul {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.category-breadcrumb li {
+    font-size: 14px;
+    color: var(--text-light);
+    position: relative;
+}
+
+.category-breadcrumb a {
+    color: var(--text-light);
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.category-breadcrumb a:hover {
+    color: var(--primary-color);
+}
+
+.category-breadcrumb i {
+    font-size: 12px;
+}
+
+.category-breadcrumb li.current {
+    color: var(--text-dark);
+    font-weight: 500;
+}
+
+/* 브레드크럼 드롭다운 */
+.breadcrumb-dropdown {
+    position: relative;
+}
+
+.breadcrumb-dropdown > .breadcrumb-link {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.breadcrumb-dropdown > .breadcrumb-link i {
+    font-size: 10px;
+    transition: transform 0.3s ease;
+}
+
+.breadcrumb-dropdown.active > .breadcrumb-link i {
+    transform: rotate(180deg);
+}
+
+.breadcrumb-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    min-width: 150px;
+    z-index: 100;
+    display: none !important;
+    margin-top: 5px;
+    padding: 5px 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+.breadcrumb-dropdown-menu.active {
+    display: block !important;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.breadcrumb-dropdown-menu li {
+    list-style: none;
+    margin: 0;
+}
+
+.breadcrumb-dropdown-menu a {
+    display: block;
+    padding: 8px 15px;
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.breadcrumb-dropdown-menu a:hover {
+    background: var(--bg-light);
+    color: var(--primary-color);
+}
+
+.breadcrumb-dropdown-menu a.active {
+    color: var(--primary-color);
+    font-weight: 500;
+    background: rgba(255, 193, 7, 0.1);
+}
+
 /* 페이지 헤더 */
 .page-header {
     text-align: center;
