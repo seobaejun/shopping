@@ -785,8 +785,8 @@ function initHeroTitle() {
     const text = heroTitle.textContent;
     const chars = text.split('');
     
-    // "10 쇼핑 게임" 부분의 시작 인덱스 찾기
-    const targetText = "10 쇼핑 게임";
+    // "10" 부분만 찾기
+    const targetText = "10";
     const startIndex = text.indexOf(targetText);
     const endIndex = startIndex + targetText.length;
     
@@ -814,12 +814,102 @@ function initScrollDown() {
     });
 }
 
+function initTermsModal() {
+    const termsLink = document.getElementById('termsOfServiceLink');
+    const termsModal = document.getElementById('termsOfServiceModal');
+    const closeBtn = document.getElementById('termsModalClose');
+    const confirmBtn = document.getElementById('termsModalConfirm');
+
+    if (!termsLink || !termsModal) return;
+
+    // 모달 열기
+    termsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        termsModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    });
+
+    // 모달 닫기
+    const closeModal = () => {
+        termsModal.style.display = 'none';
+        document.body.style.overflow = '';
+    };
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', closeModal);
+    }
+
+    // 모달 배경 클릭 시 닫기
+    termsModal.addEventListener('click', (e) => {
+        if (e.target === termsModal) {
+            closeModal();
+        }
+    });
+
+    // ESC 키로 모달 닫기
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && termsModal.style.display === 'flex') {
+            closeModal();
+        }
+    });
+}
+
+function initPrivacyModal() {
+    const privacyLink = document.getElementById('privacyPolicyLink');
+    const privacyModal = document.getElementById('privacyPolicyModal');
+    const closeBtn = document.getElementById('privacyModalClose');
+    const confirmBtn = document.getElementById('privacyModalConfirm');
+
+    if (!privacyLink || !privacyModal) return;
+
+    // 모달 열기
+    privacyLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        privacyModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    });
+
+    // 모달 닫기
+    const closeModal = () => {
+        privacyModal.style.display = 'none';
+        document.body.style.overflow = '';
+    };
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', closeModal);
+    }
+
+    // 모달 배경 클릭 시 닫기
+    privacyModal.addEventListener('click', (e) => {
+        if (e.target === privacyModal) {
+            closeModal();
+        }
+    });
+
+    // ESC 키로 모달 닫기
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && privacyModal.style.display === 'flex') {
+            closeModal();
+        }
+    });
+}
+
 function init() {
     initNoticeBanner();
     initCategorySidebar();
     initSearchToggle();
     initHeroTitle();
     initScrollDown();
+    initTermsModal();
+    initPrivacyModal();
     renderProducts();
     initTodayViewed();
     initScrollHeader();
