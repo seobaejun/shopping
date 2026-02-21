@@ -743,6 +743,7 @@ img {
 .slider-container {
     position: relative;
     height: 100%;
+    z-index: 1;
 }
 
 .slide {
@@ -765,17 +766,198 @@ img {
 .slide-content {
     text-align: center;
     color: var(--bg-white);
+    position: relative;
+    z-index: 25;
 }
 
-.slide-content h2 {
-    font-size: 48px;
+.slide-content h1 {
+    font-size: 80px;
+    font-weight: 700;
     margin-bottom: 20px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    line-height: 1.2;
+    color: #fff;
+    position: relative;
+}
+
+.slide-content h1 .char {
+    display: inline-block;
+    position: relative;
+    color: #fff;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3),
+                 0 0 10px rgba(255, 255, 255, 0.2);
+    animation: neonCharFlow 2.5s ease-in-out infinite;
+}
+
+.slide-content h1 .char.char-color-change {
+    animation: neonCharFlow 2.5s ease-in-out infinite, colorChange 3s ease-in-out infinite;
+}
+
+.slide-content h1 .char-space {
+    display: inline-block;
+    width: 0.3em;
+}
+
+@keyframes neonCharFlow {
+    0%, 90%, 100% {
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.3),
+                     0 0 10px rgba(255, 255, 255, 0.2);
+    }
+    45%, 55% {
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.5),
+                     0 0 15px rgba(255, 255, 255, 0.3),
+                     0 0 25px rgba(255, 255, 255, 0.2);
+    }
+}
+
+@keyframes colorChange {
+    0% {
+        color: #ff6b6b;
+    }
+    16.66% {
+        color: #4ecdc4;
+    }
+    33.33% {
+        color: #45b7d1;
+    }
+    50% {
+        color: #f9ca24;
+    }
+    66.66% {
+        color: #f0932b;
+    }
+    83.33% {
+        color: #eb4d4b;
+    }
+    100% {
+        color: #ff6b6b;
+    }
 }
 
 .slide-content p {
-    font-size: 24px;
-    margin-bottom: 30px;
+    font-size: 40px;
+    margin-bottom: 0;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    font-weight: 500;
+}
+
+/* 떠다니는 이미지들 */
+.floating-images {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.floating-img {
+    position: absolute;
+    max-width: 180px;
+    max-height: 180px;
+    width: auto;
+    height: auto;
+    opacity: 1;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    animation: float 6s ease-in-out infinite;
+    display: block;
+    visibility: visible;
+    z-index: 5;
+}
+
+.floating-img.img-1 {
+    top: 10%;
+    left: 5%;
+    animation-delay: 0s;
+    max-width: 150px;
+}
+
+.floating-img.img-2 {
+    top: 20%;
+    right: 8%;
+    animation-delay: 1s;
+    max-width: 170px;
+}
+
+.floating-img.img-3 {
+    bottom: 25%;
+    left: 10%;
+    animation-delay: 2s;
+    max-width: 160px;
+}
+
+.floating-img.img-4 {
+    top: 50%;
+    right: 5%;
+    animation-delay: 1.5s;
+    max-width: 140px;
+}
+
+.floating-img.img-5 {
+    bottom: 15%;
+    right: 15%;
+    animation-delay: 2.5s;
+    max-width: 130px;
+}
+
+.floating-img.img-6 {
+    top: 35%;
+    left: 15%;
+    animation-delay: 0.5s;
+    max-width: 155px;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    25% {
+        transform: translateY(-20px) rotate(5deg);
+    }
+    50% {
+        transform: translateY(-10px) rotate(-5deg);
+    }
+    75% {
+        transform: translateY(-15px) rotate(3deg);
+    }
+}
+
+/* 스크롤 다운 버튼 */
+.scroll-down-btn {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    z-index: 30;
+    animation: bounceDown 2s ease-in-out infinite;
+}
+
+.scroll-down-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateX(-50%) translateY(5px);
+}
+
+@keyframes bounceDown {
+    0%, 100% {
+        transform: translateX(-50%) translateY(0);
+    }
+    50% {
+        transform: translateX(-50%) translateY(10px);
+    }
 }
 
 .btn-primary {
@@ -793,57 +975,7 @@ img {
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
-.slider-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(255,255,255,0.3);
-    color: var(--bg-white);
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    transition: var(--transition);
-}
-
-.slider-btn:hover {
-    background: rgba(255,255,255,0.5);
-}
-
-.slider-btn.prev {
-    left: 20px;
-}
-
-.slider-btn.next {
-    right: 20px;
-}
-
-.slider-dots {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 10px;
-}
-
-.slider-dots .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.5);
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.slider-dots .dot.active {
-    background: var(--bg-white);
-    width: 30px;
-    border-radius: 6px;
-}
+/* 슬라이더 버튼 및 도트 CSS 삭제됨 */
 
 /* 상품 섹션 */
 .product-section {
@@ -1369,6 +1501,26 @@ body.show-admin-link li .admin-link {
     }
 }
 
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes gradientShift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
 @keyframes slideInRight {
     from {
         transform: translateX(100%);
@@ -1578,12 +1730,17 @@ body.show-admin-link li .admin-link {
         height: 510px;
     }
 
-    .slide-content h2 {
-        font-size: 32px;
+    .slide-content h1 {
+        font-size: 36px;
     }
 
     .slide-content p {
-        font-size: 18px;
+        font-size: 30px;
+    }
+
+    .floating-img {
+        max-width: 120px !important;
+        max-height: 120px !important;
     }
 
     .product-grid {
@@ -1627,6 +1784,20 @@ body.show-admin-link li .admin-link {
         padding: 0 15px;
     }
 
+    .slide-content h1 {
+        font-size: 24px;
+    }
+
+    .slide-content p {
+        font-size: 24px;
+    }
+
+    .floating-img {
+        max-width: 90px !important;
+        max-height: 90px !important;
+        opacity: 0.7 !important;
+    }
+
     .popup-content {
         padding: 20px;
     }
@@ -1644,18 +1815,5 @@ body.show-admin-link li .admin-link {
         grid-template-columns: 1fr;
     }
 
-    .slider-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
-    }
-
-    .slider-btn.prev {
-        left: 10px;
-    }
-
-    .slider-btn.next {
-        right: 10px;
-    }
 }
 

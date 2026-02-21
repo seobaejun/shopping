@@ -1,5 +1,4 @@
 // 상수 정의
-const SLIDE_INTERVAL = 5000;
 
 // 상품 데이터
 const productsData = {
@@ -264,9 +263,6 @@ const elements = {
     categoryBtn: document.getElementById('categoryBtn'),
     categorySidebar: document.getElementById('categorySidebar'),
     closeSidebar: document.getElementById('closeSidebar'),
-    prevSlide: document.getElementById('prevSlide'),
-    nextSlide: document.getElementById('nextSlide'),
-    sliderDots: document.getElementById('sliderDots'),
     toggleViewed: document.getElementById('toggleViewed'),
     viewedPanel: document.getElementById('viewedPanel'),
     viewedPanelClose: document.getElementById('viewedPanelClose'),
@@ -488,60 +484,7 @@ function handleSearch(event) {
     return false;
 }
 
-// 슬라이더
-let currentSlide = 0;
-let slideInterval;
-
-function initSlider() {
-    const slides = document.querySelectorAll('.slide');
-    const totalSlides = slides.length;
-
-    // 도트 생성
-    for (let i = 0; i < totalSlides; i++) {
-        const dot = document.createElement('div');
-        dot.classList.add('dot');
-        if (i === 0) dot.classList.add('active');
-        dot.addEventListener('click', () => goToSlide(i));
-        elements.sliderDots.appendChild(dot);
-    }
-
-    elements.prevSlide.addEventListener('click', () => {
-        goToSlide(currentSlide - 1);
-        resetSlideInterval();
-    });
-
-    elements.nextSlide.addEventListener('click', () => {
-        goToSlide(currentSlide + 1);
-        resetSlideInterval();
-    });
-
-    startSlideInterval();
-}
-
-function goToSlide(n) {
-    const slides = document.querySelectorAll('.slide');
-    const dots = document.querySelectorAll('.slider-dots .dot');
-    const totalSlides = slides.length;
-
-    slides[currentSlide].classList.remove('active');
-    dots[currentSlide].classList.remove('active');
-
-    currentSlide = (n + totalSlides) % totalSlides;
-
-    slides[currentSlide].classList.add('active');
-    dots[currentSlide].classList.add('active');
-}
-
-function startSlideInterval() {
-    slideInterval = setInterval(() => {
-        goToSlide(currentSlide + 1);
-    }, SLIDE_INTERVAL);
-}
-
-function resetSlideInterval() {
-    clearInterval(slideInterval);
-    startSlideInterval();
-}
+// 슬라이더 관련 코드 삭제됨 (단일 슬라이드 사용)
 
 // 상품 카드 생성
 function createProductCard(product, index, type) {
@@ -835,11 +778,48 @@ function initNoticeBanner() {
 }
 
 // 초기화
+function initHeroTitle() {
+    const heroTitle = document.querySelector('.slide-content h1');
+    if (!heroTitle) return;
+    
+    const text = heroTitle.textContent;
+    const chars = text.split('');
+    
+    // "10 쇼핑 게임" 부분의 시작 인덱스 찾기
+    const targetText = "10 쇼핑 게임";
+    const startIndex = text.indexOf(targetText);
+    const endIndex = startIndex + targetText.length;
+    
+    heroTitle.innerHTML = chars.map((char, index) => {
+        const isColorChange = index >= startIndex && index < endIndex;
+        const charClass = isColorChange ? 'char char-color-change' : 'char';
+        
+        if (char === ' ') {
+            return '<span class="char-space"> </span>';
+        }
+        return `<span class="${charClass}" data-char="${char}" style="animation-delay: ${index * 0.1}s">${char}</span>`;
+    }).join('');
+}
+
+function initScrollDown() {
+    const scrollDownBtn = document.getElementById('scrollDownBtn');
+    if (!scrollDownBtn) return;
+    
+    scrollDownBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetSection = document.getElementById('hit-products');
+        if (targetSection) {
+            targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+}
+
 function init() {
     initNoticeBanner();
     initCategorySidebar();
     initSearchToggle();
-    initSlider();
+    initHeroTitle();
+    initScrollDown();
     renderProducts();
     initTodayViewed();
     initScrollHeader();
