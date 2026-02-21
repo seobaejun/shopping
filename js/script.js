@@ -496,7 +496,7 @@ function createProductCard(product, index, type) {
     const productId = product.id;
 
     return `
-        <div class="product-card">
+        <div class="product-card" data-product-id="${productId}">
             <a href="product-detail.html?id=${productId}" class="product-link">
                 <div class="product-image">
                     <img src="${product.image}" alt="${product.title}">
@@ -513,7 +513,7 @@ function createProductCard(product, index, type) {
                     <div class="product-rating">
                         <span>고객평점</span>
                         <i class="fas fa-star"></i>
-                        <span>0</span>
+                        <span class="rating-value">0</span>
                     </div>
                     <button class="share-btn">
                         <i class="fas fa-share-alt"></i> 공유하기
@@ -545,6 +545,61 @@ function renderProducts() {
 
     if (popularProducts) {
         popularProducts.innerHTML = productsData.popular.map((product, index) => createProductCard(product, index, 'popular')).join('');
+    }
+
+    // 상품 평점 업데이트
+    updateProductRatings();
+}
+
+// 상품 평점 업데이트 함수
+async function updateProductRatings() {
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
+        return;
+    }
+
+    const db = firebase.firestore();
+    const allProducts = [
+        ...productsData.hit,
+        ...productsData.recommend,
+        ...productsData.new,
+        ...productsData.popular
+    ];
+
+    // 각 상품의 평점을 가져와서 업데이트
+    for (const product of allProducts) {
+        if (!product.id) continue;
+
+        try {
+            const productIdStr = String(product.id);
+            const reviewsSnapshot = await db.collection('posts')
+                .where('boardType', '==', 'review')
+                .where('productId', '==', productIdStr)
+                .get();
+
+            let totalRating = 0;
+            let reviewCount = 0;
+
+            reviewsSnapshot.docs.forEach(doc => {
+                const review = doc.data();
+                if (review.rating) {
+                    totalRating += review.rating;
+                    reviewCount++;
+                }
+            });
+
+            const avgRating = reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
+
+            // 해당 상품 카드의 평점 업데이트
+            const productCard = document.querySelector(`.product-card[data-product-id="${product.id}"]`);
+            if (productCard) {
+                const ratingSpan = productCard.querySelector('.product-rating .rating-value');
+                if (ratingSpan) {
+                    ratingSpan.textContent = avgRating;
+                }
+            }
+        } catch (error) {
+            console.error(`상품 ${product.id} 평점 로드 오류:`, error);
+        }
     }
 }
 
