@@ -2000,3 +2000,225 @@ body.show-admin-link li .admin-link {
 
 }
 
+/* 인기상품 배너 슬라이더 */
+.popular-banner-slider {
+    padding: 40px 20px;
+    background: var(--bg-white);
+}
+
+.banner-slider-container {
+    position: relative;
+    max-width: 1400px;
+    margin: 0 auto;
+    overflow: hidden;
+    border-radius: 20px;
+    height: 190px;
+}
+
+.banner-slide {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 0;
+    border-radius: 20px;
+    min-height: 190px;
+    align-items: center;
+}
+
+.banner-slide.active {
+    display: flex;
+    animation: slideIn 0.5s ease-in-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.banner-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 50px;
+    width: 100%;
+    padding: 0 50px;
+    min-height: 190px;
+}
+
+.banner-left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.banner-top-text {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 8px;
+    line-height: 1.5;
+    font-weight: 400;
+}
+
+.banner-main-text {
+    font-size: 22px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 6px;
+    line-height: 1.3;
+}
+
+.banner-sub-text {
+    font-size: 17px;
+    font-weight: 500;
+    color: #000;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.banner-dots {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+/* 첫 번째 배너(노란색) 전용 스타일 */
+.banner-slide[style*="#FFC107"] .banner-top-text {
+    color: rgba(0, 0, 0, 0.7);
+    font-size: 14px;
+}
+
+.banner-dots .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.banner-dots .dot.active {
+    background: rgba(0, 0, 0, 0.8);
+    width: 20px;
+    border-radius: 3px;
+}
+
+/* 두 번째 배너(핑크) 전용 - 도트 색상 */
+.banner-slide[style*="#FFB6C1"] .banner-dots .dot {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.banner-slide[style*="#FFB6C1"] .banner-dots .dot.active {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.banner-right {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+/* 두 번째 배너(핑크) 전용 스타일 */
+.banner-slide[style*="#FFB6C1"] .banner-right {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0;
+}
+
+.banner-notice-text {
+    font-size: 28px;
+    font-weight: 700;
+    color: #000;
+    text-align: right;
+    white-space: nowrap;
+    margin-bottom: 0;
+    line-height: 1.3;
+}
+
+.banner-review-text {
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+    text-align: right;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.banner-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: #000;
+    color: #fff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-top: 0;
+}
+
+.banner-btn:hover {
+    background: #333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.banner-btn i {
+    color: var(--primary-color);
+    font-size: 14px;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .banner-slide {
+        padding: 30px 25px;
+        min-height: 180px;
+    }
+    
+    .banner-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 20px;
+    }
+    
+    .banner-main-text {
+        font-size: 22px;
+    }
+    
+    .banner-sub-text {
+        font-size: 16px;
+    }
+    
+    .banner-review-text {
+        font-size: 28px;
+    }
+    
+    .banner-right {
+        align-items: center;
+    }
+    
+    .banner-notice-text {
+        text-align: center;
+    }
+    
+    .banner-review-text {
+        text-align: center;
+    }
+}
+

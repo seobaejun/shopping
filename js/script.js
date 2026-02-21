@@ -958,6 +958,64 @@ function initPrivacyModal() {
     });
 }
 
+// 배너 슬라이더 초기화
+function initBannerSlider() {
+    const slides = document.querySelectorAll('.banner-slide');
+    const dots = document.querySelectorAll('.banner-dots .dot');
+    let currentSlide = 0;
+    let slideInterval;
+
+    if (slides.length === 0) return;
+
+    function showSlide(index) {
+        // 모든 슬라이드 숨기기
+        slides.forEach(slide => slide.classList.remove('active'));
+        dots.forEach(dot => dot.classList.remove('active'));
+        
+        // 현재 슬라이드 표시
+        slides[index].classList.add('active');
+        dots[index].classList.add('active');
+        
+        currentSlide = index;
+    }
+
+    function nextSlide() {
+        const next = (currentSlide + 1) % slides.length;
+        showSlide(next);
+    }
+
+    // 자동 슬라이드 (5초마다)
+    function startSlideInterval() {
+        slideInterval = setInterval(nextSlide, 5000);
+    }
+
+    function stopSlideInterval() {
+        if (slideInterval) {
+            clearInterval(slideInterval);
+        }
+    }
+
+    // 도트 클릭 이벤트
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            stopSlideInterval();
+            showSlide(index);
+            startSlideInterval();
+        });
+    });
+
+    // 슬라이더에 마우스 올리면 일시 정지
+    const sliderContainer = document.querySelector('.banner-slider-container');
+    if (sliderContainer) {
+        sliderContainer.addEventListener('mouseenter', stopSlideInterval);
+        sliderContainer.addEventListener('mouseleave', startSlideInterval);
+    }
+
+    // 초기 슬라이드 표시 및 자동 슬라이드 시작
+    showSlide(0);
+    startSlideInterval();
+}
+
 function init() {
     initNoticeBanner();
     initCategorySidebar();
@@ -970,6 +1028,7 @@ function init() {
     initTodayViewed();
     initScrollHeader();
     initShareButtons();
+    initBannerSlider(); // Initialize banner slider
 }
 
 // DOM 로드 완료 시 실행
