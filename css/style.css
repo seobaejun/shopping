@@ -2608,8 +2608,8 @@ body.show-admin-link li .admin-link {
     font-size: 14px;
 }
 
-/* 19인치 노트북: 히어로(메인 슬라이더) 텍스트 + 옆 플로팅 이미지 축소 (겹침 방지) */
-@media (max-width: 1440px) {
+/* 노트북/작은 데스크톱: 히어로(메인 슬라이더) 텍스트 + 플로팅 이미지 축소 (1440~1680px 포함) */
+@media (max-width: 1680px) {
     .main-slider {
         height: 480px;
     }
