@@ -81,6 +81,16 @@
     opacity: 0.8;
 }
 
+/* 19인치/작은 노트북: 최상단 배너 글자 축소 */
+@media (max-width: 1440px) {
+    .notice-banner p {
+        font-size: 28px;
+    }
+    .notice-banner {
+        padding: 18px 0;
+    }
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -2596,6 +2606,42 @@ body.show-admin-link li .admin-link {
 .banner-btn i {
     color: var(--primary-color);
     font-size: 14px;
+}
+
+/* 19인치 노트북: 히어로(메인 슬라이더) 텍스트 + 옆 플로팅 이미지 축소 (겹침 방지) */
+@media (max-width: 1440px) {
+    .main-slider {
+        height: 480px;
+    }
+    .slide-content h1 {
+        font-size: 52px;
+        margin-bottom: 14px;
+    }
+    .slide-content p {
+        font-size: 28px;
+    }
+    .floating-img {
+        max-width: 120px !important;
+        max-height: 120px !important;
+    }
+    .floating-img.img-1 {
+        max-width: 100px !important;
+    }
+    .floating-img.img-2 {
+        max-width: 110px !important;
+    }
+    .floating-img.img-3 {
+        max-width: 105px !important;
+    }
+    .floating-img.img-4 {
+        max-width: 95px !important;
+    }
+    .floating-img.img-5 {
+        max-width: 90px !important;
+    }
+    .floating-img.img-6 {
+        max-width: 100px !important;
+    }
 }
 
 /* 반응형 */

@@ -1,7 +1,7 @@
 /**
- * 관심상품/장바구니 Firestore 저장
- * - 로그인 사용자: Firestore user_cart_wishlist 컬렉션에 저장 (사라지지 않음)
- * - 비로그인: localStorage만 사용 (로그인 시 Firestore와 동기화 가능)
+ * 관심상품/장바구니 - Firestore 단일 저장소
+ * - 로그인 사용자: Firestore만 읽기/쓰기 (PC/기기 동일 데이터)
+ * - 비로그인: localStorage만 사용
  */
 
 (function (global) {
@@ -10,6 +10,8 @@
     var COLLECTION_NAME = 'user_cart_wishlist';
     var STORAGE_KEY_WISHLIST = 'wishlist';
     var STORAGE_KEY_CART = 'cart';
+    var RETRY_DELAY_MS = 500;
+    var MAX_DB_RETRIES = 3;
 
     function getDb() {
         if (typeof firebase === 'undefined' || !firebase.firestore) return Promise.resolve(null);
@@ -24,7 +26,19 @@
         }
     }
 
-    /** 로그인 사용자 ID (userId). 없으면 null */
+    function getDbWithRetry(retriesLeft) {
+        retriesLeft = retriesLeft == null ? MAX_DB_RETRIES : retriesLeft;
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+            return getDb();
+        }
+        if (retriesLeft <= 0) return Promise.resolve(null);
+        return new Promise(function (resolve) {
+            setTimeout(function () {
+                getDbWithRetry(retriesLeft - 1).then(resolve);
+            }, RETRY_DELAY_MS);
+        });
+    }
+
     function getCurrentUserId() {
         try {
             if (global.window.mypageApi && typeof global.window.mypageApi.getLoginUser === 'function') {
@@ -42,34 +56,39 @@
         return null;
     }
 
-    /** Firestore 문서 ID용으로 userId 정규화 (허용 문자만) */
     function sanitizeDocId(userId) {
         if (!userId || typeof userId !== 'string') return '';
         return userId.replace(/[^a-zA-Z0-9_.-]/g, '_');
     }
 
-    /** 관심상품 목록 조회 (로그인 시 Firestore, 아니면 localStorage) */
+    function serverTimestamp() {
+        return firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp
+            ? firebase.firestore.FieldValue.serverTimestamp()
+            : new Date();
+    }
+
+    /** 로그인 시 Firestore에서만 조회. 비로그인만 localStorage */
     function getWishlist() {
         var userId = getCurrentUserId();
-        if (userId) {
-            return getDb().then(function (db) {
-                if (!db) return getWishlistFromStorage();
-                var docId = sanitizeDocId(userId);
-                if (!docId) return getWishlistFromStorage();
-                return db.collection(COLLECTION_NAME).doc(docId).get()
-                    .then(function (snap) {
-                        var data = snap.exists ? snap.data() : null;
-                        var list = (data && Array.isArray(data.wishlist)) ? data.wishlist : [];
-                        try { global.localStorage.setItem(STORAGE_KEY_WISHLIST, JSON.stringify(list)); } catch (e) { /* ignore */ }
-                        return list;
-                    })
-                    .catch(function (e) {
-                        console.warn('wishlist Firestore 조회 실패, localStorage 사용:', e);
-                        return getWishlistFromStorage();
-                    });
-            });
+        if (!userId) {
+            return Promise.resolve(getWishlistFromStorage());
         }
-        return Promise.resolve(getWishlistFromStorage());
+        return getDbWithRetry().then(function (db) {
+            if (!db) return [];
+            var docId = sanitizeDocId(userId);
+            if (!docId) return [];
+            return db.collection(COLLECTION_NAME).doc(docId).get()
+                .then(function (snap) {
+                    var data = snap.exists ? snap.data() : null;
+                    var list = (data && Array.isArray(data.wishlist)) ? data.wishlist : [];
+                    try { global.localStorage.setItem(STORAGE_KEY_WISHLIST, JSON.stringify(list)); } catch (e) { /* ignore */ }
+                    return list;
+                })
+                .catch(function (e) {
+                    console.warn('wishlist Firestore 조회 실패:', e);
+                    return [];
+                });
+        });
     }
 
     function getWishlistFromStorage() {
@@ -81,52 +100,58 @@
         }
     }
 
-    /** 관심상품 저장 (로그인 시 Firestore + localStorage, 아니면 localStorage만) */
+    /** 로그인 시 Firestore에만 저장. 기존 doc 읽어서 cart 유지 후 wishlist만 갱신 */
     function setWishlist(arr) {
         if (!Array.isArray(arr)) arr = [];
-        try { global.localStorage.setItem(STORAGE_KEY_WISHLIST, JSON.stringify(arr)); } catch (e) { /* ignore */ }
         var userId = getCurrentUserId();
-        if (!userId) return Promise.resolve();
-        return getDb().then(function (db) {
+        if (!userId) {
+            try { global.localStorage.setItem(STORAGE_KEY_WISHLIST, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+            return Promise.resolve();
+        }
+        return getDbWithRetry().then(function (db) {
             if (!db) return;
             var docId = sanitizeDocId(userId);
             if (!docId) return;
-            return db.collection(COLLECTION_NAME).doc(docId).set({
-                wishlist: arr,
-                cart: getCartFromStorage(),
-                updatedAt: firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp
-                    ? firebase.firestore.FieldValue.serverTimestamp()
-                    : new Date()
-            }, { merge: true }).then(function () {
-                console.log('wishlist Firestore 저장 완료:', docId);
-            });
+            return db.collection(COLLECTION_NAME).doc(docId).get()
+                .then(function (snap) {
+                    var existing = (snap && snap.exists && snap.data()) ? snap.data() : {};
+                    var cart = Array.isArray(existing.cart) ? existing.cart : [];
+                    return db.collection(COLLECTION_NAME).doc(docId).set({
+                        wishlist: arr,
+                        cart: cart,
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                })
+                .then(function () {
+                    try { global.localStorage.setItem(STORAGE_KEY_WISHLIST, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+                });
         }).catch(function (e) {
             console.warn('wishlist Firestore 저장 실패:', e);
         });
     }
 
-    /** 장바구니 목록 조회 */
+    /** 로그인 시 Firestore에서만 조회 */
     function getCart() {
         var userId = getCurrentUserId();
-        if (userId) {
-            return getDb().then(function (db) {
-                if (!db) return getCartFromStorage();
-                var docId = sanitizeDocId(userId);
-                if (!docId) return getCartFromStorage();
-                return db.collection(COLLECTION_NAME).doc(docId).get()
-                    .then(function (snap) {
-                        var data = snap.exists ? snap.data() : null;
-                        var list = (data && Array.isArray(data.cart)) ? data.cart : [];
-                        try { global.localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(list)); } catch (e) { /* ignore */ }
-                        return list;
-                    })
-                    .catch(function (e) {
-                        console.warn('cart Firestore 조회 실패, localStorage 사용:', e);
-                        return getCartFromStorage();
-                    });
-            });
+        if (!userId) {
+            return Promise.resolve(getCartFromStorage());
         }
-        return Promise.resolve(getCartFromStorage());
+        return getDbWithRetry().then(function (db) {
+            if (!db) return [];
+            var docId = sanitizeDocId(userId);
+            if (!docId) return [];
+            return db.collection(COLLECTION_NAME).doc(docId).get()
+                .then(function (snap) {
+                    var data = snap.exists ? snap.data() : null;
+                    var list = (data && Array.isArray(data.cart)) ? data.cart : [];
+                    try { global.localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(list)); } catch (e) { /* ignore */ }
+                    return list;
+                })
+                .catch(function (e) {
+                    console.warn('cart Firestore 조회 실패:', e);
+                    return [];
+                });
+        });
     }
 
     function getCartFromStorage() {
@@ -138,51 +163,33 @@
         }
     }
 
-    /** 장바구니 저장 */
+    /** 로그인 시 Firestore에만 저장. 기존 doc 읽어서 wishlist 유지 후 cart만 갱신 */
     function setCart(arr) {
         if (!Array.isArray(arr)) arr = [];
-        try { global.localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(arr)); } catch (e) { /* ignore */ }
         var userId = getCurrentUserId();
-        if (!userId) return Promise.resolve();
-        return getDb().then(function (db) {
+        if (!userId) {
+            try { global.localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+            return Promise.resolve();
+        }
+        return getDbWithRetry().then(function (db) {
             if (!db) return;
             var docId = sanitizeDocId(userId);
             if (!docId) return;
-            return db.collection(COLLECTION_NAME).doc(docId).set({
-                cart: arr,
-                wishlist: getWishlistFromStorage(),
-                updatedAt: firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp
-                    ? firebase.firestore.FieldValue.serverTimestamp()
-                    : new Date()
-            }, { merge: true }).then(function () {
-                console.log('cart Firestore 저장 완료:', docId);
-            });
+            return db.collection(COLLECTION_NAME).doc(docId).get()
+                .then(function (snap) {
+                    var existing = (snap && snap.exists && snap.data()) ? snap.data() : {};
+                    var wishlist = Array.isArray(existing.wishlist) ? existing.wishlist : [];
+                    return db.collection(COLLECTION_NAME).doc(docId).set({
+                        cart: arr,
+                        wishlist: wishlist,
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                })
+                .then(function () {
+                    try { global.localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+                });
         }).catch(function (e) {
             console.warn('cart Firestore 저장 실패:', e);
-        });
-    }
-
-    /** 로그인 시 localStorage 데이터를 Firestore로 한 번 올리고, 이후 Firestore 기준으로 사용 */
-    function syncLocalToFirebase() {
-        var userId = getCurrentUserId();
-        if (!userId) return Promise.resolve();
-        return getDb().then(function (db) {
-            if (!db) return;
-            var docId = sanitizeDocId(userId);
-            if (!docId) return;
-            var wishlist = getWishlistFromStorage();
-            var cart = getCartFromStorage();
-            return db.collection(COLLECTION_NAME).doc(docId).set({
-                wishlist: wishlist,
-                cart: cart,
-                updatedAt: firebase.firestore && firebase.firestore.FieldValue && firebase.firestore.FieldValue.serverTimestamp
-                    ? firebase.firestore.FieldValue.serverTimestamp()
-                    : new Date()
-            }, { merge: true }).then(function () {
-                console.log('user_cart_wishlist 동기화 완료:', docId);
-            });
-        }).catch(function (e) {
-            console.warn('syncLocalToFirebase 실패:', e);
         });
     }
 
@@ -192,25 +199,20 @@
         setWishlist: setWishlist,
         getCart: getCart,
         setCart: setCart,
-        syncLocalToFirebase: syncLocalToFirebase,
         getWishlistFromStorage: getWishlistFromStorage,
         getCartFromStorage: getCartFromStorage
     };
 
-    // 페이지 로드 시: 로그인 사용자면 로컬 데이터 Firestore 업로드 + 다른 기기에서 로그인 시 Firestore에서 내려받기
-    function onLoadSync() {
+    // 로그인 사용자: 페이지 로드 시 Firestore에서만 불러와서 로컬 캐시 갱신 (로컬→Firestore 덮어쓰기 없음)
+    function onLoadFetch() {
         var userId = getCurrentUserId();
         if (!userId) return;
-        var hasLocal = getWishlistFromStorage().length > 0 || getCartFromStorage().length > 0;
-        if (hasLocal) {
-            syncLocalToFirebase();
-        }
         getWishlist().then(function () {});
         getCart().then(function () {});
     }
     if (global.document && document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () { setTimeout(onLoadSync, 300); });
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(onLoadFetch, 300); });
     } else {
-        setTimeout(onLoadSync, 300);
+        setTimeout(onLoadFetch, 300);
     }
 })(typeof window !== 'undefined' ? window : this);
