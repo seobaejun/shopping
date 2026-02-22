@@ -122,6 +122,7 @@
                         <div class="nav-group">
                             <h4>활동정보</h4>
                             <ul>
+                                <li><a href="#" data-section="review-write" onclick="showSection('review-write', this); return false;">사용후기 작성하기 <span class="nav-badge implemented">운영</span></a></li>
                                 <li><a href="#" data-section="inquiry" onclick="showSection('inquiry', this); return false;">나의 1:1문의 <span class="nav-badge implemented">운영</span></a></li>
                                 <li><a href="#" data-section="review" onclick="showSection('review', this); return false;">나의 상품후기 <span class="nav-badge implemented">운영</span></a></li>
                                 <li><a href="#" data-section="product-inquiry" onclick="showSection('product-inquiry', this); return false;">나의 상품문의 <span class="nav-badge implemented">운영</span></a></li>
@@ -533,6 +534,27 @@
                         </div>
                     </div>
 
+                    <!-- 사용후기 작성하기 (쇼핑 이용 후기, 상품후기 아님) -->
+                    <div class="content-section mypage-section" data-section="review-write" id="mypageSectionReviewWrite" style="display: none;">
+                        <div class="section-title" style="margin-bottom: 20px;">
+                            <h3>사용후기 작성하기</h3>
+                        </div>
+                        <div class="review-write-intro" style="background: #f8f9fa; padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+                            <p style="margin: 0 0 12px 0; color: #333;">10쇼핑게임 이용 경험을 후기로 남겨주시면 다른 고객님께 큰 도움이 됩니다. (상품후기가 아닌 서비스 사용후기입니다.)</p>
+                            <p style="margin: 0; color: #666; font-size: 14px;">제목, 평점, 후기 내용을 입력해 주세요. 작성한 후기는 메인페이지 사용후기란에 노출됩니다.</p>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="btnReviewWriteMypage" onclick="typeof openReviewModalMypage === 'function' && openReviewModalMypage(); return false;" style="padding: 12px 24px;">
+                            <i class="fas fa-pen"></i> 사용후기 작성
+                        </button>
+                        <div class="my-usage-reviews-wrap" style="margin-top: 28px;">
+                            <h4 style="margin-bottom: 16px; font-size: 16px;">내가 쓴 사용후기</h4>
+                            <div class="my-usage-reviews-list" id="myUsageReviewsList"></div>
+                            <div class="my-usage-reviews-empty" id="myUsageReviewsEmpty" style="display: none; text-align: center; padding: 32px; color: #999; font-size: 14px;">
+                                작성한 사용후기가 없습니다.
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 나의 상품후기 -->
                     <div class="content-section mypage-section" data-section="review" id="mypageSectionReview" style="display: none;">
                         <div class="section-title" style="margin-bottom: 20px;">
@@ -637,26 +659,26 @@
         </div>
     </div>
 
-    <!-- 상품후기 작성 모달 (마이페이지용) -->
+    <!-- 사용후기/상품후기 작성 모달 (마이페이지용) -->
     <div id="reviewModalMypage" class="modal" style="display: none;">
         <div class="modal-content inquiry-modal-content">
             <div class="modal-header inquiry-modal-header">
                 <div class="inquiry-modal-title-wrap">
-                    <i class="fas fa-star" style="color: #4A5FC1; margin-right: 10px; font-size: 20px;"></i>
-                    <h3>상품후기 작성</h3>
+                    <i class="fas fa-comment-dots" style="color: #4A5FC1; margin-right: 10px; font-size: 20px;"></i>
+                    <h3 id="reviewModalMypageTitle">사용후기 작성</h3>
                 </div>
-                <button type="button" class="modal-close" id="reviewModalMypageClose">&times;</button>
+                <button type="button" class="modal-close" id="reviewModalMypageClose" onclick="closeReviewModalMypage(); return false;">&times;</button>
             </div>
             <div class="modal-body inquiry-modal-body">
                 <input type="hidden" id="reviewMypageId" value="">
                 <input type="hidden" id="reviewMypageProductId" value="">
-                <div class="inquiry-form-group">
+                <input type="hidden" id="reviewMypageIsUsageReview" value="1">
+                <div class="inquiry-form-group" id="reviewMypageProductNameGroup" style="display: none;">
                     <label class="inquiry-label">
-                        <span class="label-text">상품명</span>
+                        <span class="label-text" id="reviewMypageProductNameLabel">상품명</span>
                         <span class="required-badge">필수</span>
                     </label>
-                    <input type="text" class="inquiry-input" id="reviewMypageProductName" placeholder="후기를 작성할 상품명을 입력해주세요" required>
-                    <small style="color: #666; margin-top: 5px; display: block; font-size: 13px;">상품 상세 페이지에서 작성하면 자동으로 입력됩니다.</small>
+                    <input type="text" class="inquiry-input" id="reviewMypageProductName" placeholder="상품명">
                 </div>
                 <div class="inquiry-form-group">
                     <label class="inquiry-label">
@@ -664,12 +686,12 @@
                         <span class="required-badge">필수</span>
                     </label>
                     <div class="rating-input" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-                        <div class="star-rating" id="reviewMypageRating" style="display: flex; gap: 5px;">
-                            <i class="far fa-star star-icon" data-rating="1" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
-                            <i class="far fa-star star-icon" data-rating="2" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
-                            <i class="far fa-star star-icon" data-rating="3" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
-                            <i class="far fa-star star-icon" data-rating="4" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
-                            <i class="far fa-star star-icon" data-rating="5" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                        <div class="star-rating" id="reviewMypageRating" style="display: flex; gap: 5px;" onmouseleave="var v=document.getElementById('reviewMypageRatingValue'); if(v&&typeof highlightReviewStarsMypage==='function') highlightReviewStarsMypage(parseInt(v.value,10)||0);">
+                            <i class="far fa-star star-icon" data-rating="1" onclick="setReviewRatingMypage(1); return false;" onmouseenter="highlightReviewStarsMypage(1);" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="2" onclick="setReviewRatingMypage(2); return false;" onmouseenter="highlightReviewStarsMypage(2);" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="3" onclick="setReviewRatingMypage(3); return false;" onmouseenter="highlightReviewStarsMypage(3);" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="4" onclick="setReviewRatingMypage(4); return false;" onmouseenter="highlightReviewStarsMypage(4);" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
+                            <i class="far fa-star star-icon" data-rating="5" onclick="setReviewRatingMypage(5); return false;" onmouseenter="highlightReviewStarsMypage(5);" style="font-size: 28px; color: #ddd; cursor: pointer; transition: all 0.2s;"></i>
                         </div>
                         <span id="reviewMypageRatingText" style="color: #666; font-size: 14px; margin-left: 10px;">평점을 선택해주세요</span>
                         <input type="hidden" id="reviewMypageRatingValue" value="0" required>
@@ -687,18 +709,18 @@
                         <span class="label-text">후기 내용</span>
                         <span class="required-badge">필수</span>
                     </label>
-                    <textarea class="inquiry-textarea" id="reviewMypageContent" rows="8" placeholder="상품에 대한 후기를 자세히 입력해주세요.&#10;예: 사용감, 품질, 만족도 등" required></textarea>
+                    <textarea class="inquiry-textarea" id="reviewMypageContent" rows="8" placeholder="10쇼핑게임 이용 경험을 자세히 입력해주세요.&#10;예: 쇼핑 경험, 서비스 만족도, 개선 제안 등" required></textarea>
                     <div class="textarea-counter">
                         <span id="reviewMypageContentCounter">0</span> / 1000자
                     </div>
                 </div>
             </div>
             <div class="modal-footer inquiry-modal-footer">
-                <button type="button" class="btn-inquiry-cancel" id="reviewModalMypageCancel">
+                <button type="button" class="btn-inquiry-cancel" id="reviewModalMypageCancel" onclick="closeReviewModalMypage(); return false;">
                     <i class="fas fa-times"></i> 취소
                 </button>
                 <button type="button" class="btn-inquiry-submit" id="reviewModalMypageSave">
-                    <i class="fas fa-paper-plane"></i> 후기 작성
+                    <i class="fas fa-paper-plane"></i> 작성 완료
                 </button>
             </div>
         </div>
@@ -838,6 +860,6 @@
     <script src="js/mypage-api.js"></script>
     <script src="js/notifications.js"></script>
     <!-- 마이페이지 스크립트 -->
-    <script src="js/mypage.js?v=2"></script>
+    <script src="js/mypage.js?v=3"></script>
 </body>
 </html>

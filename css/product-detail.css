@@ -487,6 +487,7 @@
     border-radius: 10px;
     padding: 40px;
     min-height: 400px;
+    display: block;
 }
 
 .tab-content {
@@ -494,7 +495,20 @@
 }
 
 .tab-content.active {
+    display: block !important;
+    visibility: visible;
+}
+
+/* 상세페이지 섹션 가시성 보장 */
+.product-detail,
+.product-tabs {
     display: block;
+    visibility: visible;
+}
+
+.review-list-container,
+.product-inquiry-list-container {
+    min-height: 60px;
 }
 
 /* 상품정보 탭 */
@@ -561,7 +575,56 @@
     width: 250px;
 }
 
-/* 사용후기 / 상품문의 탭 */
+/* 사용후기 탭: 목록표 + 10개씩 페이지네이션 */
+.tab-content#review {
+    display: none;
+    min-height: 200px;
+}
+.tab-content#review.active {
+    display: block !important;
+    visibility: visible;
+}
+.review-list-container {
+    min-height: 120px;
+    overflow-x: auto;
+}
+.review-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+.review-list-table th,
+.review-list-table td {
+    padding: 12px 10px;
+    border: 1px solid var(--border-color);
+    text-align: left;
+    vertical-align: top;
+}
+.review-list-table th {
+    background: var(--bg-light);
+    font-weight: 600;
+}
+.review-list-table .review-td-title { min-width: 100px; }
+.review-list-table .review-td-rating { white-space: nowrap; }
+.review-list-table .review-td-author { white-space: nowrap; }
+.review-list-table .review-td-date { white-space: nowrap; }
+.review-list-table .review-td-content { max-width: 300px; word-break: break-word; white-space: pre-wrap; }
+.review-list-table .review-td-action { white-space: nowrap; }
+.btn-review-delete {
+    padding: 6px 12px;
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+#reviewPaginationContainer {
+    margin-top: 20px;
+    padding: 20px 0;
+}
+
+/* 상품문의 탭 */
 .review-header,
 .qna-header {
     display: flex;

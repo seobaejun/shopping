@@ -359,11 +359,14 @@
         </div>
     </footer>
 
-    <!-- 최근 본 상품 퀵메뉴 -->
+    <!-- 최근 본 상품 퀵메뉴 + 맨 위로 -->
     <div class="today-viewed">
         <button class="toggle-viewed" id="toggleViewed">
             <i class="fas fa-clock"></i>
             <span class="count">1</span>
+        </button>
+        <button type="button" class="scroll-to-top" aria-label="상단으로 이동" title="상단으로 이동" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+            <i class="fas fa-chevron-up"></i>
         </button>
     </div>
 

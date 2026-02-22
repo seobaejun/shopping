@@ -1767,15 +1767,18 @@ function saveReviewInternal() {
         }
 
         const db = firebase.firestore();
+        var nickname = user.nickname || user.userId || user.name;
         const data = {
             boardType: 'review',
+            reviewType: 'product',
             title: title,
             content: content,
             productId: String(PRODUCT_INFO.id), // 문자열로 변환
             productName: PRODUCT_INFO.name || '',
             productImage: PRODUCT_INFO.image || '',
             rating: rating,
-            authorName: user.name || user.userId,
+            authorName: nickname,
+            authorNickname: nickname,
             authorId: user.userId,
             status: 'published',
             viewCount: 0,
@@ -1895,11 +1898,6 @@ function checkPurchaseAndDeliveryStatus() {
 
 // 상품후기 목록 로드
 function loadProductReviews() {
-    if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
-        return;
-    }
-
-    const productId = PRODUCT_INFO.id;
     const reviewListContainer = document.getElementById('reviewListContainer');
     const reviewEmptyState = document.getElementById('reviewEmptyState');
     const reviewCountEl = document.getElementById('reviewCount');
@@ -1907,20 +1905,27 @@ function loadProductReviews() {
 
     if (!reviewListContainer || !reviewEmptyState) return;
 
-    if (typeof firebase === 'undefined' || !firebase.firestore) {
-        if (reviewEmptyState) reviewEmptyState.style.display = 'block';
+    function showEmpty() {
         if (reviewListContainer) reviewListContainer.innerHTML = '';
+        if (reviewEmptyState) reviewEmptyState.style.display = 'block';
         if (reviewCountEl) reviewCountEl.textContent = '0';
         if (reviewTabCountEl) reviewTabCountEl.textContent = '0';
+    }
+
+    if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
+        showEmpty();
         return;
     }
 
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
+        showEmpty();
+        return;
+    }
+
+    const productId = PRODUCT_INFO.id;
     const db = firebase.firestore();
-    
-    // 상품 ID를 문자열로 변환하여 비교
     const productIdStr = String(productId);
     
-    // 상품 ID로 후기 조회
     db.collection('posts')
         .where('boardType', '==', 'review')
         .where('productId', '==', productIdStr)
@@ -1930,7 +1935,9 @@ function loadProductReviews() {
             let totalRating = 0;
             
             snap.docs.forEach(function(d) {
-                const review = { id: d.id, ...d.data() };
+                const data = d.data();
+                if (data.reviewType === 'usage') return;
+                const review = { id: d.id, ...data };
                 reviews.push(review);
                 if (review.rating) {
                     totalRating += review.rating;
@@ -1957,8 +1964,7 @@ function loadProductReviews() {
             updateReviewRatingDisplay(avgRating, reviews.length);
 
             if (reviews.length === 0) {
-                if (reviewListContainer) reviewListContainer.innerHTML = '';
-                if (reviewEmptyState) reviewEmptyState.style.display = 'block';
+                showEmpty();
                 return;
             }
 
@@ -1982,9 +1988,9 @@ function loadProductReviews() {
             })();
             const currentUserId = user ? user.userId : null;
             
-            // 후기 목록 렌더링
+            // 후기 목록표 렌더링 (10개씩 페이지네이션)
             if (reviewListContainer) {
-                reviewListContainer.innerHTML = currentReviews.map(function(review) {
+                const rows = currentReviews.map(function(review) {
                     const date = review.createdAt && review.createdAt.seconds 
                         ? new Date(review.createdAt.seconds * 1000).toLocaleDateString('ko-KR')
                         : '-';
@@ -1992,52 +1998,36 @@ function loadProductReviews() {
                     const authorName = review.authorName || '익명';
                     const authorId = review.authorId || '';
                     const isMyReview = currentUserId && authorId === currentUserId;
-                    
-                    // 평점 별표 표시
                     let starsHtml = '';
                     for (let i = 1; i <= 5; i++) {
-                        if (i <= rating) {
-                            starsHtml += '<i class="fas fa-star" style="color: #FFD700;"></i>';
-                        } else {
-                            starsHtml += '<i class="far fa-star" style="color: #ddd;"></i>';
-                        }
+                        starsHtml += i <= rating ? '<i class="fas fa-star" style="color:#FFD700;"></i>' : '<i class="far fa-star" style="color:#ddd;"></i>';
                     }
-                    
-                    // 삭제 버튼 (내가 쓴 글일 때만 표시)
-                    const deleteButton = isMyReview 
-                        ? '<button onclick="deleteProductReview(\'' + review.id + '\')" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">삭제</button>'
+                    const deleteBtn = isMyReview 
+                        ? '<button type="button" onclick="deleteProductReview(\'' + review.id + '\')" class="btn-review-delete">삭제</button>' 
                         : '';
-                    
-                    return '<div class="review-item" style="border-bottom: 1px solid #e0e0e0; padding: 20px 0;">' +
-                        '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">' +
-                        '<div style="flex: 1;">' +
-                        '<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">' +
-                        '<strong style="font-size: 15px; color: #333;">' + (review.title || '제목 없음') + '</strong>' +
-                        '<div style="display: flex; align-items: center; gap: 3px;">' + starsHtml + '</div>' +
-                        '</div>' +
-                        '<div style="display: flex; gap: 15px; font-size: 13px; color: #666;">' +
-                        '<span>' + authorName + '</span>' +
-                        '<span>' + date + '</span>' +
-                        '</div>' +
-                        '</div>' +
-                        (deleteButton ? '<div style="margin-left: 10px;">' + deleteButton + '</div>' : '') +
-                        '</div>' +
-                        '<div style="margin-top: 10px;">' +
-                        '<p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">' + (review.content || '') + '</p>' +
-                        '</div>' +
-                        '</div>';
+                    const content = (review.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    var displayName = review.authorNickname || review.authorName || authorName;
+                    return '<tr>' +
+                        '<td class="review-td-title">' + (review.title || '제목 없음') + '</td>' +
+                        '<td class="review-td-rating">' + starsHtml + '</td>' +
+                        '<td class="review-td-author">' + displayName + '</td>' +
+                        '<td class="review-td-date">' + date + '</td>' +
+                        '<td class="review-td-content">' + content + '</td>' +
+                        '<td class="review-td-action">' + deleteBtn + '</td>' +
+                        '</tr>';
                 }).join('');
+                reviewListContainer.innerHTML = 
+                    '<table class="review-list-table"><thead><tr>' +
+                    '<th>제목</th><th>별점</th><th>작성자</th><th>날짜</th><th>내용</th><th>삭제</th>' +
+                    '</tr></thead><tbody>' + rows + '</tbody></table>';
             }
             
             // 페이지네이션 UI 렌더링
             renderReviewPagination(totalPages, reviews.length);
         })
         .catch(function(error) {
-            console.error('후기 목록 로드 오류:', error);
-            if (reviewListContainer) reviewListContainer.innerHTML = '';
-            if (reviewEmptyState) reviewEmptyState.style.display = 'block';
-            if (reviewCountEl) reviewCountEl.textContent = '0';
-            if (reviewTabCountEl) reviewTabCountEl.textContent = '0';
+            console.error('상품후기 로드 오류:', error);
+            showEmpty();
         });
 }
 
@@ -2258,16 +2248,12 @@ function loadProductInquiries() {
 // 페이지네이션 함수
 // ============================================
 
-// 사용후기 페이지네이션 렌더링
+// 사용후기 페이지네이션 렌더링 (10개 미만이어도 항상 표시, 1페이지 인지 가능)
 function renderReviewPagination(totalPages, totalItems) {
     const paginationContainer = document.getElementById('reviewPaginationContainer');
     if (!paginationContainer) return;
     
-    if (totalPages <= 1) {
-        paginationContainer.style.display = 'none';
-        return;
-    }
-    
+    if (totalPages < 1) totalPages = 1;
     paginationContainer.style.display = 'block';
     
     let paginationHtml = '<div style="display: flex; justify-content: center; align-items: center; gap: 5px;">';

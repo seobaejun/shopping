@@ -1016,6 +1016,14 @@ function initBannerSlider() {
     startSlideInterval();
 }
 
+function initScrollToTop() {
+    var btn = document.getElementById('scrollToTopBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
+
 function init() {
     initNoticeBanner();
     initCategorySidebar();
@@ -1028,7 +1036,8 @@ function init() {
     initTodayViewed();
     initScrollHeader();
     initShareButtons();
-    initBannerSlider(); // Initialize banner slider
+    initBannerSlider();
+    initScrollToTop();
 }
 
 // DOM 로드 완료 시 실행
@@ -1353,27 +1362,206 @@ function waitForFirebase() {
     });
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', async () => {
-        updateHeaderForLoginStatus(); // 로그인 상태에 따라 헤더 업데이트
-        init();
-        // Firebase 초기화 대기 후 상품 및 카테고리 로드
+// 메인페이지 사용후기 로드 (Firestore posts, boardType=review)
+async function loadMainPageReviews() {
+    const container = document.getElementById('mainReviewContainer');
+    const emptyEl = document.getElementById('mainReviewEmpty');
+    if (!container) return;
+
+    if (typeof firebase === 'undefined' || !firebase.firestore) {
         try {
             await waitForFirebase();
+        } catch (e) {
+            return;
+        }
+    }
+
+    try {
+        const db = firebase.firestore();
+        var snapshot = await db.collection('posts')
+            .where('boardType', '==', 'review')
+            .get();
+
+        var reviews = [];
+        var seenIds = {};
+        snapshot.docs.forEach(function(doc) {
+            if (seenIds[doc.id]) return;
+            seenIds[doc.id] = true;
+            var d = doc.data();
+            if (d.reviewType === 'product') return;
+            var createdAt = null;
+            if (d.createdAt) {
+                if (d.createdAt.seconds != null) createdAt = new Date(d.createdAt.seconds * 1000);
+                else if (typeof d.createdAt.toDate === 'function') createdAt = d.createdAt.toDate();
+            }
+            reviews.push({
+                id: doc.id,
+                title: d.title || '',
+                content: d.content || '',
+                authorName: d.authorNickname || d.authorName || '익명',
+                rating: d.rating || 0,
+                productName: d.productName || '',
+                createdAt: createdAt
+            });
+        });
+        window._mainPageUsageReviews = reviews;
+
+        var sortOrder = 'latest';
+        if (sortOrder === 'latest') {
+            reviews.sort(function(a, b) {
+                if (!a.createdAt) return 1;
+                if (!b.createdAt) return -1;
+                return b.createdAt.getTime() - a.createdAt.getTime();
+            });
+        } else {
+            reviews.sort(function(a, b) {
+                var ra = a.rating || 0, rb = b.rating || 0;
+                if (rb !== ra) return rb - ra;
+                if (!a.createdAt) return 1;
+                if (!b.createdAt) return -1;
+                return b.createdAt.getTime() - a.createdAt.getTime();
+            });
+        }
+
+        if (reviews.length === 0) {
+            if (emptyEl) emptyEl.style.display = 'block';
+            var sw = document.getElementById('mainReviewSliderWrap');
+            var eb = document.getElementById('mainReviewExpandBtn');
+            if (sw) sw.style.display = 'none';
+            if (eb) eb.style.display = 'none';
+            return;
+        }
+
+        if (emptyEl) emptyEl.style.display = 'none';
+        var sliderWrap = document.getElementById('mainReviewSliderWrap');
+        var expandBtn = document.getElementById('mainReviewExpandBtn');
+        if (sliderWrap) sliderWrap.style.display = 'flex';
+        if (expandBtn) expandBtn.style.display = 'inline-block';
+
+        function buildReviewItem(r, index) {
+            var dateStr = r.createdAt ? r.createdAt.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+            var stars = '<span class="main-review-stars">' + Array(5).fill(0).map(function(_, i) {
+                return '<i class="' + (i < r.rating ? 'fas' : 'far') + ' fa-star" style="color:#FFD700;font-size:14px;"></i>';
+            }).join('') + '</span>';
+            var fullContent = escapeHtml(r.content || '');
+            var safeId = 'review-content-' + (r.id || index);
+            return '<article class="main-review-item">' +
+                '<div class="main-review-header">' +
+                '<strong class="main-review-title">' + escapeHtml(r.title) + '</strong>' +
+                '</div>' +
+                '<div class="main-review-content-box" id="' + safeId + '" data-full="' + fullContent.replace(/"/g, '&quot;') + '" role="button" tabindex="0" title="클릭 시 전체 내용 보기">' +
+                '<div class="main-review-content-inner">' + fullContent + '</div>' +
+                '</div>' +
+                '<div class="main-review-meta">' + stars + ' <span class="main-review-author">' + escapeHtml(r.authorName) + '</span> · <span class="main-review-date">' + dateStr + '</span></div>' +
+                '</article>';
+        }
+
+        var trackEl = document.getElementById('mainReviewTrack');
+        if (trackEl) {
+            trackEl.innerHTML = reviews.map(buildReviewItem).join('');
+            trackEl.querySelectorAll('.main-review-content-box').forEach(function(box) {
+                box.addEventListener('click', function() {
+                    var full = this.getAttribute('data-full');
+                    if (!full) return;
+                    var modal = document.getElementById('reviewContentModal');
+                    var body = document.getElementById('reviewContentModalBody');
+                    if (modal && body) {
+                        body.textContent = full;
+                        modal.style.display = 'flex';
+                        modal.style.visibility = 'visible';
+                        modal.classList.add('active');
+                    } else {
+                        alert(full);
+                    }
+                });
+            });
+        }
+
+        var track = document.getElementById('mainReviewTrack');
+        var prevBtn = document.getElementById('mainReviewPrev');
+        var nextBtn = document.getElementById('mainReviewNext');
+        if (track && prevBtn && nextBtn && !track._reviewSliderBound) {
+            track._reviewSliderBound = true;
+            var scrollStep = 320;
+            prevBtn.addEventListener('click', function() {
+                track.scrollLeft = Math.max(0, track.scrollLeft - scrollStep);
+            });
+            nextBtn.addEventListener('click', function() {
+                track.scrollLeft = Math.min(track.scrollWidth - track.clientWidth, track.scrollLeft + scrollStep);
+            });
+        }
+
+        if (!window._reviewContentModalBound) {
+            window._reviewContentModalBound = true;
+            var modal = document.getElementById('reviewContentModal');
+            var closeBtn = document.getElementById('reviewContentModalClose');
+            function closeReviewModal() {
+                if (modal) {
+                    modal.style.display = 'none';
+                    modal.style.visibility = 'hidden';
+                    modal.classList.remove('active');
+                }
+            }
+            if (modal) {
+                if (closeBtn) closeBtn.addEventListener('click', closeReviewModal);
+                var backdrop = modal.querySelector('.review-content-modal-backdrop');
+                if (backdrop) backdrop.addEventListener('click', closeReviewModal);
+            }
+        }
+    } catch (error) {
+        console.error('메인페이지 후기 로드 오류:', error);
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function initMainPage() {
+    updateHeaderForLoginStatus();
+    init();
+    waitForFirebase().then(async () => {
+        try {
             await loadCategoriesMenu();
             await loadProductsFromFirestore();
         } catch (error) {
             console.error('초기화 오류:', error);
+        } finally {
+            await loadMainPageReviews();
         }
+    }).catch(async () => {
+        await loadMainPageReviews();
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initMainPage();
+        window.addEventListener('pageshow', function(ev) {
+            if (ev.persisted || document.visibilityState === 'visible') {
+                loadMainPageReviews();
+            }
+        });
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                loadMainPageReviews();
+            }
+        });
     });
 } else {
-    updateHeaderForLoginStatus(); // 로그인 상태에 따라 헤더 업데이트
-    init();
-    waitForFirebase().then(async () => {
-        await loadCategoriesMenu();
-        await loadProductsFromFirestore();
-    }).catch(error => {
-        console.error('초기화 오류:', error);
+    initMainPage();
+    window.addEventListener('pageshow', function(ev) {
+        if (ev.persisted || document.visibilityState === 'visible') {
+            loadMainPageReviews();
+        }
+    });
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            loadMainPageReviews();
+        }
     });
 }
 
@@ -1483,8 +1671,8 @@ function initTopMenuNavigation() {
             // 1:1문의
             section = 'inquiry';
         } else if (iconClass.includes('fa-star')) {
-            // 사용후기
-            section = 'review';
+            // 사용후기 → 사용후기 작성하기 섹션으로 이동
+            section = 'review-write';
         } else if (iconClass.includes('fa-keyboard')) {
             // 상품문의
             section = 'product-inquiry';

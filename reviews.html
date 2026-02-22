@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>사용후기 - 10쇼핑게임</title>
+    <link rel="stylesheet" href="css/style.css?v=28">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .reviews-page .section-header { text-align: left; margin-bottom: 24px; }
+        .reviews-sort { display: flex; gap: 12px; margin-bottom: 24px; }
+        .reviews-sort button { padding: 8px 16px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; }
+        .reviews-sort button.active { background: var(--primary-color); border-color: var(--primary-color); }
+        .reviews-list-page { display: flex; flex-direction: column; gap: 20px; }
+        .reviews-list-page .review-item { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 20px; }
+        .reviews-pagination { display: flex; justify-content: center; gap: 8px; margin-top: 32px; flex-wrap: wrap; }
+        .reviews-pagination button { min-width: 40px; height: 40px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; }
+        .reviews-pagination button.active { background: var(--primary-color); border-color: var(--primary-color); color: #333; }
+        .reviews-pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="notice-banner" id="noticeBanner">
+        <div class="container">
+            <p>판매자의 수익금을 구매자와 함께 나누는 '10쇼핑게임' 은 회원전용 쇼핑몰입니다.</p>
+        </div>
+        <div class="banner-close-area">
+            <button class="close-banner" id="closeBanner" aria-label="배너 닫기"><i class="fas fa-times"></i></button>
+            <span class="close-today" id="closeToday">오늘 하루 그만보기</span>
+        </div>
+    </div>
+    <div class="top-bar">
+        <div class="container">
+            <ul class="top-menu">
+                <li><a href="mypage.html"><i class="fas fa-shopping-bag"></i> 주문내역</a></li>
+                <li><a href="notice.html"><i class="fas fa-bullhorn"></i> 공지사항</a></li>
+                <li><a href="faq.html"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                <li><a href="reviews.html"><i class="fas fa-star"></i> 사용후기</a></li>
+            </ul>
+        </div>
+    </div>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a href="index.html">
+                        <img src="image/2026-02-21_15_44_38-removebg-preview.png" alt="10쇼핑게임" class="logo-img">
+                    </a>
+                </div>
+                <div class="user-menu">
+                    <a href="index.html"><i class="fas fa-home"></i> 메인</a>
+                    <a href="mypage.html?section=review-write"><i class="fas fa-pen"></i> 사용후기 작성</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="reviews-page" style="padding: 40px 0 80px;">
+        <div class="container">
+            <div class="section-header">
+                <h1 style="font-size: 28px; margin-bottom: 8px;"><i class="fas fa-comment-dots"></i> 사용후기</h1>
+                <p style="color: #666;">고객님들의 소중한 후기입니다. (서비스 사용후기만 표시됩니다.)</p>
+            </div>
+            <div class="reviews-sort" id="reviewsSort">
+                <button type="button" class="active" data-sort="latest">최신순</button>
+                <button type="button" data-sort="rating">별점순</button>
+            </div>
+            <div class="reviews-list-page" id="reviewsListPage"></div>
+            <div class="reviews-empty" id="reviewsEmpty" style="display: none; text-align: center; padding: 60px 20px; color: #999;">
+                등록된 사용후기가 없습니다.
+            </div>
+            <div class="reviews-pagination" id="reviewsPagination"></div>
+        </div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/reviews-page.js"></script>
+</body>
+</html>

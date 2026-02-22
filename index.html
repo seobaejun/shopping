@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>10쇼핑게임 - 온라인 쇼핑몰</title>
-    <link rel="stylesheet" href="css/style.css?v=28">
+    <link rel="stylesheet" href="css/style.css?v=30">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -297,21 +297,29 @@
         </div>
     </section>
 
-    <!-- 사용후기 섹션 -->
+    <!-- 사용후기 섹션 (가로 슬라이더, 박스 하나씩) -->
     <section class="review-section">
         <div class="container">
             <div class="section-header">
-                <h2><i class="fas fa-comment-dots"></i> 사용후기 💬</h2>
+                <h2><i class="fas fa-comment-dots"></i> 사용후기</h2>
                 <p>고객님들의 소중한 후기 입니다.</p>
             </div>
-            <div class="review-container">
-                <div class="no-review">
+            <div class="review-container" id="mainReviewContainer">
+                <div class="no-review" id="mainReviewEmpty">
                     <i class="fas fa-inbox"></i>
                     <p>등록된 사용후기가 없습니다.</p>
                 </div>
+                <div class="review-slider-outer" id="mainReviewSliderWrap" style="display: none;">
+                    <button type="button" class="review-slider-arrow review-slider-arrow-left" id="mainReviewPrev" aria-label="이전"><i class="fas fa-chevron-left"></i></button>
+                    <div class="review-slider-viewport">
+                        <div class="review-slider-track" id="mainReviewTrack"></div>
+                    </div>
+                    <button type="button" class="review-slider-arrow review-slider-arrow-right" id="mainReviewNext" aria-label="다음"><i class="fas fa-chevron-right"></i></button>
+                </div>
             </div>
-            <div class="section-footer">
-                <a href="#" class="btn-more">더보기</a>
+            <div class="section-footer review-section-footer">
+                <a href="mypage.html?section=review-write" class="btn-more">사용후기 작성하기</a>
+                <a href="reviews.html" class="btn-more btn-more-outline" id="mainReviewExpandBtn" style="display: none;">펼쳐보기</a>
             </div>
         </div>
     </section>
@@ -421,11 +429,14 @@
         </a>
     </div>
 
-    <!-- 최근 본 상품 퀵메뉴 -->
+    <!-- 최근 본 상품 퀵메뉴 + 맨 위로 -->
     <div class="today-viewed">
         <button class="toggle-viewed" id="toggleViewed">
             <i class="fas fa-clock"></i>
             <span class="count">0</span>
+        </button>
+        <button type="button" class="scroll-to-top" id="scrollToTopBtn" aria-label="상단으로 이동" title="상단으로 이동" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+            <i class="fas fa-chevron-up"></i>
         </button>
     </div>
 
@@ -463,7 +474,7 @@
     <script src="js/share-utils.js?v=4"></script>
     
     <script src="js/admin-link-visibility.js"></script>
-    <script src="js/script.js?v=23"></script>
+    <script src="js/script.js?v=30"></script>
     
     <!-- 서비스 이용약관 모달 -->
     <div id="termsOfServiceModal" class="terms-modal" style="display: none;">
@@ -632,6 +643,18 @@
             <div class="terms-modal-footer">
                 <button class="btn btn-primary" id="privacyModalConfirm">확인</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 후기 전체 내용 모달 (클릭 시에만 표시, 평소에는 완전 숨김) -->
+    <div class="review-content-modal" id="reviewContentModal" aria-hidden="true" style="display:none;visibility:hidden;">
+        <div class="review-content-modal-backdrop"></div>
+        <div class="review-content-modal-box">
+            <div class="review-content-modal-header">
+                <span class="review-content-modal-title">후기 전체 내용</span>
+                <button type="button" class="review-content-modal-close" id="reviewContentModalClose" aria-label="닫기">&times;</button>
+            </div>
+            <div class="review-content-modal-body" id="reviewContentModalBody"></div>
         </div>
     </div>
 </body>
