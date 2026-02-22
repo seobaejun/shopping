@@ -50,6 +50,36 @@
         return null;
     }
 
+    /** Auth 상태 복원 대기 (페이지 로드 직후 currentUser가 아직 null일 수 있음) */
+    function waitForAuthState(timeoutMs) {
+        timeoutMs = timeoutMs || 4000;
+        return new Promise(function (resolve) {
+            try {
+                if (typeof firebase === 'undefined' || !firebase.auth) {
+                    resolve(null);
+                    return;
+                }
+                var resolved = false;
+                function done(uid) {
+                    if (resolved) return;
+                    resolved = true;
+                    if (timer) clearTimeout(timer);
+                    resolve(uid ? String(uid) : null);
+                }
+                var timer = setTimeout(function () {
+                    var u = firebase.auth().currentUser;
+                    done(u ? u.uid : null);
+                }, timeoutMs);
+                var unsub = firebase.auth().onAuthStateChanged(function (user) {
+                    unsub();
+                    done(user ? user.uid : null);
+                });
+            } catch (e) {
+                resolve(null);
+            }
+        });
+    }
+
     function sanitizeDocId(userId) {
         if (!userId || typeof userId !== 'string') return '';
         return userId.replace(/[^a-zA-Z0-9_.-]/g, '_');
@@ -71,28 +101,29 @@
             });
     }
 
-    /** 로그인 시 Firestore에서만 조회. 비로그인만 localStorage. 읽기 실패 시 재시도 */
+    /** 로그인 시 Firestore에서만 조회. Auth 복원 대기 후 조회. 읽기 실패 시 재시도 */
     function getWishlist() {
-        var userId = getCurrentUserId();
-        if (!userId) return Promise.resolve(getWishlistFromStorage());
-        var docId = sanitizeDocId(userId);
-        if (!docId) return Promise.resolve([]);
-        return getDbWithRetry().then(function (db) {
-            if (!db) return [];
-            var attempt = 0;
-            function tryGet() {
-                return fetchWishlistOnce(db, docId).catch(function (e) {
-                    console.warn('wishlist Firestore 조회 실패:', e);
-                    attempt += 1;
-                    if (attempt < MAX_READ_RETRIES) {
-                        return new Promise(function (resolve) {
-                            setTimeout(function () { tryGet().then(resolve); }, 350);
-                        });
-                    }
-                    return [];
-                });
-            }
-            return tryGet();
+        return waitForAuthState(4000).then(function (userId) {
+            if (!userId) return Promise.resolve(getWishlistFromStorage());
+            var docId = sanitizeDocId(userId);
+            if (!docId) return Promise.resolve([]);
+            return getDbWithRetry().then(function (db) {
+                if (!db) return [];
+                var attempt = 0;
+                function tryGet() {
+                    return fetchWishlistOnce(db, docId).catch(function (e) {
+                        console.warn('wishlist Firestore 조회 실패:', e);
+                        attempt += 1;
+                        if (attempt < MAX_READ_RETRIES) {
+                            return new Promise(function (resolve) {
+                                setTimeout(function () { tryGet().then(resolve); }, 350);
+                            });
+                        }
+                        return [];
+                    });
+                }
+                return tryGet();
+            });
         });
     }
 
@@ -108,12 +139,12 @@
     /** 로그인 시 Firestore에만 저장. 기존 doc 읽어서 cart 유지 후 wishlist만 갱신 */
     function setWishlist(arr) {
         if (!Array.isArray(arr)) arr = [];
-        var userId = getCurrentUserId();
-        if (!userId) {
-            try { global.localStorage.setItem(STORAGE_KEY_WISHLIST, JSON.stringify(arr)); } catch (e) { /* ignore */ }
-            return Promise.resolve();
-        }
-        return getDbWithRetry().then(function (db) {
+        return waitForAuthState(3000).then(function (userId) {
+            if (!userId) {
+                try { global.localStorage.setItem(STORAGE_KEY_WISHLIST, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+                return;
+            }
+            return getDbWithRetry().then(function (db) {
             if (!db) return;
             var docId = sanitizeDocId(userId);
             if (!docId) return;
@@ -130,6 +161,7 @@
                 .then(function () {
                     try { global.localStorage.setItem(STORAGE_KEY_WISHLIST, JSON.stringify(arr)); } catch (e) { /* ignore */ }
                 });
+            });
         }).catch(function (e) {
             console.warn('wishlist Firestore 저장 실패:', e);
         });
@@ -145,28 +177,29 @@
             });
     }
 
-    /** 로그인 시 Firestore에서만 조회. 읽기 실패 시 재시도 */
+    /** 로그인 시 Firestore에서만 조회. Auth 복원 대기 후 조회. 읽기 실패 시 재시도 */
     function getCart() {
-        var userId = getCurrentUserId();
-        if (!userId) return Promise.resolve(getCartFromStorage());
-        var docId = sanitizeDocId(userId);
-        if (!docId) return Promise.resolve([]);
-        return getDbWithRetry().then(function (db) {
-            if (!db) return [];
-            var attempt = 0;
-            function tryGet() {
-                return fetchCartOnce(db, docId).catch(function (e) {
-                    console.warn('cart Firestore 조회 실패:', e);
-                    attempt += 1;
-                    if (attempt < MAX_READ_RETRIES) {
-                        return new Promise(function (resolve) {
-                            setTimeout(function () { tryGet().then(resolve); }, 350);
-                        });
-                    }
-                    return [];
-                });
-            }
-            return tryGet();
+        return waitForAuthState(4000).then(function (userId) {
+            if (!userId) return Promise.resolve(getCartFromStorage());
+            var docId = sanitizeDocId(userId);
+            if (!docId) return Promise.resolve([]);
+            return getDbWithRetry().then(function (db) {
+                if (!db) return [];
+                var attempt = 0;
+                function tryGet() {
+                    return fetchCartOnce(db, docId).catch(function (e) {
+                        console.warn('cart Firestore 조회 실패:', e);
+                        attempt += 1;
+                        if (attempt < MAX_READ_RETRIES) {
+                            return new Promise(function (resolve) {
+                                setTimeout(function () { tryGet().then(resolve); }, 350);
+                            });
+                        }
+                        return [];
+                    });
+                }
+                return tryGet();
+            });
         });
     }
 
@@ -182,30 +215,31 @@
     /** 로그인 시 Firestore에만 저장. 기존 doc 읽어서 wishlist 유지 후 cart만 갱신 */
     function setCart(arr) {
         if (!Array.isArray(arr)) arr = [];
-        var userId = getCurrentUserId();
-        if (!userId) {
-            try { global.localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(arr)); } catch (e) { /* ignore */ }
-            return Promise.resolve();
-        }
-        return getDbWithRetry().then(function (db) {
-            if (!db) return;
-            var docId = sanitizeDocId(userId);
-            if (!docId) return;
-            return db.collection(COLLECTION_NAME).doc(docId).get()
-                .then(function (snap) {
-                    var existing = (snap && snap.exists && snap.data()) ? snap.data() : {};
-                    var wishlist = Array.isArray(existing.wishlist) ? existing.wishlist : [];
-                    return db.collection(COLLECTION_NAME).doc(docId).set({
-                        cart: arr,
-                        wishlist: wishlist,
-                        updatedAt: serverTimestamp()
-                    }, { merge: true });
-                })
-                .then(function () {
-                    try { global.localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(arr)); } catch (e) { /* ignore */ }
-                });
-        }).catch(function (e) {
-            console.warn('cart Firestore 저장 실패:', e);
+        return waitForAuthState(3000).then(function (userId) {
+            if (!userId) {
+                try { global.localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+                return;
+            }
+            return getDbWithRetry().then(function (db) {
+                if (!db) return;
+                var docId = sanitizeDocId(userId);
+                if (!docId) return;
+                return db.collection(COLLECTION_NAME).doc(docId).get()
+                    .then(function (snap) {
+                        var existing = (snap && snap.exists && snap.data()) ? snap.data() : {};
+                        var wishlist = Array.isArray(existing.wishlist) ? existing.wishlist : [];
+                        return db.collection(COLLECTION_NAME).doc(docId).set({
+                            cart: arr,
+                            wishlist: wishlist,
+                            updatedAt: serverTimestamp()
+                        }, { merge: true });
+                    })
+                    .then(function () {
+                        try { global.localStorage.setItem(STORAGE_KEY_CART, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+                    });
+            }).catch(function (e) {
+                console.warn('cart Firestore 저장 실패:', e);
+            });
         });
     }
 
