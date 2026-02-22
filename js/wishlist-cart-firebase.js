@@ -196,4 +196,21 @@
         getWishlistFromStorage: getWishlistFromStorage,
         getCartFromStorage: getCartFromStorage
     };
+
+    // 페이지 로드 시: 로그인 사용자면 로컬 데이터 Firestore 업로드 + 다른 기기에서 로그인 시 Firestore에서 내려받기
+    function onLoadSync() {
+        var userId = getCurrentUserId();
+        if (!userId) return;
+        var hasLocal = getWishlistFromStorage().length > 0 || getCartFromStorage().length > 0;
+        if (hasLocal) {
+            syncLocalToFirebase();
+        }
+        getWishlist().then(function () {});
+        getCart().then(function () {});
+    }
+    if (global.document && document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(onLoadSync, 300); });
+    } else {
+        setTimeout(onLoadSync, 300);
+    }
 })(typeof window !== 'undefined' ? window : this);

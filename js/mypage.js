@@ -207,7 +207,7 @@ function displayUserInfo(user, member, orders) {
     updateWishlistAndCartCount();
 }
 
-// 관심상품과 장바구니 개수 업데이트 (Firestore/로컬 통합)
+// 관심상품과 장바구니 개수 업데이트 (Firestore/로컬 통합, 다른 기기/배포 후에도 Firestore에서 복원)
 function updateWishlistAndCartCount() {
     var getCart = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getCart === 'function'
         ? window.wishlistCartFirebase.getCart()
@@ -215,20 +215,28 @@ function updateWishlistAndCartCount() {
     var getWishlist = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getWishlist === 'function'
         ? window.wishlistCartFirebase.getWishlist()
         : Promise.resolve(JSON.parse(localStorage.getItem('wishlist') || '[]'));
-    getCart.then(function (cart) {
+
+    function setCartCount(cart) {
         var cartCountEl = document.getElementById('cartCount');
         if (cartCountEl) cartCountEl.textContent = (cart && cart.length) || 0;
-    }).catch(function () {
-        var cartCountEl = document.getElementById('cartCount');
-        if (cartCountEl) cartCountEl.textContent = '0';
-    });
-    getWishlist.then(function (wishlist) {
+    }
+    function setWishlistCount(wishlist) {
         var wishlistCountEl = document.getElementById('wishlistCount');
         if (wishlistCountEl) wishlistCountEl.textContent = (wishlist && wishlist.length) || 0;
-    }).catch(function () {
-        var wishlistCountEl = document.getElementById('wishlistCount');
-        if (wishlistCountEl) wishlistCountEl.textContent = '0';
-    });
+    }
+
+    getCart.then(setCartCount).catch(function () { setCartCount([]); });
+    getWishlist.then(setWishlistCount).catch(function () { setWishlistCount([]); });
+
+    var userId = window.wishlistCartFirebase && window.wishlistCartFirebase.getCurrentUserId ? window.wishlistCartFirebase.getCurrentUserId() : null;
+    if (userId) {
+        setTimeout(function () {
+            getCart = window.wishlistCartFirebase && window.wishlistCartFirebase.getCart ? window.wishlistCartFirebase.getCart() : Promise.resolve([]);
+            getWishlist = window.wishlistCartFirebase && window.wishlistCartFirebase.getWishlist ? window.wishlistCartFirebase.getWishlist() : Promise.resolve([]);
+            getCart.then(setCartCount);
+            getWishlist.then(setWishlistCount);
+        }, 1500);
+    }
 }
 
 // 주문 단계별 건수 (주문/입금/준비/배송/완료)
