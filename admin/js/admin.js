@@ -2047,6 +2047,12 @@ async function loadBoardPosts(boardType) {
         } else {
             list = await window.firebaseAdmin.boardService.getPosts(boardType, filters);
             
+            // 상품후기 탭: 상품후기만 표시 (사용후기 reviewType 'usage' 제외)
+            if (boardType === 'review') {
+                list = list.filter(function(item) {
+                    return item.reviewType === 'product';
+                });
+            }
             // 일반 상품문의일 때는 productId가 없는 것만 표시 (마이페이지에서 작성한 문의만)
             if (boardType === 'product-inquiry') {
                 list = list.filter(function(item) {

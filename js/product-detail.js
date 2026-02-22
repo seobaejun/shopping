@@ -300,30 +300,40 @@ function initCartActions() {
                 alert('옵션을 선택해주세요.');
                 return;
             }
-            
-            // 장바구니에 담기 (로컬스토리지 활용)
-            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            
-            selectedOptionsData.forEach(option => {
-                cart.push({
-                    productId: PRODUCT_INFO.id,
-                    productName: PRODUCT_INFO.name,
-                    optionName: option.name,
-                    quantity: option.quantity,
-                    price: option.price,
-                    image: PRODUCT_INFO.image
+            var saveCart = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getCart === 'function' && typeof window.wishlistCartFirebase.setCart === 'function'
+                ? window.wishlistCartFirebase.getCart().then(function (cart) {
+                    selectedOptionsData.forEach(function (option) {
+                        cart.push({
+                            productId: PRODUCT_INFO.id,
+                            productName: PRODUCT_INFO.name,
+                            optionName: option.name,
+                            quantity: option.quantity,
+                            price: option.price,
+                            image: PRODUCT_INFO.image
+                        });
+                    });
+                    return window.wishlistCartFirebase.setCart(cart);
+                })
+                : Promise.resolve().then(function () {
+                    var cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                    selectedOptionsData.forEach(function (option) {
+                        cart.push({
+                            productId: PRODUCT_INFO.id,
+                            productName: PRODUCT_INFO.name,
+                            optionName: option.name,
+                            quantity: option.quantity,
+                            price: option.price,
+                            image: PRODUCT_INFO.image
+                        });
+                    });
+                    localStorage.setItem('cart', JSON.stringify(cart));
                 });
+            saveCart.then(function () {
+                if (typeof updateWishlistAndCartCount === 'function') {
+                    updateWishlistAndCartCount();
+                }
+                productDetailElements.cartModal.classList.add('active');
             });
-            
-            localStorage.setItem('cart', JSON.stringify(cart));
-            
-            // 마이페이지의 장바구니 개수 업데이트 (페이지가 열려있을 경우)
-            if (typeof updateWishlistAndCartCount === 'function') {
-                updateWishlistAndCartCount();
-            }
-            
-            // 모달 표시
-            productDetailElements.cartModal.classList.add('active');
         });
     });
 }
@@ -598,75 +608,65 @@ function initBuyNowDeliveryModal() {
     }
 }
 
-// 관심상품
+// 관심상품 (Firestore 저장)
 function initWishlistActions() {
-    const wishlistBtns = document.querySelectorAll('.btn-wishlist');
-    
-    // 현재 상품이 관심상품에 있는지 확인
-    const currentProductId = PRODUCT_INFO && PRODUCT_INFO.id ? PRODUCT_INFO.id : null;
-    const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-    let isWishlisted = currentProductId && wishlist.some(item => item.id === currentProductId);
-    
-    // 초기 상태 설정
-    wishlistBtns.forEach(btn => {
-        if (isWishlisted) {
-            btn.innerHTML = '<i class="fas fa-heart"></i> 관심상품';
-            btn.style.color = 'var(--danger-color)';
-            btn.style.borderColor = 'var(--danger-color)';
-        }
-    });
-    
-    wishlistBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (!currentProductId) {
-                alert('상품 정보를 불러올 수 없습니다.');
-                return;
-            }
-            
-            isWishlisted = !isWishlisted;
-            const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-            
+    var wishlistBtns = document.querySelectorAll('.btn-wishlist');
+    var currentProductId = PRODUCT_INFO && PRODUCT_INFO.id ? PRODUCT_INFO.id : null;
+    var getWishlistFn = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getWishlist === 'function'
+        ? window.wishlistCartFirebase.getWishlist
+        : function () { return Promise.resolve(JSON.parse(localStorage.getItem('wishlist') || '[]')); };
+    var setWishlistFn = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.setWishlist === 'function'
+        ? window.wishlistCartFirebase.setWishlist
+        : function (arr) { localStorage.setItem('wishlist', JSON.stringify(arr)); return Promise.resolve(); };
+
+    getWishlistFn().then(function (wishlist) {
+        var isWishlisted = currentProductId && wishlist.some(function (item) { return item.id === currentProductId; });
+        wishlistBtns.forEach(function (btn) {
             if (isWishlisted) {
-                // 관심상품에 추가
-                const productData = {
-                    id: currentProductId,
-                    name: PRODUCT_INFO.name || '',
-                    price: PRODUCT_INFO.price || 0,
-                    image: PRODUCT_INFO.image || '',
-                    addedAt: new Date().toISOString()
-                };
-                
-                // 중복 체크
-                const exists = wishlist.some(item => item.id === currentProductId);
-                if (!exists) {
-                    wishlist.push(productData);
-                    localStorage.setItem('wishlist', JSON.stringify(wishlist));
-                }
-                
                 btn.innerHTML = '<i class="fas fa-heart"></i> 관심상품';
                 btn.style.color = 'var(--danger-color)';
                 btn.style.borderColor = 'var(--danger-color)';
-                
-                // 관심상품 추가 후 마이페이지로 이동
-                window.location.href = 'mypage.html?section=wishlist-cart&tab=wishlist';
-            } else {
-                // 관심상품에서 제거
-                const filtered = wishlist.filter(item => item.id !== currentProductId);
-                localStorage.setItem('wishlist', JSON.stringify(filtered));
-                
-                btn.innerHTML = '<i class="far fa-heart"></i> 관심상품';
-                btn.style.color = '';
-                btn.style.borderColor = '';
-                alert('관심상품에서 제거되었습니다.');
             }
-            
-            // 관심상품 개수 업데이트
-            updateWishlistCount();
-            
-            // 마이페이지의 관심상품 개수 업데이트 (페이지가 열려있을 경우)
-            if (typeof updateWishlistAndCartCount === 'function') {
-                updateWishlistAndCartCount();
-            }
+        });
+
+        wishlistBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                if (!currentProductId) {
+                    alert('상품 정보를 불러올 수 없습니다.');
+                    return;
+                }
+                getWishlistFn().then(function (wishlist) {
+                    var isIn = wishlist.some(function (item) { return item.id === currentProductId; });
+                    if (!isIn) {
+                        var productData = {
+                            id: currentProductId,
+                            name: PRODUCT_INFO.name || '',
+                            price: PRODUCT_INFO.price || 0,
+                            image: PRODUCT_INFO.image || '',
+                            addedAt: new Date().toISOString()
+                        };
+                        wishlist.push(productData);
+                        setWishlistFn(wishlist).then(function () {
+                            btn.innerHTML = '<i class="fas fa-heart"></i> 관심상품';
+                            btn.style.color = 'var(--danger-color)';
+                            btn.style.borderColor = 'var(--danger-color)';
+                            updateWishlistCount();
+                            if (typeof updateWishlistAndCartCount === 'function') updateWishlistAndCartCount();
+                            window.location.href = 'mypage.html?section=wishlist-cart&tab=wishlist';
+                        });
+                    } else {
+                        var filtered = wishlist.filter(function (item) { return item.id !== currentProductId; });
+                        setWishlistFn(filtered).then(function () {
+                            btn.innerHTML = '<i class="far fa-heart"></i> 관심상품';
+                            btn.style.color = '';
+                            btn.style.borderColor = '';
+                            alert('관심상품에서 제거되었습니다.');
+                            updateWishlistCount();
+                            if (typeof updateWishlistAndCartCount === 'function') updateWishlistAndCartCount();
+                        });
+                    }
+                });
+            });
         });
     });
 }
@@ -1512,30 +1512,24 @@ function saveProductInquiry() {
 
 // 상품후기 모달 열기
 function openReviewModal() {
-    // 관리자 체크
-    const user = (function() {
-        if (localStorage.getItem('isLoggedIn') !== 'true') return null;
-        try {
-            const raw = localStorage.getItem('loginUser');
-            return raw ? JSON.parse(raw) : null;
-        } catch (e) {
-            return null;
+    // 로그인 확인 (관리자는 로그인 없어도 후기 쓰기 허용)
+    var user = null;
+    try {
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+            var raw = localStorage.getItem('loginUser');
+            if (raw) user = JSON.parse(raw);
         }
-    })();
-    
-    // localStorage의 isAdmin 또는 userId/role로 관리자 확인
-    const isAdmin = localStorage.getItem('isAdmin') === 'true' || 
+    } catch (e) { /* ignore */ }
+
+    var isAdmin = localStorage.getItem('isAdmin') === 'true' ||
                     (user && user.userId && (user.userId === 'admin' || user.role === 'admin'));
-    
-    console.log('관리자 체크:', {
-        isAdmin: isAdmin,
-        isAdminStorage: localStorage.getItem('isAdmin'),
-        userId: user ? user.userId : null,
-        role: user ? user.role : null
-    });
-    
-    // 관리자가 아니면 구매 및 배송 완료 여부 확인
+
     if (!isAdmin) {
+        if (!user || !user.userId) {
+            alert('로그인이 필요합니다.');
+            window.location.href = 'login.html';
+            return;
+        }
         checkPurchaseAndDeliveryStatus().then(function(canWrite) {
             if (!canWrite) {
                 alert('상품후기는 배송 완료된 상품에 대해서만 작성할 수 있습니다.\n구매하신 상품의 배송이 완료된 후 후기를 작성해주세요.');
@@ -1547,7 +1541,6 @@ function openReviewModal() {
             alert('구매 정보를 확인하는 중 오류가 발생했습니다.');
         });
     } else {
-        // 관리자는 바로 모달 열기
         openReviewModalInternal();
     }
 }
@@ -1679,23 +1672,22 @@ function highlightReviewStars(rating) {
 
 // 상품후기 저장
 function saveReview() {
-    // 관리자 체크
-    const user = (function() {
-        if (localStorage.getItem('isLoggedIn') !== 'true') return null;
-        try {
-            const raw = localStorage.getItem('loginUser');
-            return raw ? JSON.parse(raw) : null;
-        } catch (e) {
-            return null;
+    var user = null;
+    try {
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+            var raw = localStorage.getItem('loginUser');
+            if (raw) user = JSON.parse(raw);
         }
-    })();
-    
-    // localStorage의 isAdmin 또는 userId/role로 관리자 확인
-    const isAdmin = localStorage.getItem('isAdmin') === 'true' || 
+    } catch (e) { /* ignore */ }
+
+    var isAdmin = localStorage.getItem('isAdmin') === 'true' ||
                     (user && user.userId && (user.userId === 'admin' || user.role === 'admin'));
-    
-    // 관리자가 아니면 구매 및 배송 완료 여부 재확인
+
     if (!isAdmin) {
+        if (!user || !user.userId) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
         checkPurchaseAndDeliveryStatus().then(function(canWrite) {
             if (!canWrite) {
                 alert('상품후기는 배송 완료된 상품에 대해서만 작성할 수 있습니다.\n구매하신 상품의 배송이 완료된 후 후기를 작성해주세요.');
@@ -1707,7 +1699,6 @@ function saveReview() {
             alert('구매 정보를 확인하는 중 오류가 발생했습니다.');
         });
     } else {
-        // 관리자는 바로 저장
         saveReviewInternal();
     }
 }
@@ -1745,20 +1736,24 @@ function saveReviewInternal() {
             return;
         }
 
-        const user = (function() {
-            if (localStorage.getItem('isLoggedIn') !== 'true') return null;
-            try {
-                const raw = localStorage.getItem('loginUser');
-                return raw ? JSON.parse(raw) : null;
-            } catch (e) {
-                return null;
+        var user = null;
+        try {
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                var raw = localStorage.getItem('loginUser');
+                if (raw) user = JSON.parse(raw);
             }
-        })();
+        } catch (e) { /* ignore */ }
+
+        var isAdmin = localStorage.getItem('isAdmin') === 'true' ||
+                        (user && user.userId && (user.userId === 'admin' || user.role === 'admin'));
 
         if (!user || !user.userId) {
-            alert('로그인이 필요합니다.');
-            window.location.href = 'login.html';
-            return;
+            if (!isAdmin) {
+                alert('로그인이 필요합니다.');
+                window.location.href = 'login.html';
+                return;
+            }
+            user = { userId: 'admin', name: '관리자', authorName: '관리자' };
         }
 
         if (typeof firebase === 'undefined' || !firebase.firestore) {
@@ -1766,8 +1761,8 @@ function saveReviewInternal() {
             return;
         }
 
-        const db = firebase.firestore();
-        var nickname = user.nickname || user.userId || user.name;
+        var db = firebase.firestore();
+        var nickname = user.nickname || user.userId || user.name || (isAdmin ? '관리자' : '');
         const data = {
             boardType: 'review',
             reviewType: 'product',
@@ -1840,13 +1835,14 @@ function checkPurchaseAndDeliveryStatus() {
                 const productId = PRODUCT_INFO.id;
                 const productName = PRODUCT_INFO.name || '';
 
-                // 해당 상품을 구매하고 배송 완료된 주문이 있는지 확인
+                // 해당 상품을 구매하고 배송 완료 또는 입금확인(승인)된 주문이 있는지 확인
                 const hasCompletedOrder = orders.some(function(order) {
                     const orderProductId = order.productId || '';
                     const orderProductName = order.productName || '';
                     const isSameProduct = (orderProductId && orderProductId === productId) || 
                                          (!orderProductId && orderProductName === productName);
-                    return isSameProduct && order.deliveryStatus === 'complete';
+                    const canReview = order.deliveryStatus === 'complete' || order.status === 'approved';
+                    return isSameProduct && canReview;
                 });
 
                 resolve(hasCompletedOrder);
@@ -1865,10 +1861,9 @@ function checkPurchaseAndDeliveryStatus() {
             const productId = PRODUCT_INFO.id;
             const productName = PRODUCT_INFO.name || '';
 
-            // 주문 컬렉션에서 해당 사용자의 배송 완료된 주문 조회
+            // 주문 컬렉션에서 해당 사용자의 주문 조회 (배송 완료 또는 승인된 것만 후기 가능)
             db.collection('orders')
                 .where('userId', '==', user.userId)
-                .where('deliveryStatus', '==', 'complete')
                 .get()
                 .then(function(snap) {
                     let hasCompletedOrder = false;
@@ -1878,7 +1873,8 @@ function checkPurchaseAndDeliveryStatus() {
                         const orderProductName = order.productName || '';
                         const isSameProduct = (orderProductId && orderProductId === productId) || 
                                              (!orderProductId && orderProductName === productName);
-                        if (isSameProduct) {
+                        const canReview = order.deliveryStatus === 'complete' || order.status === 'approved';
+                        if (isSameProduct && canReview) {
                             hasCompletedOrder = true;
                         }
                     });
@@ -2059,51 +2055,25 @@ function updateReviewRatingDisplay(avgRating, reviewCount) {
     }
 }
 
-// 관심상품 개수 업데이트
+// 관심상품 개수 업데이트 (Firestore/로컬 통합)
 function updateWishlistCount() {
-    if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
-        console.log('updateWishlistCount: PRODUCT_INFO 없음');
-        return;
-    }
-    
-    const productId = String(PRODUCT_INFO.id);
-    let wishlist = [];
-    
-    try {
-        const wishlistStr = localStorage.getItem('wishlist');
-        if (wishlistStr) {
-            wishlist = JSON.parse(wishlistStr);
+    if (!PRODUCT_INFO || !PRODUCT_INFO.id) return;
+    var productId = String(PRODUCT_INFO.id);
+    var getWishlist = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getWishlist === 'function'
+        ? window.wishlistCartFirebase.getWishlist()
+        : Promise.resolve(JSON.parse(localStorage.getItem('wishlist') || '[]'));
+    getWishlist.then(function (wishlist) {
+        var wishlistCount = wishlist.filter(function (item) {
+            var itemId = String(item.id || item.productId || '');
+            return itemId === productId;
+        }).length;
+        var likeStatusEl = document.getElementById('likeStatus');
+        if (likeStatusEl) {
+            likeStatusEl.textContent = wishlistCount > 0
+                ? '이 상품을 좋아하는 회원 ' + wishlistCount + '명'
+                : '이 상품을 좋아하는 회원이 없습니다.';
         }
-    } catch (e) {
-        console.error('관심상품 목록 파싱 오류:', e);
-        wishlist = [];
-    }
-    
-    console.log('updateWishlistCount:', {
-        productId: productId,
-        wishlist: wishlist,
-        wishlistLength: wishlist.length
     });
-    
-    // 현재 상품이 관심상품에 있는지 확인
-    const wishlistCount = wishlist.filter(function(item) {
-        const itemId = String(item.id || item.productId || '');
-        return itemId === productId;
-    }).length;
-    
-    console.log('관심상품 개수:', wishlistCount);
-    
-    const likeStatusEl = document.getElementById('likeStatus');
-    if (likeStatusEl) {
-        if (wishlistCount > 0) {
-            likeStatusEl.textContent = '이 상품을 좋아하는 회원 ' + wishlistCount + '명';
-        } else {
-            likeStatusEl.textContent = '이 상품을 좋아하는 회원이 없습니다.';
-        }
-        console.log('likeStatus 업데이트:', likeStatusEl.textContent);
-    } else {
-        console.warn('likeStatus 요소를 찾을 수 없습니다.');
-    }
 }
 
 // ============================================

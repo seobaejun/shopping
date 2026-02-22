@@ -1229,6 +1229,7 @@ img {
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     padding-top: 15px;
     margin-top: 15px;
+    visibility: visible;
 }
 
 .product-rating {
@@ -1236,6 +1237,14 @@ img {
     align-items: center;
     gap: 5px;
     font-size: 13px;
+    color: #333;
+    visibility: visible;
+}
+
+.product-rating span,
+.product-rating .rating-value {
+    color: #333;
+    visibility: visible;
 }
 
 .product-rating i {

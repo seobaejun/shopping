@@ -385,6 +385,14 @@
     background: #000;
 }
 
+/* 관심상품/장바구니 버튼 항상 표시 */
+.action-buttons .btn-wishlist,
+.action-buttons .btn-cart {
+    display: flex;
+    visibility: visible;
+    opacity: 1;
+}
+
 .btn-buy {
     background: var(--primary-color);
     color: var(--text-dark);

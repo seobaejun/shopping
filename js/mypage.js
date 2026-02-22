@@ -70,6 +70,9 @@ function runMypageInit() {
         }
         window._mypageOrders = orders || [];
         displayUserInfo(user, member, orders);
+        if (window.wishlistCartFirebase && typeof window.wishlistCartFirebase.syncLocalToFirebase === 'function') {
+            window.wishlistCartFirebase.syncLocalToFirebase();
+        }
         updateWishlistAndCartCount();
         renderOrderSteps(orders);
         renderOrderList(orders);
@@ -204,35 +207,28 @@ function displayUserInfo(user, member, orders) {
     updateWishlistAndCartCount();
 }
 
-// 관심상품과 장바구니 개수 업데이트
+// 관심상품과 장바구니 개수 업데이트 (Firestore/로컬 통합)
 function updateWishlistAndCartCount() {
-    // 장바구니 개수
-    try {
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        const cartCount = cart.length || 0;
-        const cartCountEl = document.getElementById('cartCount');
-        if (cartCountEl) {
-            cartCountEl.textContent = cartCount;
-        }
-    } catch (e) {
-        console.warn('장바구니 개수 업데이트 실패:', e);
-        const cartCountEl = document.getElementById('cartCount');
+    var getCart = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getCart === 'function'
+        ? window.wishlistCartFirebase.getCart()
+        : Promise.resolve(JSON.parse(localStorage.getItem('cart') || '[]'));
+    var getWishlist = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getWishlist === 'function'
+        ? window.wishlistCartFirebase.getWishlist()
+        : Promise.resolve(JSON.parse(localStorage.getItem('wishlist') || '[]'));
+    getCart.then(function (cart) {
+        var cartCountEl = document.getElementById('cartCount');
+        if (cartCountEl) cartCountEl.textContent = (cart && cart.length) || 0;
+    }).catch(function () {
+        var cartCountEl = document.getElementById('cartCount');
         if (cartCountEl) cartCountEl.textContent = '0';
-    }
-    
-    // 관심상품 개수 (localStorage에서 wishlist 키 확인)
-    try {
-        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-        const wishlistCount = wishlist.length || 0;
-        const wishlistCountEl = document.getElementById('wishlistCount');
-        if (wishlistCountEl) {
-            wishlistCountEl.textContent = wishlistCount;
-        }
-    } catch (e) {
-        console.warn('관심상품 개수 업데이트 실패:', e);
-        const wishlistCountEl = document.getElementById('wishlistCount');
+    });
+    getWishlist.then(function (wishlist) {
+        var wishlistCountEl = document.getElementById('wishlistCount');
+        if (wishlistCountEl) wishlistCountEl.textContent = (wishlist && wishlist.length) || 0;
+    }).catch(function () {
+        var wishlistCountEl = document.getElementById('wishlistCount');
         if (wishlistCountEl) wishlistCountEl.textContent = '0';
-    }
+    });
 }
 
 // 주문 단계별 건수 (주문/입금/준비/배송/완료)
@@ -971,23 +967,23 @@ function renderWishlistCartSection() {
     bindWishlistCartTabs();
 }
 
-// 관심상품 목록 렌더링
+// 관심상품 목록 렌더링 (Firestore/로컬 통합)
 function renderWishlistList() {
-    const listEl = document.getElementById('wishlistList');
-    const emptyEl = document.getElementById('wishlistEmpty');
+    var listEl = document.getElementById('wishlistList');
+    var emptyEl = document.getElementById('wishlistEmpty');
     if (!listEl || !emptyEl) return;
-
-    try {
-        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-        
-        if (wishlist.length === 0) {
+    var getWishlist = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getWishlist === 'function'
+        ? window.wishlistCartFirebase.getWishlist()
+        : Promise.resolve(JSON.parse(localStorage.getItem('wishlist') || '[]'));
+    getWishlist.then(function (wishlist) {
+        if (!wishlist || wishlist.length === 0) {
             listEl.innerHTML = '';
             emptyEl.style.display = 'block';
             return;
         }
-
         emptyEl.style.display = 'none';
-        listEl.innerHTML = wishlist.map(function(item) {
+        listEl.innerHTML = wishlist.map(function (item) {
+            var safeId = (item.id || '').toString().replace(/'/g, "\\'");
             return '<div class="wishlist-item" style="display: flex; align-items: center; padding: 20px; border-bottom: 1px solid #e0e0e0;">' +
                 '<div style="width: 100px; height: 100px; margin-right: 20px; background: #f5f5f5; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden;">' +
                 (item.image ? '<img src="' + item.image + '" style="width: 100%; height: 100%; object-fit: cover;">' : '<i class="fas fa-image" style="font-size: 32px; color: #ddd;"></i>') +
@@ -997,35 +993,34 @@ function renderWishlistList() {
                 '<p style="margin: 0; color: #666; font-size: 14px;">' + (item.price ? item.price.toLocaleString() + '원' : '가격 정보 없음') + '</p>' +
                 '</div>' +
                 '<div style="display: flex; gap: 10px;">' +
-                '<button type="button" class="btn btn-secondary" onclick="removeFromWishlist(\'' + item.id + '\')" style="padding: 8px 16px; font-size: 14px;">삭제</button>' +
-                '<a href="product-detail.html?id=' + item.id + '" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; display: inline-block;">상세보기</a>' +
+                '<button type="button" class="btn btn-secondary" onclick="removeFromWishlist(\'' + safeId + '\')" style="padding: 8px 16px; font-size: 14px;">삭제</button>' +
+                '<a href="product-detail.html?id=' + (item.id || '') + '" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; display: inline-block;">상세보기</a>' +
                 '</div>' +
                 '</div>';
         }).join('');
-    } catch (e) {
+    }).catch(function (e) {
         console.error('관심상품 목록 렌더링 오류:', e);
         listEl.innerHTML = '';
         emptyEl.style.display = 'block';
-    }
+    });
 }
 
-// 장바구니 목록 렌더링
+// 장바구니 목록 렌더링 (Firestore/로컬 통합)
 function renderCartList() {
-    const listEl = document.getElementById('cartList');
-    const emptyEl = document.getElementById('cartEmpty');
+    var listEl = document.getElementById('cartList');
+    var emptyEl = document.getElementById('cartEmpty');
     if (!listEl || !emptyEl) return;
-
-    try {
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        
-        if (cart.length === 0) {
+    var getCart = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getCart === 'function'
+        ? window.wishlistCartFirebase.getCart()
+        : Promise.resolve(JSON.parse(localStorage.getItem('cart') || '[]'));
+    getCart.then(function (cart) {
+        if (!cart || cart.length === 0) {
             listEl.innerHTML = '';
             emptyEl.style.display = 'block';
             return;
         }
-
         emptyEl.style.display = 'none';
-        listEl.innerHTML = cart.map(function(item, index) {
+        listEl.innerHTML = cart.map(function (item, index) {
             return '<div class="cart-item" style="display: flex; align-items: center; padding: 20px; border-bottom: 1px solid #e0e0e0;">' +
                 '<div style="width: 100px; height: 100px; margin-right: 20px; background: #f5f5f5; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden;">' +
                 (item.image ? '<img src="' + item.image + '" style="width: 100%; height: 100%; object-fit: cover;">' : '<i class="fas fa-image" style="font-size: 32px; color: #ddd;"></i>') +
@@ -1037,15 +1032,15 @@ function renderCartList() {
                 '</div>' +
                 '<div style="display: flex; gap: 10px;">' +
                 '<button type="button" class="btn btn-secondary" onclick="removeFromCart(' + index + ')" style="padding: 8px 16px; font-size: 14px;">삭제</button>' +
-                '<a href="product-detail.html?id=' + item.productId + '" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; display: inline-block;">상세보기</a>' +
+                '<a href="product-detail.html?id=' + (item.productId || '') + '" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; display: inline-block;">상세보기</a>' +
                 '</div>' +
                 '</div>';
         }).join('');
-    } catch (e) {
+    }).catch(function (e) {
         console.error('장바구니 목록 렌더링 오류:', e);
         listEl.innerHTML = '';
         emptyEl.style.display = 'block';
-    }
+    });
 }
 
 // 관심상품/장바구니 탭 전환
@@ -1074,40 +1069,48 @@ function bindWishlistCartTabs() {
     });
 }
 
-// 관심상품에서 제거
+// 관심상품에서 제거 (Firestore/로컬 통합)
 function removeFromWishlist(productId) {
     if (!confirm('관심상품에서 제거하시겠습니까?')) return;
-    
-    try {
-        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-        const filtered = wishlist.filter(function(item) { return item.id !== productId; });
-        localStorage.setItem('wishlist', JSON.stringify(filtered));
-        
+    var getWishlist = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getWishlist === 'function'
+        ? window.wishlistCartFirebase.getWishlist()
+        : Promise.resolve(JSON.parse(localStorage.getItem('wishlist') || '[]'));
+    var setWishlist = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.setWishlist === 'function'
+        ? window.wishlistCartFirebase.setWishlist
+        : function (arr) { localStorage.setItem('wishlist', JSON.stringify(arr)); return Promise.resolve(); };
+    getWishlist.then(function (wishlist) {
+        var filtered = wishlist.filter(function (item) { return item.id !== productId; });
+        return setWishlist(filtered);
+    }).then(function () {
         renderWishlistList();
         updateWishlistAndCartCount();
         alert('관심상품에서 제거되었습니다.');
-    } catch (e) {
+    }).catch(function (e) {
         console.error('관심상품 제거 오류:', e);
         alert('오류가 발생했습니다.');
-    }
+    });
 }
 
-// 장바구니에서 제거
+// 장바구니에서 제거 (Firestore/로컬 통합)
 function removeFromCart(index) {
     if (!confirm('장바구니에서 제거하시겠습니까?')) return;
-    
-    try {
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    var getCart = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getCart === 'function'
+        ? window.wishlistCartFirebase.getCart()
+        : Promise.resolve(JSON.parse(localStorage.getItem('cart') || '[]'));
+    var setCart = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.setCart === 'function'
+        ? window.wishlistCartFirebase.setCart
+        : function (arr) { localStorage.setItem('cart', JSON.stringify(arr)); return Promise.resolve(); };
+    getCart.then(function (cart) {
         cart.splice(index, 1);
-        localStorage.setItem('cart', JSON.stringify(cart));
-        
+        return setCart(cart);
+    }).then(function () {
         renderCartList();
         updateWishlistAndCartCount();
         alert('장바구니에서 제거되었습니다.');
-    } catch (e) {
+    }).catch(function (e) {
         console.error('장바구니 제거 오류:', e);
         alert('오류가 발생했습니다.');
-    }
+    });
 }
 
 // 전역 함수로 노출
@@ -1953,10 +1956,10 @@ function renderReviewList() {
         return;
     }
 
-    // 배송 완료된 주문 목록 가져오기
+    // 배송 완료 또는 입금확인(승인)된 주문 목록 가져오기 (후기 작성 가능 주문)
     const orders = window._mypageOrders || [];
     const completedOrders = orders.filter(function(o) {
-        return o.deliveryStatus === 'complete';
+        return o.deliveryStatus === 'complete' || o.status === 'approved';
     });
 
     if (completedOrders.length === 0) {
@@ -1977,7 +1980,7 @@ function renderReviewList() {
             return;
         }
 
-        // 작성한 후기 목록 조회
+        // 작성한 상품후기 목록 조회 (사용후기 제외)
         db.collection('posts')
             .where('boardType', '==', 'review')
             .where('authorId', '==', user.userId)
@@ -1985,7 +1988,8 @@ function renderReviewList() {
             .then(function(snap) {
                 const reviews = [];
                 snap.docs.forEach(function(d) {
-                    reviews.push({ id: d.id, ...d.data() });
+                    var data = d.data();
+                    if (data.reviewType === 'product') reviews.push({ id: d.id, ...data });
                 });
                 renderCompletedProductsList(completedOrders, reviews);
             })
@@ -1996,73 +2000,91 @@ function renderReviewList() {
     });
 }
 
-// 배송 완료된 상품 목록 렌더링
+// 배송 완료/입금확인 상품 + 내가 쓴 상품후기 목록 렌더링 (상세페이지에서 쓴 글 포함)
 function renderCompletedProductsList(completedOrders, reviews) {
     const listEl = document.getElementById('completedProductsList');
     const emptyEl = document.getElementById('completedProductsEmpty');
-    
     if (!listEl) return;
 
-    if (completedOrders.length === 0) {
-        listEl.innerHTML = '';
-        if (emptyEl) emptyEl.style.display = 'block';
-        return;
-    }
-
-    if (emptyEl) emptyEl.style.display = 'none';
-
-    // 상품별로 그룹화 (같은 상품은 하나로 표시)
+    // 상품별로 그룹화 (주문 기준, 같은 상품은 하나로)
     const productMap = {};
     completedOrders.forEach(function(order) {
         const productId = order.productId || order.productName || 'unknown';
         const productName = order.productName || '상품명 없음';
         const productImage = order.productImage || order.image || '';
-        
         if (!productMap[productId]) {
             productMap[productId] = {
                 productId: productId,
                 productName: productName,
                 productImage: productImage,
                 orderId: order.id,
-                hasReview: false
+                hasReview: false,
+                reviewId: null
             };
         }
     });
 
-    // 작성한 후기 확인 (productId 또는 productName으로 매칭)
+    // 작성한 후기로 주문 상품에 매칭
     reviews.forEach(function(review) {
-        const reviewProductId = review.productId || '';
+        const reviewProductId = (review.productId || '').toString();
         const reviewProductName = review.productName || '';
-        
         Object.keys(productMap).forEach(function(key) {
             const product = productMap[key];
-            // productId가 있으면 productId로, 없으면 productName으로 매칭
-            if (reviewProductId && product.productId === reviewProductId) {
-                product.hasReview = true;
-                product.reviewId = review.id;
-            } else if (!reviewProductId && product.productName === reviewProductName) {
+            const match = (reviewProductId && product.productId === reviewProductId) ||
+                         (!reviewProductId && product.productName === reviewProductName);
+            if (match) {
                 product.hasReview = true;
                 product.reviewId = review.id;
             }
         });
     });
 
+    // 주문에 없는 상품후기만 (상세페이지에서만 작성한 글)
+    const reviewOnlyList = [];
+    reviews.forEach(function(review) {
+        const reviewProductId = (review.productId || '').toString();
+        const reviewProductName = review.productName || '상품명 없음';
+        const matched = Object.keys(productMap).some(function(key) {
+            const p = productMap[key];
+            return (reviewProductId && p.productId === reviewProductId) || (!reviewProductId && p.productName === reviewProductName);
+        });
+        if (!matched) {
+            reviewOnlyList.push({
+                productId: reviewProductId,
+                productName: reviewProductName,
+                productImage: review.productImage || review.productImageUrl || '',
+                hasReview: true,
+                reviewId: review.id
+            });
+        }
+    });
+
     const products = Object.values(productMap);
-    
-    listEl.innerHTML = products.map(function(product) {
+    const allItems = products.concat(reviewOnlyList);
+
+    if (allItems.length === 0) {
+        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    listEl.innerHTML = allItems.map(function(product) {
         const hasReview = product.hasReview;
         const reviewButtonText = hasReview ? '후기 수정' : '후기 작성';
         const reviewButtonClass = hasReview ? 'btn-secondary' : 'btn-primary';
-        
+        const safeName = (product.productName || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const detailUrl = product.productId ? 'product-detail.html?id=' + encodeURIComponent(product.productId) : '#';
         return '<div class="completed-product-item" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 10px; background: #fff;">' +
             '<div style="display: flex; align-items: center; gap: 15px; flex: 1;">' +
-            (product.productImage ? '<img src="' + product.productImage + '" alt="' + product.productName + '" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">' : '') +
+            (product.productImage ? '<img src="' + product.productImage + '" alt="" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">' : '') +
             '<div>' +
-            '<div style="font-size: 15px; font-weight: 600; color: #333; margin-bottom: 5px;">' + product.productName + '</div>' +
-            '<div style="font-size: 13px; color: #666;">배송 완료</div>' +
+            '<div style="font-size: 15px; font-weight: 600; color: #333; margin-bottom: 5px;">' + (product.productName || '상품명 없음') + '</div>' +
+            '<div style="font-size: 13px; color: #666;">' + (product.orderId ? '배송 완료' : '상품후기') + '</div>' +
+            (detailUrl !== '#' ? '<a href="' + detailUrl + '" style="font-size: 12px; color: #667eea; margin-top: 4px; display: inline-block;">상품보기</a>' : '') +
             '</div>' +
             '</div>' +
-            '<button type="button" class="btn ' + reviewButtonClass + '" onclick="openReviewModalForProduct(\'' + product.productId + '\', \'' + product.productName.replace(/'/g, "\\'") + '\', \'' + (product.reviewId || '') + '\')" style="padding: 8px 16px; white-space: nowrap;">' +
+            '<button type="button" class="btn ' + reviewButtonClass + '" onclick="openReviewModalForProduct(\'' + (product.productId || '') + '\', \'' + safeName + '\', \'' + (product.reviewId || '') + '\')" style="padding: 8px 16px; white-space: nowrap;">' +
             '<i class="fas fa-star"></i> ' + reviewButtonText +
             '</button>' +
             '</div>';

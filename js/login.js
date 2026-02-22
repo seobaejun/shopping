@@ -180,6 +180,28 @@ async function handleLogin(e) {
         localStorage.setItem('loginUser', JSON.stringify(loginData));
         localStorage.setItem('isLoggedIn', 'true');
         
+        // 관리자 여부 확인 (admins 컬렉션)
+        try {
+            const adminsSnap = await db.collection('admins').where('userId', '==', userData.userId).get();
+            let isAdminUser = false;
+            if (!adminsSnap.empty) {
+                adminsSnap.docs.forEach(doc => {
+                    if (doc.data().status === 'active') isAdminUser = true;
+                });
+            }
+            if (!isAdminUser && userData.name) {
+                const adminsAll = await db.collection('admins').get();
+                adminsAll.docs.forEach(doc => {
+                    const d = doc.data();
+                    if (d.status === 'active' && (d.userId === userData.userId || d.name === userData.name)) isAdminUser = true;
+                });
+            }
+            localStorage.setItem('isAdmin', isAdminUser ? 'true' : 'false');
+        } catch (e) {
+            console.warn('관리자 여부 확인 실패:', e);
+            localStorage.setItem('isAdmin', 'false');
+        }
+        
         // 아이디 저장 기능
         if (rememberMe) {
             localStorage.setItem('savedUserId', userId);

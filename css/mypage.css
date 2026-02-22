@@ -243,6 +243,21 @@
     color: #333;
 }
 
+/* 관심상품/장바구니/알림 라벨·개수 항상 표시 */
+.user-stats .stat-item span,
+#wishlistCount,
+#cartCount,
+#notificationCount {
+    visibility: visible;
+    color: inherit;
+}
+.user-stats .stat-item {
+    visibility: visible;
+}
+.user-stats .stat-item strong {
+    visibility: visible;
+}
+
 /* 쇼핑지원금 섹션 */
 .support-info-section {
     background: #fff;

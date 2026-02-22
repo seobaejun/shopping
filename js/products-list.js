@@ -627,6 +627,7 @@ function renderProducts() {
         return createProductCard(product, actualIndex);
     }).join('');
     listElements.productGrid.innerHTML = html;
+    updateProductRatingsInGrid(pageProducts);
 }
 
 // 상품 카드 생성
@@ -642,8 +643,9 @@ function createProductCard(product, index) {
     // Firestore ID 사용
     const productId = product.id;
     
+    const ratingVal = (product.rating != null && product.rating !== undefined) ? product.rating : 0;
     return `
-        <div class="product-card">
+        <div class="product-card" data-product-id="${productId}">
             <a href="product-detail.html?id=${productId}" class="product-link">
                 <div class="product-image">
                     <img src="${product.image}" alt="${product.title}">
@@ -661,7 +663,7 @@ function createProductCard(product, index) {
                     <div class="product-rating">
                         <span>고객평점</span>
                         <i class="fas fa-star"></i>
-                        <span>${product.rating}</span>
+                        <span class="rating-value">${ratingVal}</span>
                     </div>
                     <button class="share-btn">
                         <i class="fas fa-share-alt"></i> 공유하기
@@ -670,6 +672,37 @@ function createProductCard(product, index) {
             </div>
         </div>
     `;
+}
+
+// 상품 그리드 고객평점 업데이트 (Firestore 상품후기 기준)
+async function updateProductRatingsInGrid(products) {
+    if (!products || products.length === 0 || typeof firebase === 'undefined' || !firebase.firestore) return;
+    const db = firebase.firestore();
+    for (const product of products) {
+        if (!product.id) continue;
+        try {
+            const snapshot = await db.collection('posts')
+                .where('boardType', '==', 'review')
+                .where('productId', '==', String(product.id))
+                .get();
+            let total = 0, count = 0;
+            snapshot.docs.forEach(doc => {
+                const d = doc.data();
+                if ((d.reviewType === 'product' || !d.reviewType) && d.rating) {
+                    total += d.rating;
+                    count++;
+                }
+            });
+            const avg = count > 0 ? (total / count).toFixed(1) : 0;
+            const card = listElements.productGrid.querySelector('.product-card[data-product-id="' + product.id + '"]');
+            if (card) {
+                const span = card.querySelector('.product-rating .rating-value');
+                if (span) span.textContent = avg;
+            }
+        } catch (e) {
+            console.warn('평점 로드 실패:', product.id, e);
+        }
+    }
 }
 
 // 빈 상태 표시

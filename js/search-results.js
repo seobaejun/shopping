@@ -98,9 +98,10 @@ function createProductCard(product) {
         .map(badge => `<span class="badge">${badgeLabels[badge] || badge}</span>`)
         .join('');
     
+    const productId = product.id || '';
     return `
-        <div class="product-card">
-            <a href="product-detail.html?id=${product.id}">
+        <div class="product-card" data-product-id="${productId}">
+            <a href="product-detail.html?id=${productId}" class="product-link">
                 <div class="product-image">
                     <img src="${product.image}" alt="${product.title}">
                     <div class="product-badge">
@@ -109,14 +110,14 @@ function createProductCard(product) {
                 </div>
             </a>
             <div class="product-info">
-                <a href="product-detail.html?id=${product.id}" class="product-title">${product.title}</a>
+                <a href="product-detail.html?id=${productId}" class="product-title">${product.title}</a>
                 <div class="product-option">${product.option || ''}</div>
                 <div class="product-support">쇼핑지원금 ${product.support}</div>
                 <div class="product-footer">
                     <div class="product-rating">
                         <span>고객평점</span>
                         <i class="fas fa-star"></i>
-                        <span>0</span>
+                        <span class="rating-value">0</span>
                     </div>
                     <button class="share-btn">
                         <i class="fas fa-share-alt"></i> 공유하기
@@ -125,6 +126,37 @@ function createProductCard(product) {
             </div>
         </div>
     `;
+}
+
+// 검색 결과 고객평점 업데이트 (Firestore 상품후기 기준)
+async function updateSearchResultRatings(results, productGrid) {
+    if (!results || results.length === 0 || !productGrid || typeof firebase === 'undefined' || !firebase.firestore) return;
+    const db = firebase.firestore();
+    for (const product of results) {
+        if (!product.id) continue;
+        try {
+            const snapshot = await db.collection('posts')
+                .where('boardType', '==', 'review')
+                .where('productId', '==', String(product.id))
+                .get();
+            let total = 0, count = 0;
+            snapshot.docs.forEach(doc => {
+                const d = doc.data();
+                if ((d.reviewType === 'product' || !d.reviewType) && d.rating) {
+                    total += d.rating;
+                    count++;
+                }
+            });
+            const avg = count > 0 ? (total / count).toFixed(1) : 0;
+            const card = productGrid.querySelector('.product-card[data-product-id="' + product.id + '"]');
+            if (card) {
+                const span = card.querySelector('.product-rating .rating-value');
+                if (span) span.textContent = avg;
+            }
+        } catch (e) {
+            console.warn('검색 결과 평점 로드 실패:', product.id, e);
+        }
+    }
 }
 
 // 검색 결과 렌더링
@@ -177,6 +209,7 @@ async function renderSearchResults() {
         productGrid.innerHTML = results.map(product => createProductCard(product)).join('');
         productGrid.style.display = 'grid';
         noResults.style.display = 'none';
+        updateSearchResultRatings(results, productGrid);
     } else {
         console.log('검색 결과 없음');
         productGrid.style.display = 'none';

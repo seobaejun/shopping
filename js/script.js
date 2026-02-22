@@ -582,7 +582,10 @@ async function updateProductRatings() {
 
             reviewsSnapshot.docs.forEach(doc => {
                 const review = doc.data();
-                if (review.rating) {
+                if (review.reviewType === 'product' && review.rating) {
+                    totalRating += review.rating;
+                    reviewCount++;
+                } else if (!review.reviewType && review.rating) {
                     totalRating += review.rating;
                     reviewCount++;
                 }
