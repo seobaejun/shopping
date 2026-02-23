@@ -3937,7 +3937,6 @@ function hidePaymentCompleteButton() {
 // ============================================
 const SEED_ADMIN_NAME = '서배준';
 const SEED_ADMIN_USER_ID = 'seobaejun';
-const ADMIN_ADD_PASSWORD = '7979';
 
 /** Firebase가 준비될 때까지 대기 후, 실제 db/서비스 사용 가능 여부 반환 */
 async function ensureFirebaseReady() {
@@ -4108,9 +4107,9 @@ async function openAdminModal(editId) {
         if (adminEditForm) adminEditForm.style.display = 'none';
         document.getElementById('adminEditId').value = '';
         const nameEl = document.getElementById('adminAddName');
-        const pwEl = document.getElementById('adminAddPassword');
+        const userIdEl = document.getElementById('adminAddUserId');
         if (nameEl) nameEl.value = '';
-        if (pwEl) pwEl.value = '';
+        if (userIdEl) userIdEl.value = '';
     }
     modal.style.display = 'flex';
 }
@@ -4197,25 +4196,23 @@ async function saveAdminModal() {
             alert('수정되었습니다.');
         } else {
             const name = (document.getElementById('adminAddName') && document.getElementById('adminAddName').value || '').trim();
-            const password = document.getElementById('adminAddPassword') ? document.getElementById('adminAddPassword').value : '';
+            const userId = (document.getElementById('adminAddUserId') && document.getElementById('adminAddUserId').value || '').trim();
             if (!name) {
                 alert('이름을 입력해주세요.');
                 return;
             }
-            if (password !== ADMIN_ADD_PASSWORD) {
-                alert('비밀번호가 올바르지 않습니다.');
+            if (!userId) {
+                alert('아이디를 입력해주세요.');
                 return;
             }
-            var userId = name.replace(/\s+/g, '_') || 'admin';
             var email = '';
             var phone = '';
             var memberService = window.firebaseAdmin && window.firebaseAdmin.memberService;
             if (memberService) {
                 try {
-                    var members = await memberService.getMembers({ searchTerm: name });
+                    var members = await memberService.getMembers({ searchTerm: userId });
                     if (members && members.length > 0) {
-                        var m = members[0];
-                        userId = m.userId || userId;
+                        var m = members.find(function (x) { return (x.userId || '').trim() === userId; }) || members[0];
                         email = m.email || '';
                         phone = m.phone || '';
                     }
