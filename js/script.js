@@ -1203,15 +1203,13 @@ async function loadCategoriesMenu() {
 
         // 관리자가 아니면 isPublic !== false 인 카테고리만 표시 (관리자는 전체 접근)
         var isAdmin = localStorage.getItem('isAdmin') === 'true';
-        if (!isAdmin) {
-            categories = categories.filter(function(c) { return c.isPublic !== false; });
-        }
+        var categoriesToShow = isAdmin ? categories : categories.filter(function(c) { return c.isPublic !== false; });
 
-        console.log('✅ 카테고리 로드 완료:', categories.length, '개');
-        console.log('카테고리 데이터:', categories);
+        console.log('✅ 카테고리 로드 완료:', categoriesToShow.length, '개');
+        console.log('카테고리 데이터:', categoriesToShow);
 
         // 카테고리 트리 구조 생성
-        const categoryTree = buildCategoryTree(categories);
+        const categoryTree = buildCategoryTree(categoriesToShow);
         
         console.log('✅ 카테고리 트리 생성 완료:', categoryTree);
         

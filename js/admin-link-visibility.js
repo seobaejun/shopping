@@ -28,15 +28,28 @@
         }
     }
 
+    /** 로그인한 회원의 userId (admins 컬렉션과 비교용). loginUser.userId 우선, 없으면 uid */
     function getCurrentUserId() {
         try {
             var raw = localStorage.getItem('loginUser');
             if (raw) {
                 var u = JSON.parse(raw);
-                if (u && u.userId) return u.userId;
+                if (u && u.userId) return String(u.userId).trim();
+                if (u && u.uid) return String(u.uid).trim();
             }
             if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
                 return firebase.auth().currentUser.uid;
+            }
+        } catch (e) { /* ignore */ }
+        return null;
+    }
+
+    function getCurrentUserName() {
+        try {
+            var raw = localStorage.getItem('loginUser');
+            if (raw) {
+                var u = JSON.parse(raw);
+                if (u && u.name) return String(u.name).trim();
             }
         } catch (e) { /* ignore */ }
         return null;
@@ -54,46 +67,55 @@
             return;
         }
         if (typeof firebase === 'undefined' || !firebase.firestore) {
-            apply();
+            setTimeout(refreshAdminAndApply, 600);
             return;
         }
+        var db;
         try {
-            var db = firebase.firestore();
-            db.collection('admins').where('userId', '==', userId).get().then(function (snap) {
-                var isAdminUser = false;
-                if (snap && !snap.empty) {
-                    snap.docs.forEach(function (doc) {
-                        if (doc.data().status === 'active') isAdminUser = true;
-                    });
-                }
-                if (isAdminUser) {
-                    localStorage.setItem('isAdmin', 'true');
-                    apply();
-                    return;
-                }
-                db.collection('admins').get().then(function (allSnap) {
-                    if (allSnap && !allSnap.empty) {
-                        allSnap.docs.forEach(function (doc) {
-                            var d = doc.data();
-                            if (d.status === 'active' && d.userId === userId) isAdminUser = true;
-                        });
-                    }
-                    localStorage.setItem('isAdmin', isAdminUser ? 'true' : 'false');
-                    apply();
-                }).catch(function () { apply(); });
-            }).catch(function () { apply(); });
+            db = firebase.firestore();
         } catch (e) {
-            apply();
+            setTimeout(refreshAdminAndApply, 600);
+            return;
         }
+        db.collection('admins').where('userId', '==', userId).get().then(function (snap) {
+            var isAdminUser = false;
+            if (snap && !snap.empty) {
+                snap.docs.forEach(function (doc) {
+                    if (doc.data().status === 'active') isAdminUser = true;
+                });
+            }
+            if (!isAdminUser) {
+                return db.collection('admins').get();
+            }
+            localStorage.setItem('isAdmin', 'true');
+            apply();
+            return null;
+        }).then(function (allSnap) {
+            if (!allSnap) return;
+            var isAdminUser = false;
+            var userId = getCurrentUserId();
+            var userName = getCurrentUserName();
+            if (allSnap && !allSnap.empty) {
+                allSnap.docs.forEach(function (doc) {
+                    var d = doc.data();
+                    if (d.status !== 'active') return;
+                    if (userId && String(d.userId || '').trim() === userId) isAdminUser = true;
+                    if (!isAdminUser && userName && String(d.name || '').trim() === userName) isAdminUser = true;
+                });
+            }
+            localStorage.setItem('isAdmin', isAdminUser ? 'true' : 'false');
+            apply();
+        }).catch(function () { apply(); });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () {
-            apply();
-            setTimeout(refreshAdminAndApply, 500);
-        });
-    } else {
+    function run() {
         apply();
-        setTimeout(refreshAdminAndApply, 500);
+        setTimeout(refreshAdminAndApply, 400);
+        setTimeout(refreshAdminAndApply, 1500);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
+    } else {
+        run();
     }
 })();
