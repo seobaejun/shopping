@@ -139,21 +139,9 @@
                 <!-- 상품 카드는 JavaScript로 동적 생성 -->
             </div>
 
-            <!-- 페이지네이션 -->
-            <div class="pagination" id="pagination">
-                <button class="page-btn prev" disabled>
-                    <i class="fas fa-chevron-left"></i> 이전
-                </button>
-                <div class="page-numbers" id="pageNumbers">
-                    <button class="page-num active">1</button>
-                    <button class="page-num">2</button>
-                    <button class="page-num">3</button>
-                    <button class="page-num">4</button>
-                    <button class="page-num">5</button>
-                </div>
-                <button class="page-btn next">
-                    다음 <i class="fas fa-chevron-right"></i>
-                </button>
+            <!-- 페이지네이션 (<< < −10 1..9 ... +10 > >>) -->
+            <div class="pagination list-pagination" id="pagination">
+                <div class="page-numbers" id="pageNumbers"></div>
             </div>
         </div>
     </section>
@@ -280,6 +268,7 @@
     
     <!-- Firebase 설정 -->
     <script src="js/firebase-config.js"></script>
+    <script src="js/image-config.js"></script>
     <script src="js/visitor-logger.js"></script>
     
     <!-- SNS 공유 유틸리티 -->

@@ -174,6 +174,7 @@ function runMypageInit() {
 function initMypageOnLoad() {
     bindReviewModalMypage();
     bindReviewWriteSection();
+    bindTokenModals();
     runMypageInit();
 }
 if (document.readyState === 'loading') {
@@ -182,7 +183,7 @@ if (document.readyState === 'loading') {
     initMypageOnLoad();
 }
 
-// 사용자 정보 표시 (회원 문서 + 주문 기반 지원금)
+// 사용자 정보 표시 (회원 tokenBalance 우선, 없으면 주문 기반 지원금)
 function displayUserInfo(user, member, orders) {
     member = member || user;
     const name = (member && member.name) || user.name || user.userId || (user.email && user.email.split('@')[0]) || '사용자';
@@ -190,18 +191,115 @@ function displayUserInfo(user, member, orders) {
     if (userNameEl) userNameEl.textContent = name;
 
     let totalSupport = 0;
-    if (orders && orders.length) {
+    if (member && typeof member.tokenBalance === 'number') {
+        totalSupport = member.tokenBalance;
+    } else if (orders && orders.length) {
         const approved = orders.filter(function (o) { return o.status === 'approved'; });
         approved.forEach(function (o) { totalSupport += (o.supportAmount || 0); });
     }
-    const totalSupportEl = document.getElementById('totalSupport');
     const currentSupportEl = document.getElementById('currentSupport');
-    const supportStr = totalSupport.toLocaleString() + '원';
-    if (totalSupportEl) totalSupportEl.textContent = supportStr;
+    const supportStr = totalSupport.toLocaleString() + ' trix';
     if (currentSupportEl) currentSupportEl.textContent = supportStr;
-    
-    // 관심상품과 장바구니 개수 업데이트
+    var withdrawBalanceEl = document.getElementById('tokenWithdrawBalance');
+    if (withdrawBalanceEl) withdrawBalanceEl.textContent = supportStr;
+
     updateWishlistAndCartCount();
+}
+
+// 보유 토큰(쇼핑지원금) 숫자만 반환 (trix)
+function getCurrentSupportBalance() {
+    var el = document.getElementById('currentSupport');
+    if (!el) return 0;
+    var text = (el.textContent || '').replace(/\s*trix/g, '').replace(/,/g, '').trim();
+    return parseInt(text, 10) || 0;
+}
+
+// 토큰 구매/출금: 우측 영역 섹션 표시 및 폼 제출
+function bindTokenModals() {
+    var btnPurchase = document.getElementById('btnTokenPurchase');
+    var btnWithdraw = document.getElementById('btnTokenWithdraw');
+    var purchaseQty = document.getElementById('tokenPurchaseQty');
+    var purchaseAmount = document.getElementById('tokenPurchaseAmount');
+    var btnPurchaseComplete = document.getElementById('btnTokenPurchaseComplete');
+    var withdrawAddress = document.getElementById('tokenWithdrawAddress');
+    var withdrawQty = document.getElementById('tokenWithdrawQty');
+    var withdrawBalanceEl = document.getElementById('tokenWithdrawBalance');
+    var btnWithdrawSubmit = document.getElementById('btnTokenWithdrawSubmit');
+
+    if (btnPurchase) {
+        btnPurchase.addEventListener('click', function () {
+            if (purchaseQty) purchaseQty.value = '';
+            if (purchaseAmount) purchaseAmount.value = '';
+            showSection('token-purchase');
+        });
+    }
+    if (purchaseQty && purchaseAmount) {
+        purchaseQty.addEventListener('input', function () {
+            var qty = parseInt(purchaseQty.value, 10) || 0;
+            purchaseAmount.value = qty ? (qty * 100).toLocaleString() + '원' : '';
+        });
+    }
+    if (btnPurchaseComplete) {
+        btnPurchaseComplete.addEventListener('click', function () {
+            var qty = parseInt(purchaseQty && purchaseQty.value ? purchaseQty.value : 0, 10) || 0;
+            if (qty <= 0) { alert('수량을 입력해주세요.'); return; }
+            var amount = qty * 100;
+            if (!window.mypageApi || !window.mypageApi.createTokenDeposit) {
+                alert('입금 신청 기능을 사용할 수 없습니다.');
+                return;
+            }
+            window.mypageApi.getCurrentMemberId().then(function (ids) {
+                if (!ids || !ids.docId) return Promise.reject(new Error('회원 정보를 확인할 수 없습니다.'));
+                return window.mypageApi.createTokenDeposit(ids.docId, { quantity: qty, amount: amount });
+            }).then(function () {
+                alert('입금 신청이 접수되었습니다. 관리자 확인 후 보유 토큰에 반영됩니다.');
+                if (purchaseQty) purchaseQty.value = '';
+                if (purchaseAmount) purchaseAmount.value = '';
+                return window.mypageApi.getCurrentMember().then(function (member) {
+                    displayUserInfo(window.mypageApi.getLoginUser(), member, window._mypageOrders || []);
+                });
+            }).catch(function (err) {
+                alert(err && err.message ? err.message : '입금 신청에 실패했습니다.');
+            });
+        });
+    }
+
+    if (btnWithdraw) {
+        btnWithdraw.addEventListener('click', function () {
+            var balance = getCurrentSupportBalance();
+            if (withdrawBalanceEl) withdrawBalanceEl.textContent = balance.toLocaleString() + ' trix';
+            if (withdrawAddress) withdrawAddress.value = '';
+            if (withdrawQty) withdrawQty.value = '';
+            showSection('token-withdraw');
+        });
+    }
+    if (btnWithdrawSubmit) {
+        btnWithdrawSubmit.addEventListener('click', function () {
+            var addr = withdrawAddress && withdrawAddress.value ? withdrawAddress.value.trim() : '';
+            var qty = parseInt(withdrawQty && withdrawQty.value ? withdrawQty.value : 0, 10) || 0;
+            if (!addr) { alert('지갑 주소를 입력해주세요.'); return; }
+            if (qty <= 0) { alert('수량을 입력해주세요.'); return; }
+            var balance = getCurrentSupportBalance();
+            if (qty > balance) { alert('잔여 보유 토큰보다 많을 수 없습니다.'); return; }
+            if (!window.mypageApi || !window.mypageApi.createTokenWithdrawal) {
+                alert('출금 요청 기능을 사용할 수 없습니다.');
+                return;
+            }
+            window.mypageApi.getCurrentMemberId().then(function (ids) {
+                if (!ids || !ids.docId) { alert('회원 정보를 확인할 수 없습니다.'); return Promise.reject(new Error('회원 정보 없음')); }
+                return window.mypageApi.createTokenWithdrawal(ids.docId, { walletAddress: addr, quantity: qty });
+            }).then(function () {
+                alert('출금 요청이 접수되었습니다. 관리자 확인 후 처리됩니다.');
+                if (withdrawAddress) withdrawAddress.value = '';
+                if (withdrawQty) withdrawQty.value = '';
+                return window.mypageApi.getCurrentMember().then(function (member) {
+                    displayUserInfo(window.mypageApi.getLoginUser(), member, window._mypageOrders || []);
+                });
+            }).catch(function (err) {
+                alert(err && err.message ? err.message : '출금 요청에 실패했습니다.');
+            });
+        });
+    }
 }
 
 // 관심상품/장바구니 개수 - 로그인 시 Firestore에서만 조회
@@ -260,7 +358,7 @@ function renderSupportList() {
     if (!tbody) return;
     var orders = window._mypageOrders || [];
     var list = orders.filter(function (o) { return o.status === 'approved'; });
-    if (summaryEl) summaryEl.textContent = '승인된 주문 기준 쇼핑지원금 내역입니다. (총 ' + list.length + '건, 합계 ' + (list.reduce(function (s, o) { return s + (o.supportAmount || 0); }, 0)).toLocaleString() + '원)';
+    if (summaryEl) summaryEl.textContent = '승인된 주문 기준 쇼핑지원금 내역입니다. (총 ' + list.length + '건, 합계 ' + (list.reduce(function (s, o) { return s + (o.supportAmount || 0); }, 0)).toLocaleString() + ' trix)';
     if (!list.length) {
         tbody.innerHTML = '<tr><td colspan="3" class="empty-message" style="padding: 20px; text-align: center;">내역이 없습니다.</td></tr>';
         return;
@@ -276,7 +374,7 @@ function renderSupportList() {
         var date = formatDate(o.createdAt);
         var name = (o.productName || '-').replace(/</g, '&lt;');
         var support = (o.supportAmount != null ? o.supportAmount : 0).toLocaleString();
-        return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + date + '</td><td style="padding: 10px;">' + name + '</td><td style="padding: 10px; text-align: right;">' + support + '원</td></tr>';
+        return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + date + '</td><td style="padding: 10px;">' + name + '</td><td style="padding: 10px; text-align: right;">' + support + ' trix</td></tr>';
     }).join('');
     tbody.innerHTML = html;
 }
@@ -405,7 +503,7 @@ function renderOrderList(orders) {
         const price = (o.price != null ? o.price : 0).toLocaleString();
         const support = (o.supportAmount != null ? o.supportAmount : 0).toLocaleString();
         const status = statusLabel(o);
-        html += '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + date + '</td><td style="padding: 10px;">' + name + '</td><td style="padding: 10px; text-align: right;">' + price + '원</td><td style="padding: 10px; text-align: right;">' + support + '원</td><td style="padding: 10px; text-align: center;">' + status + '</td></tr>';
+        html += '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + date + '</td><td style="padding: 10px;">' + name + '</td><td style="padding: 10px; text-align: right;">' + price + '원</td><td style="padding: 10px; text-align: right;">' + support + ' trix</td><td style="padding: 10px; text-align: center;">' + status + '</td></tr>';
     });
     tbody.innerHTML = html;
 }
@@ -883,20 +981,17 @@ function bindSectionNav() {
     });
 }
 
-// 섹션 전환 함수 (orders/notice 함께, profile/support/coupons/marketing/address/withdraw 단독 표시)
+// 섹션 전환: 주문/배송조회는 항상 맨 위 표시, 왼쪽 메뉴 선택 시 해당 섹션만 그 아래 표시
 function showSection(sectionName, clickedLink) {
     if (!clickedLink) {
         clickedLink = document.querySelector('.mypage-nav a[data-section="' + sectionName + '"]');
     }
     const sections = document.querySelectorAll('.mypage-section');
-    const soloSections = ['profile', 'support', 'coupons', 'notice', 'events', 'marketing', 'address', 'withdraw', 'faq'];
-    const isSolo = soloSections.indexOf(sectionName) !== -1;
     sections.forEach(function (sec) {
         const dataSection = sec.getAttribute('data-section');
-        let show = false;
-        if (dataSection === sectionName) show = true;
-        else if (!isSolo && (dataSection === 'orders' || dataSection === 'notice')) show = true;
-        sec.style.display = show ? 'block' : 'none';
+        const isOrders = dataSection === 'orders';
+        const isSelected = dataSection === sectionName;
+        sec.style.display = (isOrders || isSelected) ? 'block' : 'none';
     });
     if (sectionName === 'support') renderSupportList();
     if (sectionName === 'coupons') renderLotteryList();

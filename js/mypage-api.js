@@ -251,6 +251,60 @@
         });
     }
 
+    /**
+     * 토큰 입금 신청 (입금완료 버튼) - tokenDeposits 컬렉션에 pending 문서 추가
+     * @param {string} memberId - members 문서 id
+     * @param {{ quantity: number, amount: number }} data
+     * @returns {Promise<string>} 생성된 문서 id
+     */
+    function createTokenDeposit(memberId, data) {
+        if (!memberId || data == null) return Promise.reject(new Error('회원 정보와 입금 정보가 필요합니다.'));
+        return getCurrentMember().then(function (member) {
+            if (!member || member.id !== memberId) return Promise.reject(new Error('본인만 입금 신청할 수 있습니다.'));
+            return getMypageDb().then(function (database) {
+                if (!database) return Promise.reject(new Error('Firestore를 사용할 수 없습니다.'));
+                var payload = {
+                    memberId: memberId,
+                    userId: (member.userId || '').toString(),
+                    userName: (member.name || '').toString(),
+                    quantity: Number(data.quantity) || 0,
+                    amount: Number(data.amount) || 0,
+                    status: 'pending',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                return database.collection('tokenDeposits').add(payload).then(function (ref) { return ref.id; });
+            });
+        });
+    }
+
+    /**
+     * 토큰 출금 요청 - tokenWithdrawals 컬렉션에 pending 문서 추가
+     * @param {string} memberId - members 문서 id
+     * @param {{ walletAddress: string, quantity: number }} data
+     * @returns {Promise<string>} 생성된 문서 id
+     */
+    function createTokenWithdrawal(memberId, data) {
+        if (!memberId || data == null) return Promise.reject(new Error('회원 정보와 출금 정보가 필요합니다.'));
+        return getCurrentMember().then(function (member) {
+            if (!member || member.id !== memberId) return Promise.reject(new Error('본인만 출금 요청할 수 있습니다.'));
+            return getMypageDb().then(function (database) {
+                if (!database) return Promise.reject(new Error('Firestore를 사용할 수 없습니다.'));
+                var payload = {
+                    memberId: memberId,
+                    userId: (member.userId || '').toString(),
+                    userName: (member.name || '').toString(),
+                    walletAddress: (data.walletAddress || '').toString().trim(),
+                    quantity: Number(data.quantity) || 0,
+                    status: 'pending',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                return database.collection('tokenWithdrawals').add(payload).then(function (ref) { return ref.id; });
+            });
+        });
+    }
+
     var mypageApi = {
         getMypageDb: getMypageDb,
         getLoginUser: getLoginUser,
@@ -260,7 +314,9 @@
         getMyLotteryResults: getMyLotteryResults,
         getBoardPosts: getBoardPosts,
         updateMember: updateMember,
-        withdrawMember: withdrawMember
+        withdrawMember: withdrawMember,
+        createTokenDeposit: createTokenDeposit,
+        createTokenWithdrawal: createTokenWithdrawal
     };
 
     if (global.window) {

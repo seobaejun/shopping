@@ -1160,6 +1160,46 @@ img {
     gap: 30px;
 }
 
+/* 메인 상품 페이징 (이미지 스타일: 둥근 버튼, 파란 활성) */
+.main-pagination-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.main-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.main-pagination-btn {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color, #dee2e6);
+    background: var(--bg-white, #fff);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text-color, #333);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.main-pagination-btn:hover:not(:disabled) {
+    background: var(--primary-color, #4A5FC1);
+    border-color: var(--primary-color, #4A5FC1);
+    color: #fff;
+}
+.main-pagination-btn.active {
+    background: var(--primary-color, #4A5FC1);
+    border-color: var(--primary-color, #4A5FC1);
+    color: #fff;
+}
+.main-pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .product-card {
     background: transparent;
     border-radius: 0;

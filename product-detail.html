@@ -120,7 +120,6 @@
                 <div class="product-image-section">
                     <div class="main-image">
                         <img src="https://placehold.co/600x600/E0E0E0/999?text=No+Image" alt="상품 이미지" id="mainImage">
-                        <button class="zoom-btn"><i class="fas fa-search-plus"></i> 확대보기</button>
                     </div>
                 </div>
 
@@ -134,17 +133,11 @@
 
                     <div class="product-support-banner">
                         <i class="fas fa-gift"></i>
-                        <span>쇼핑지원금 <strong id="supportAmount">0원</strong></span>
+                        <span>쇼핑지원금 <strong id="supportAmount">0 trix</strong></span>
                     </div>
 
                     <div class="shipping-info">
                         <span class="free-shipping"><i class="fas fa-truck"></i> 무료배송</span>
-                    </div>
-
-                    <div class="product-info-table">
-                        <table id="productInfoTable">
-                            <!-- JavaScript로 동적 생성 -->
-                        </table>
                     </div>
 
                     <div class="product-stats">
@@ -210,7 +203,7 @@
                     </div>
 
                     <div class="product-specification">
-                        <h2>상품 정보 고시</h2>
+                        <h2>상품 정보</h2>
                         <table class="spec-table" id="productSpecTable">
                             <!-- JavaScript로 동적 생성 -->
                         </table>
@@ -469,6 +462,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="js/firebase-config.js"></script>
+    <script src="js/image-config.js"></script>
     <script src="js/wishlist-cart-firebase.js"></script>
     <script src="js/visitor-logger.js"></script>
     

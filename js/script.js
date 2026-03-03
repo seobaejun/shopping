@@ -6,63 +6,63 @@ const productsData = {
         {
             title: '제주도 노지 조생귤 5kg',
             option: '중과 (S-M)',
-            support: '2,000원',
+            support: '2,000 trix',
             badge: ['hit'],
             image: 'https://placehold.co/300x300/FFA726/FFF?text=제주귤&font=nanum-gothic'
         },
         {
             title: '이앤위즈 원홀 무전원 우드스피커',
             option: '',
-            support: '2,500원',
+            support: '2,500 trix',
             badge: ['hit'],
             image: 'https://placehold.co/300x300/78909C/FFF?text=스피커&font=nanum-gothic'
         },
         {
             title: '시치미쓱 프리미엄 데일리물티슈 100매 * 10팩',
             option: '',
-            support: '3,000원',
+            support: '3,000 trix',
             badge: ['hit'],
             image: 'https://placehold.co/300x300/81C784/FFF?text=물티슈&font=nanum-gothic'
         },
         {
             title: '셀비엔 괄사 마사지 리프팅 앰플 스틱 15ml',
             option: '',
-            support: '3,000원',
+            support: '3,000 trix',
             badge: ['hit'],
             image: 'https://placehold.co/300x300/FF8A80/FFF?text=앰플&font=nanum-gothic'
         },
         {
             title: '셀비엔 블래미쉬 크림 & 블랙스팟 패치 기미세트',
             option: '',
-            support: '5,000원',
+            support: '5,000 trix',
             badge: ['hit', 'popular'],
             image: 'https://placehold.co/300x300/FFB74D/FFF?text=크림세트&font=nanum-gothic'
         },
         {
             title: '감홍사과 산지직송 고당도 문경 꿀사과 가정용 3kg',
             option: '가정용 못난이 / 중과 10-13과',
-            support: '5,000원',
+            support: '5,000 trix',
             badge: ['hit'],
             image: 'https://placehold.co/300x300/EF5350/FFF?text=사과&font=nanum-gothic'
         },
         {
             title: '애견 영양 간식 치킨맛 200g',
             option: '전연령',
-            support: '1,500원',
+            support: '1,500 trix',
             badge: ['hit'],
             image: 'https://placehold.co/300x300/8D6E63/FFF?text=애견간식&font=nanum-gothic'
         },
         {
             title: '롯데 스퀘어 다이얼 에어프라이어 7L 민트',
             option: '',
-            support: '10,000원',
+            support: '10,000 trix',
             badge: ['hit'],
             image: 'https://placehold.co/300x300/4FC3F7/FFF?text=에어프라이어&font=nanum-gothic'
         },
         {
             title: '정관장 홍삼보윤정 데일리스틱 10ml x 30포',
             option: '',
-            support: '8,000원',
+            support: '8,000 trix',
             badge: ['hit'],
             image: 'https://placehold.co/300x300/A1887F/FFF?text=홍삼&font=nanum-gothic'
         }
@@ -71,56 +71,56 @@ const productsData = {
         {
             title: '페티피 드라이룸 강아지집 자동온도조절 난방 살균',
             option: '',
-            support: '20,000원',
+            support: '20,000 trix',
             badge: ['recommend'],
             image: 'https://placehold.co/300x300/BA68C8/FFF?text=강아지집&font=nanum-gothic'
         },
         {
             title: '닥터포밸런스 견활력 애견영양간식',
             option: '30개입',
-            support: '8,000원',
+            support: '8,000 trix',
             badge: ['recommend'],
             image: 'https://placehold.co/300x300/FFD54F/333?text=영양간식&font=nanum-gothic'
         },
         {
             title: '꿈꾸는 미니가습기 화이트 핑크 랜덤',
             option: '화이트 / 핑크 색상 랜덤발송',
-            support: '3,500원',
+            support: '3,500 trix',
             badge: ['recommend'],
             image: 'https://placehold.co/300x300/64B5F6/FFF?text=가습기&font=nanum-gothic'
         },
         {
             title: '극세사 양털 입는 무릎담요 블루',
             option: '',
-            support: '3,500원',
+            support: '3,500 trix',
             badge: ['recommend'],
             image: 'https://placehold.co/300x300/4DB6AC/FFF?text=담요&font=nanum-gothic'
         },
         {
             title: '클립 자바라 스탠드 화이트(전구색)',
             option: '',
-            support: '3,000원',
+            support: '3,000 trix',
             badge: ['recommend'],
             image: 'https://placehold.co/300x300/FFB300/FFF?text=스탠드&font=nanum-gothic'
         },
         {
             title: '닥터유 단백질바 50gx12ea',
             option: '',
-            support: '3,000원',
+            support: '3,000 trix',
             badge: ['recommend'],
             image: 'https://placehold.co/300x300/E91E63/FFF?text=단백질바&font=nanum-gothic'
         },
         {
             title: '키밍 스카치 스포츠 암밴드 그레이',
             option: '',
-            support: '2,500원',
+            support: '2,500 trix',
             badge: ['recommend'],
             image: 'https://placehold.co/300x300/9C27B0/FFF?text=암밴드&font=nanum-gothic'
         },
         {
             title: '넛츠앤 오너 31호 525베리 데일리 하루너츠 선물세트',
             option: '',
-            support: '5,000원',
+            support: '5,000 trix',
             badge: ['recommend'],
             image: 'https://placehold.co/300x300/FF5722/FFF?text=선물세트&font=nanum-gothic'
         }
@@ -129,63 +129,63 @@ const productsData = {
         {
             title: '홈스타일 미니멀 고밀도 러그 카펫 140x200',
             option: '',
-            support: '5,000원',
+            support: '5,000 trix',
             badge: ['new'],
             image: 'https://placehold.co/300x300/8BC34A/FFF?text=러그&font=nanum-gothic'
         },
         {
             title: '쿠션 목베개 인형 옐로우고양이',
             option: '',
-            support: '2,000원',
+            support: '2,000 trix',
             badge: ['new'],
             image: 'https://placehold.co/300x300/CDDC39/333?text=목베개&font=nanum-gothic'
         },
         {
             title: '자이리톨 대추방울토마토 1kg',
             option: '',
-            support: '1,000원',
+            support: '1,000 trix',
             badge: ['new'],
             image: 'https://placehold.co/300x300/FF5252/FFF?text=토마토&font=nanum-gothic'
         },
         {
             title: '네추럴라이즈 간건강 활력 밀크씨슬 800mg x 180정',
             option: '',
-            support: '1,500원',
+            support: '1,500 trix',
             badge: ['new'],
             image: 'https://placehold.co/300x300/4CAF50/FFF?text=밀크씨슬&font=nanum-gothic'
         },
         {
             title: '네추럴라이즈 비타민C & 아연 꾸미 150g',
             option: '',
-            support: '3,000원',
+            support: '3,000 trix',
             badge: ['new'],
             image: 'https://placehold.co/300x300/FFC107/333?text=비타민C&font=nanum-gothic'
         },
         {
             title: '네추럴라이즈 칼슘 & 비타민D 꾸미 150g',
             option: '',
-            support: '2,000원',
+            support: '2,000 trix',
             badge: ['new'],
             image: 'https://placehold.co/300x300/FF9800/FFF?text=칼슘&font=nanum-gothic'
         },
         {
             title: '네추럴라이즈 멀티비타민 꾸미 150g',
             option: '',
-            support: '2,500원',
+            support: '2,500 trix',
             badge: ['new'],
             image: 'https://placehold.co/300x300/FF6F00/FFF?text=멀티비타민&font=nanum-gothic'
         },
         {
             title: '뮤토 소프트 자카드 블랭킷',
             option: '',
-            support: '3,000원',
+            support: '3,000 trix',
             badge: ['new'],
             image: 'https://placehold.co/300x300/42A5F5/FFF?text=블랭킷&font=nanum-gothic'
         },
         {
             title: '[타가] 아토 크림밤 50ml',
             option: '',
-            support: '3,000원',
+            support: '3,000 trix',
             badge: ['new'],
             image: 'https://placehold.co/300x300/26C6DA/FFF?text=크림밤&font=nanum-gothic'
         }
@@ -194,56 +194,56 @@ const productsData = {
         {
             title: '더담은 일키로 오리윙 1kg',
             option: '',
-            support: '2,000원',
+            support: '2,000 trix',
             badge: ['popular'],
             image: 'https://placehold.co/300x300/AB47BC/FFF?text=오리윙&font=nanum-gothic'
         },
         {
             title: '더담은 일키로 고구마치킨 1kg',
             option: '',
-            support: '2,000원',
+            support: '2,000 trix',
             badge: ['popular'],
             image: 'https://placehold.co/300x300/8E24AA/FFF?text=고구마치킨&font=nanum-gothic'
         },
         {
             title: '1000피스 직소퍼즐 모네의 정원',
             option: '',
-            support: '3,000원',
+            support: '3,000 trix',
             badge: ['popular'],
             image: 'https://placehold.co/300x300/7E57C2/FFF?text=퍼즐&font=nanum-gothic'
         },
         {
             title: '셀비엔 블래미쉬 크림 & 블랙스팟 패치 기미세트',
             option: '',
-            support: '5,000원',
+            support: '5,000 trix',
             badge: ['hit', 'popular'],
             image: 'https://placehold.co/300x300/FFB74D/FFF?text=크림세트&font=nanum-gothic'
         },
         {
             title: '독스플레이 펫TV 펫캠',
             option: '',
-            support: '100,000원',
+            support: '100,000 trix',
             badge: ['popular'],
             image: 'https://placehold.co/300x300/5C6BC0/FFF?text=펫캠&font=nanum-gothic'
         },
         {
             title: '정관장 홍삼본정 데일리스틱 10ml x 30포 + 쇼핑백',
             option: '',
-            support: '6,000원',
+            support: '6,000 trix',
             badge: ['popular'],
             image: 'https://placehold.co/300x300/8D6E63/FFF?text=홍삼본정&font=nanum-gothic'
         },
         {
             title: '포천이동갈비 1.1kg 꽃갈비 (6대)',
             option: '',
-            support: '5,000원',
+            support: '5,000 trix',
             badge: ['recommend', 'popular'],
             image: 'https://placehold.co/300x300/D32F2F/FFF?text=갈비&font=nanum-gothic'
         },
         {
             title: '과일 큐브 치즈 8가지맛 24구 80g x 2ea',
             option: '',
-            support: '2,000원',
+            support: '2,000 trix',
             badge: ['recommend', 'popular'],
             image: 'https://placehold.co/300x300/FDD835/333?text=치즈&font=nanum-gothic'
         }
@@ -323,15 +323,69 @@ function createProductCard(product, index, type) {
     `;
 }
 
-// 상품 목록 렌더링
+// 메인 상품 페이징: 15줄 = 1페이지 (1줄 = 그리드 열 개수만큼 상품)
+const MAIN_ROWS_PER_PAGE = 15;
+const MAIN_GRID_COLUMNS = 4;
+const MAIN_ITEMS_PER_PAGE = MAIN_ROWS_PER_PAGE * MAIN_GRID_COLUMNS;
+let mainProductCurrentPage = 1;
+const MAIN_PAGINATION_VISIBLE = 9;
+const MAIN_PAGINATION_SKIP = 10;
+
 function renderProducts() {
     const grid = document.getElementById('mainProductGrid');
     if (!grid) return;
     var list = (productsData.all && productsData.all.length) ? productsData.all : [];
-    grid.innerHTML = list.map(function (product, index) {
-        return createProductCard(product, index, '');
+    var totalPages = Math.max(1, Math.ceil(list.length / MAIN_ITEMS_PER_PAGE));
+    if (mainProductCurrentPage > totalPages) mainProductCurrentPage = totalPages;
+    var start = (mainProductCurrentPage - 1) * MAIN_ITEMS_PER_PAGE;
+    var slice = list.slice(start, start + MAIN_ITEMS_PER_PAGE);
+    grid.innerHTML = slice.map(function (product, index) {
+        return createProductCard(product, start + index, '');
     }).join('');
     updateProductRatings();
+    renderMainPagination(list.length);
+}
+
+function renderMainPagination(totalItems) {
+    var wrap = document.getElementById('mainProductPaginationWrap');
+    var container = document.getElementById('mainProductPagination');
+    if (!wrap || !container) return;
+    var totalPages = Math.max(1, Math.ceil(totalItems / MAIN_ITEMS_PER_PAGE));
+    if (totalPages <= 1) {
+        wrap.style.display = 'none';
+        return;
+    }
+    wrap.style.display = 'block';
+    var cur = mainProductCurrentPage;
+    var half = Math.floor(MAIN_PAGINATION_VISIBLE / 2);
+    var start = Math.max(1, cur - half);
+    var end = Math.min(totalPages, start + MAIN_PAGINATION_VISIBLE - 1);
+    if (end - start + 1 < MAIN_PAGINATION_VISIBLE) start = Math.max(1, end - MAIN_PAGINATION_VISIBLE + 1);
+    var html = '';
+    html += '<button type="button" class="main-pagination-btn main-pagination-skip-prev" ' + (cur <= MAIN_PAGINATION_SKIP ? 'disabled' : '') + ' title="10페이지 이전">&lt;&lt;</button>';
+    html += '<button type="button" class="main-pagination-btn main-pagination-prev" ' + (cur <= 1 ? 'disabled' : '') + ' title="이전">&lt;</button>';
+    if (start > 1) html += '<button type="button" class="main-pagination-btn" disabled>...</button>';
+    for (var p = start; p <= end; p++) {
+        html += '<button type="button" class="main-pagination-btn' + (p === cur ? ' active' : '') + '" data-page="' + p + '">' + p + '</button>';
+    }
+    if (end < totalPages) html += '<button type="button" class="main-pagination-btn" disabled>...</button>';
+    html += '<button type="button" class="main-pagination-btn main-pagination-next" ' + (cur >= totalPages ? 'disabled' : '') + ' title="다음">&gt;</button>';
+    html += '<button type="button" class="main-pagination-btn main-pagination-skip-next" ' + (cur + MAIN_PAGINATION_SKIP > totalPages ? 'disabled' : '') + ' title="10페이지 다음">&gt;&gt;</button>';
+    container.innerHTML = html;
+    container.onclick = function (e) {
+        var btn = e.target.closest('.main-pagination-btn');
+        if (!btn || btn.disabled) return;
+        var totalPages = Math.max(1, Math.ceil((productsData.all || []).length / MAIN_ITEMS_PER_PAGE));
+        if (btn.classList.contains('main-pagination-skip-prev')) { mainProductCurrentPage = Math.max(1, mainProductCurrentPage - MAIN_PAGINATION_SKIP); }
+        else if (btn.classList.contains('main-pagination-prev')) { mainProductCurrentPage = Math.max(1, mainProductCurrentPage - 1); }
+        else if (btn.classList.contains('main-pagination-next')) { mainProductCurrentPage = Math.min(totalPages, mainProductCurrentPage + 1); }
+        else if (btn.classList.contains('main-pagination-skip-next')) { mainProductCurrentPage = Math.min(totalPages, mainProductCurrentPage + MAIN_PAGINATION_SKIP); }
+        else if (btn.dataset.page) { mainProductCurrentPage = parseInt(btn.dataset.page, 10); }
+        else return;
+        renderProducts();
+        var el = document.getElementById('main-products');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 }
 
 // 상품 평점 업데이트 함수
@@ -716,9 +770,9 @@ async function loadProductsFromFirestore() {
                 title: product.name,
                 option: product.shortDesc || '',
                 price: product.price || 0,
-                support: ((product.price || 0) * ((product.supportRate || 5) / 100)).toLocaleString() + '원',
+                support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : (((product.price || 0) * ((product.supportRate || 5) / 100)).toLocaleString() + ' trix'),
                 badge: Array.isArray(product.displayCategory) ? product.displayCategory : [],
-                image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image'
+                image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image'
             });
         });
         productsData.all = allList;

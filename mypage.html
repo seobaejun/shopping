@@ -58,9 +58,9 @@
                 <h2>마이페이지 ✨</h2>
             </div>
 
-            <!-- 쇼핑지원금 안내 배너 -->
+            <!-- 토큰 안내 배너 -->
             <div class="support-notice">
-                쇼핑지원금은 당일 입금 됩니다.
+                보유 토큰은 trix 단위로 표시됩니다.
             </div>
 
             <div class="mypage-wrapper">
@@ -91,16 +91,14 @@
                         </div>
                     </div>
 
-                    <!-- 쇼핑지원금 정보 -->
+                    <!-- 보유 토큰 정보 -->
                     <div class="support-info-section">
+                        <button type="button" class="btn-token-action" id="btnTokenPurchase">토큰 구매하기</button>
                         <div class="support-row">
-                            <span>쇼핑지원금</span>
-                            <strong id="currentSupport">0원</strong>
+                            <span>보유 토큰</span>
+                            <strong id="currentSupport">0 trix</strong>
                         </div>
-                        <div class="support-row">
-                            <span>누적 쇼핑지원금</span>
-                            <strong id="totalSupport">0원</strong>
-                        </div>
+                        <button type="button" class="btn-token-action" id="btnTokenWithdraw">토큰 출금하기</button>
                     </div>
 
                     <!-- 네비게이션 메뉴 -->
@@ -190,7 +188,7 @@
                                         <th style="padding: 10px; text-align: left;">주문일</th>
                                         <th style="padding: 10px; text-align: left;">상품명</th>
                                         <th style="padding: 10px; text-align: right;">금액</th>
-                                        <th style="padding: 10px; text-align: right;">지원금</th>
+                                        <th style="padding: 10px; text-align: right;">지원금 (trix)</th>
                                         <th style="padding: 10px; text-align: center;">상태</th>
                                     </tr>
                                 </thead>
@@ -198,6 +196,47 @@
                                     <tr><td colspan="5" class="empty-message" style="padding: 20px; text-align: center;">주문 내역이 없습니다.</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- 토큰 구매하기 (주문/배송조회 밑) -->
+                    <div class="content-section mypage-section token-section" data-section="token-purchase" id="mypageSectionTokenPurchase" style="display: none;">
+                        <div class="section-title">
+                            <h3><i class="fas fa-coins"></i> 토큰 구매하기</h3>
+                        </div>
+                        <div class="token-panel token-purchase-panel">
+                            <p class="token-desc">구매할 토큰 수량을 입력한 뒤 입금 후 <strong>입금완료</strong> 버튼을 눌러 주세요. 관리자 확인 후 보유 토큰에 반영됩니다.</p>
+                            <div class="token-form-group">
+                                <label for="tokenPurchaseQty">수량 (trix)</label>
+                                <input type="number" id="tokenPurchaseQty" placeholder="수량" min="1" class="form-control token-input">
+                            </div>
+                            <div class="token-form-group">
+                                <label>결제 금액</label>
+                                <input type="text" id="tokenPurchaseAmount" placeholder="금액" class="form-control token-input" readonly>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-token-submit" id="btnTokenPurchaseComplete"><i class="fas fa-check-circle"></i> 입금완료</button>
+                        </div>
+                    </div>
+                    <!-- 토큰 출금하기 (주문/배송조회 밑) -->
+                    <div class="content-section mypage-section token-section" data-section="token-withdraw" id="mypageSectionTokenWithdraw" style="display: none;">
+                        <div class="section-title">
+                            <h3><i class="fas fa-wallet"></i> 토큰 출금하기</h3>
+                        </div>
+                        <div class="token-panel token-withdraw-panel">
+                            <p class="token-desc">출금할 지갑 주소와 수량을 입력 후 <strong>출금 요청</strong>을 눌러 주세요. 관리자 확인 후 처리됩니다.</p>
+                            <div class="token-form-group">
+                                <label for="tokenWithdrawAddress">지갑 주소</label>
+                                <input type="text" id="tokenWithdrawAddress" placeholder="지갑 주소 입력" class="form-control token-input">
+                            </div>
+                            <div class="token-form-group">
+                                <label for="tokenWithdrawQty">출금 수량 (trix)</label>
+                                <input type="number" id="tokenWithdrawQty" placeholder="수량" min="1" class="form-control token-input">
+                            </div>
+                            <div class="token-form-group token-balance-row">
+                                <span class="token-balance-label">보유 토큰</span>
+                                <span id="tokenWithdrawBalance" class="token-balance">0 trix</span>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-token-submit" id="btnTokenWithdrawSubmit"><i class="fas fa-paper-plane"></i> 출금 요청</button>
                         </div>
                     </div>
 
@@ -417,8 +456,8 @@
                         </div>
                     </div>
 
-                    <!-- 공지사항 -->
-                    <div class="content-section mypage-section" data-section="notice" id="mypageSectionNotice">
+                    <!-- 공지사항 (선택 시에만 표시) -->
+                    <div class="content-section mypage-section" data-section="notice" id="mypageSectionNotice" style="display: none;">
                         <div class="section-title">
                             <h3>공지사항</h3>
                             <a href="#" class="link-more">전체보기</a>

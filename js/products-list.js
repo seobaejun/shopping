@@ -32,7 +32,9 @@ const PAGE_CONFIG = {
 let currentType = 'hit';
 let currentCategory = null; // 카테고리 ID
 let currentPage = 1;
-let itemsPerPage = 12;
+const ROWS_PER_PAGE = 15;
+const GRID_COLUMNS = 4;
+let itemsPerPage = ROWS_PER_PAGE * GRID_COLUMNS;
 let currentProducts = [];
 let currentSort = 'recent';
 
@@ -449,9 +451,9 @@ async function loadProducts() {
                             id: product.id,
                             title: product.name,
                             option: product.shortDesc || '',
-                            support: `${(product.price * (product.supportRate || 5) / 100).toLocaleString()}원`,
+                            support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : `${(product.price * (product.supportRate || 5) / 100).toLocaleString()} trix`,
                             rating: 0,
-                            image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                            image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
                             description: product.description || product.shortDesc || ''
                         });
                     });
@@ -463,9 +465,9 @@ async function loadProducts() {
                             id: product.id,
                             title: product.name,
                             option: product.shortDesc || '',
-                            support: `${(product.price * (product.supportRate || 5) / 100).toLocaleString()}원`,
+                            support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : `${(product.price * (product.supportRate || 5) / 100).toLocaleString()} trix`,
                             rating: 0,
-                            image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                            image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
                             description: product.description || product.shortDesc || ''
                         });
                     });
@@ -556,8 +558,7 @@ function renderProducts() {
         showEmptyState();
         return;
     }
-    
-    // 페이지네이션 적용
+    itemsPerPage = getItemsPerPageForView();
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const pageProducts = currentProducts.slice(startIndex, endIndex);
@@ -660,8 +661,18 @@ function showEmptyState() {
     `;
 }
 
-// 페이지네이션 업데이트
+const PAGINATION_VISIBLE = 9;
+const PAGINATION_SKIP = 10;
+
+function getItemsPerPageForView() {
+    const grid = listElements.productGrid;
+    if (!grid) return ROWS_PER_PAGE * GRID_COLUMNS;
+    return grid.classList.contains('list-view') ? ROWS_PER_PAGE : ROWS_PER_PAGE * GRID_COLUMNS;
+}
+
+// 페이지네이션 업데이트 (<< = 10페이지 이전, < = 1페이지 이전, > = 1페이지 다음, >> = 10페이지 다음)
 function updatePagination() {
+    itemsPerPage = getItemsPerPageForView();
     const totalPages = Math.ceil(currentProducts.length / itemsPerPage);
     
     if (totalPages <= 1) {
@@ -671,32 +682,24 @@ function updatePagination() {
     
     listElements.pagination.style.display = 'flex';
     
-    // 페이지 번호 생성
+    const cur = currentPage;
+    const half = Math.floor(PAGINATION_VISIBLE / 2);
+    let startPage = Math.max(1, cur - half);
+    let endPage = Math.min(totalPages, startPage + PAGINATION_VISIBLE - 1);
+    if (endPage - startPage + 1 < PAGINATION_VISIBLE) startPage = Math.max(1, endPage - PAGINATION_VISIBLE + 1);
+    
     let pageNumbersHtml = '';
-    const maxVisible = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-    
-    if (endPage - startPage < maxVisible - 1) {
-        startPage = Math.max(1, endPage - maxVisible + 1);
-    }
-    
+    pageNumbersHtml += `<button type="button" class="page-btn skip-prev" title="10페이지 이전" ${cur <= PAGINATION_SKIP ? 'disabled' : ''}>&lt;&lt;</button>`;
+    pageNumbersHtml += `<button type="button" class="page-btn prev" title="이전" ${cur <= 1 ? 'disabled' : ''}>&lt;</button>`;
+    if (startPage > 1) pageNumbersHtml += `<button type="button" class="page-btn" disabled>...</button>`;
     for (let i = startPage; i <= endPage; i++) {
-        pageNumbersHtml += `
-            <button class="page-num ${i === currentPage ? 'active' : ''}" data-page="${i}">
-                ${i}
-            </button>
-        `;
+        pageNumbersHtml += `<button type="button" class="page-num ${i === cur ? 'active' : ''}" data-page="${i}">${i}</button>`;
     }
+    if (endPage < totalPages) pageNumbersHtml += `<button type="button" class="page-btn" disabled>...</button>`;
+    pageNumbersHtml += `<button type="button" class="page-btn next" title="다음" ${cur >= totalPages ? 'disabled' : ''}>&gt;</button>`;
+    pageNumbersHtml += `<button type="button" class="page-btn skip-next" title="10페이지 다음" ${cur + PAGINATION_SKIP > totalPages ? 'disabled' : ''}>&gt;&gt;</button>`;
     
     listElements.pageNumbers.innerHTML = pageNumbersHtml;
-    
-    // 이전/다음 버튼 상태
-    const prevBtn = listElements.pagination.querySelector('.prev');
-    const nextBtn = listElements.pagination.querySelector('.next');
-    
-    prevBtn.disabled = currentPage === 1;
-    nextBtn.disabled = currentPage === totalPages;
 }
 
 // 이벤트 리스너 초기화
@@ -708,43 +711,34 @@ function initEventListeners() {
         loadProducts();
     });
     
-    // 보기 타입 변경
+    // 보기 타입 변경 (15줄 = 1페이지이므로 리스트는 15개, 그리드는 15*4=60개)
     listElements.viewBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const viewType = btn.dataset.view;
-            
-            // 활성 상태 변경
             listElements.viewBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
-            // 그리드 클래스 변경
             listElements.productGrid.className = `product-grid ${viewType}-view`;
+            currentPage = 1;
+            renderProducts();
+            updatePagination();
         });
     });
     
-    // 페이지네이션
+    // 페이지네이션 (위임): << 10페이지 이전, < 이전, > 다음, >> 10페이지 다음
     listElements.pagination.addEventListener('click', (e) => {
-        if (e.target.classList.contains('page-num')) {
-            currentPage = parseInt(e.target.dataset.page);
-            renderProducts();
-            updatePagination();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else if (e.target.closest('.prev')) {
-            if (currentPage > 1) {
-                currentPage--;
-                renderProducts();
-                updatePagination();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        } else if (e.target.closest('.next')) {
-            const totalPages = Math.ceil(currentProducts.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderProducts();
-                updatePagination();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        }
+        const btn = e.target.closest('button');
+        if (!btn || btn.disabled) return;
+        itemsPerPage = getItemsPerPageForView();
+        const totalPages = Math.ceil(currentProducts.length / itemsPerPage);
+        if (btn.classList.contains('skip-prev')) currentPage = Math.max(1, currentPage - PAGINATION_SKIP);
+        else if (btn.classList.contains('prev')) currentPage = Math.max(1, currentPage - 1);
+        else if (btn.classList.contains('next')) currentPage = Math.min(totalPages, currentPage + 1);
+        else if (btn.classList.contains('skip-next')) currentPage = Math.min(totalPages, currentPage + PAGINATION_SKIP);
+        else if (btn.classList.contains('page-num') && btn.dataset.page) currentPage = parseInt(btn.dataset.page, 10);
+        else return;
+        renderProducts();
+        updatePagination();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
     
     // 인기 검색어 토글

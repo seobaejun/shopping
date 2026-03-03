@@ -63,20 +63,55 @@ async function loadCategoriesForProduct() {
         
         console.log('✅ 상품용 카테고리 로드 완료:', categories.length, '개 (표시:', visibleCategories.length, '개)');
         
-        // 상품수정 모달의 카테고리 select 업데이트
-        const editCategorySelect = document.getElementById('editProductCategory');
-        if (editCategorySelect) {
-            editCategorySelect.innerHTML = '<option value="">선택하세요</option>';
-            visibleCategories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.id;
-                const levelLabel = cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차';
-                option.textContent = `${levelLabel} - ${cat.name || cat.id}`;
-                editCategorySelect.appendChild(option);
+        // 상품수정 모달: 1차/2차/3차 연쇄 선택
+        const editCat1 = document.getElementById('editProductCategory1');
+        const editCat2 = document.getElementById('editProductCategory2');
+        const editCat3 = document.getElementById('editProductCategory3');
+        if (editCat1 && editCat2 && editCat3) {
+            const level1Edit = visibleCategories.filter(c => c.level === 1 && !c.parentId);
+            editCat1.innerHTML = '<option value="">선택하세요</option>';
+            level1Edit.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name || c.id;
+                editCat1.appendChild(opt);
             });
-            console.log('✅ 상품수정 카테고리 select 업데이트 완료');
+            editCat2.innerHTML = '<option value="">선택하세요</option>';
+            editCat3.innerHTML = '<option value="">선택하세요</option>';
+            function fillEditCategory2() {
+                const v1 = editCat1.value;
+                editCat2.innerHTML = '<option value="">선택하세요</option>';
+                editCat3.innerHTML = '<option value="">선택하세요</option>';
+                if (!v1) return;
+                visibleCategories.filter(c => c.level === 2 && c.parentId === v1).forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name || c.id;
+                    editCat2.appendChild(opt);
+                });
+            }
+            function fillEditCategory3() {
+                const v2 = editCat2.value;
+                editCat3.innerHTML = '<option value="">선택하세요</option>';
+                if (!v2) return;
+                visibleCategories.filter(c => c.level === 3 && c.parentId === v2).forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name || c.id;
+                    editCat3.appendChild(opt);
+                });
+            }
+            editCat1.removeEventListener('change', fillEditCategory2);
+            editCat1.addEventListener('change', fillEditCategory2);
+            editCat2.removeEventListener('change', fillEditCategory3);
+            editCat2.addEventListener('change', fillEditCategory3);
+            window.__fillEditCategory2 = fillEditCategory2;
+            window.__fillEditCategory3 = fillEditCategory3;
+            console.log('✅ 상품수정 카테고리 1/2/3차 select 업데이트 완료');
         }
-        
+
+        window.__productCategoriesList = categories;
+
         // 상품 목록 검색용 카테고리 select 업데이트
         const searchCategorySelect = document.getElementById('productSearchCategory');
         if (searchCategorySelect) {
@@ -110,23 +145,86 @@ async function loadCategoriesForProduct() {
             }
         }
         
-        // 상품 등록 페이지 카테고리 select
-        const registerCategorySelect = document.getElementById('productRegisterCategory');
-        if (registerCategorySelect) {
-            registerCategorySelect.innerHTML = '<option value="">선택하세요</option>';
-            visibleCategories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.id;
-                const levelLabel = cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차';
-                option.textContent = `${levelLabel} - ${cat.name || cat.id}`;
-                registerCategorySelect.appendChild(option);
+        // 상품 등록 페이지: 1차/2차/3차 연쇄 선택
+        const cat1Select = document.getElementById('productRegisterCategory1');
+        const cat2Select = document.getElementById('productRegisterCategory2');
+        const cat3Select = document.getElementById('productRegisterCategory3');
+        if (cat1Select && cat2Select && cat3Select) {
+            const level1 = visibleCategories.filter(c => c.level === 1 && !c.parentId);
+            cat1Select.innerHTML = '<option value="">선택하세요</option>';
+            level1.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name || c.id;
+                cat1Select.appendChild(opt);
             });
+            cat2Select.innerHTML = '<option value="">선택하세요</option>';
+            cat3Select.innerHTML = '<option value="">선택하세요</option>';
+            function fillCategory2() {
+                const v1 = cat1Select.value;
+                cat2Select.innerHTML = '<option value="">선택하세요</option>';
+                cat3Select.innerHTML = '<option value="">선택하세요</option>';
+                if (!v1) return;
+                const level2 = visibleCategories.filter(c => c.level === 2 && c.parentId === v1);
+                level2.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name || c.id;
+                    cat2Select.appendChild(opt);
+                });
+            }
+            function fillCategory3() {
+                const v2 = cat2Select.value;
+                cat3Select.innerHTML = '<option value="">선택하세요</option>';
+                if (!v2) return;
+                const level3 = visibleCategories.filter(c => c.level === 3 && c.parentId === v2);
+                level3.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name || c.id;
+                    cat3Select.appendChild(opt);
+                });
+            }
+            cat1Select.removeEventListener('change', fillCategory2);
+            cat1Select.addEventListener('change', fillCategory2);
+            cat2Select.removeEventListener('change', fillCategory3);
+            cat2Select.addEventListener('change', fillCategory3);
         }
-        
+
         return categories;
     } catch (error) {
         console.error('❌ 카테고리 로드 오류:', error);
         return [];
+    }
+}
+
+// 상품 설명(글) 리치 에디터 초기화 (Quill)
+function initProductDescriptionEditor() {
+    if (window.productDescriptionQuill || !document.getElementById('productDescriptionEditor')) return;
+    if (typeof Quill === 'undefined') return;
+    const editorEl = document.getElementById('productDescriptionEditor');
+    if (!editorEl) return;
+    window.productDescriptionQuill = new Quill(editorEl, {
+        theme: 'snow',
+        placeholder: '상품 설명을 입력하세요. 비우면 상세 이미지만 표시됩니다.',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }, 'link', 'image'],
+                ['clean']
+            ]
+        }
+    });
+    console.log('✅ 상품 설명(글) 에디터 초기화 완료');
+}
+function syncProductDescriptionEditorToInput() {
+    const input = document.getElementById('productDescriptionHtmlInput');
+    if (!input) return;
+    if (window.productDescriptionQuill) {
+        input.value = window.productDescriptionQuill.root.innerHTML;
     }
 }
 
@@ -168,7 +266,9 @@ async function switchToPage(targetPage, clickedLink = null) {
     if (targetElement) {
         targetElement.classList.add('active');
         console.log('페이지 활성화:', targetPage);
-        
+        if (targetPage === 'product-register') {
+            setTimeout(initProductDescriptionEditor, 100);
+        }
         // 페이지별 데이터 로드
         try {
             await loadPageData(targetPage);
@@ -294,6 +394,11 @@ async function loadPageData(pageId) {
                 await loadBoardPosts(window._currentBoardType);
             }
             break;
+        case 'token-manage':
+            if (typeof window.loadTokenManagePage === 'function') {
+                await window.loadTokenManagePage();
+            }
+            break;
         case 'member-search':
             // 회원조회 페이지 로드 (기본환경설정과 동일한 패턴)
             console.log('🔵🔵🔵 회원조회 페이지 로드 시작 (loadPageData)');
@@ -345,6 +450,7 @@ async function loadPageData(pageId) {
             try {
                 await loadCategoriesForProduct();
                 if (typeof initProductOptionButtons === 'function') initProductOptionButtons();
+                if (typeof window.initBulkProductUpload === 'function') window.initBulkProductUpload();
             } catch (error) {
                 console.error('❌ 상품 등록 페이지 로드 오류:', error);
             }
@@ -2526,8 +2632,10 @@ async function resetProductSearch() {
 async function renderProductTable(data) {
     const tbody = document.getElementById('productListBody');
     const countEl = document.getElementById('productCount');
-    
     if (!tbody) return;
+    if (window.allProductsData && Array.isArray(window.allProductsData) && document.getElementById('productListPagination')) {
+        return;
+    }
 
     if (countEl) {
         countEl.textContent = data.length;
@@ -2611,7 +2719,11 @@ async function deleteProduct(productId) {
         try {
             await window.firebaseAdmin.productService.deleteProduct(productId);
             alert('삭제되었습니다.');
-            searchProducts();
+            if (typeof window.loadAllProducts === 'function') {
+                await window.loadAllProducts();
+            } else {
+                searchProducts();
+            }
         } catch (error) {
             console.error('상품 삭제 오류:', error);
             alert('상품 삭제 중 오류가 발생했습니다.');
@@ -2624,6 +2736,18 @@ async function deleteProduct(productId) {
 // ============================================
 // 상세 설명 항목 추가/삭제 함수
 let detailRowCounter = 0;
+function initDetailRowCounter() {
+    const container = document.getElementById('detailRowsContainer');
+    if (container) {
+        const rows = container.querySelectorAll('.detail-row');
+        detailRowCounter = rows.length;
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDetailRowCounter);
+} else {
+    initDetailRowCounter();
+}
 
 function addDetailRow() {
     detailRowCounter++;
@@ -2632,13 +2756,9 @@ function addDetailRow() {
     newRow.className = 'detail-row';
     newRow.setAttribute('data-row-id', detailRowCounter);
     newRow.innerHTML = `
-        <div class="detail-row-inputs">
-            <div class="form-group" style="flex: 1; margin: 0;">
-                <input type="text" class="form-control" name="detailTitle[]" placeholder="항목명 (예: 표장단위별 용량)">
-            </div>
-            <div class="form-group" style="flex: 1; margin: 0;">
-                <input type="text" class="form-control" name="detailContent[]" placeholder="내용 (예: 5KG)">
-            </div>
+        <div class="detail-row-inputs" style="display: flex; gap: 10px; margin-bottom: 8px; align-items: center;">
+            <input type="text" class="form-control" name="detailTitle[]" placeholder="항목명">
+            <input type="text" class="form-control" name="detailContent[]" placeholder="내용" value="상품페이지 참고">
             <button type="button" class="btn btn-sm btn-danger" onclick="removeDetailRow(${detailRowCounter})" style="flex-shrink: 0;">
                 <i class="fas fa-minus"></i>
             </button>
@@ -2790,6 +2910,7 @@ function fileToBase64(file) {
 
 async function registerProduct(event) {
     event.preventDefault();
+    syncProductDescriptionEditorToInput();
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData);
     
@@ -2808,16 +2929,45 @@ async function registerProduct(event) {
             }
         }
         
-        // 대표 이미지 처리
+        // 대표 이미지: URL 입력 우선, 없으면 파일 업로드
+        const mainImageUrlInput = document.getElementById('mainImageUrlInput');
+        const mainImageUrlVal = mainImageUrlInput && mainImageUrlInput.value ? mainImageUrlInput.value.trim() : '';
+        function toAbsoluteImageUrl(val) {
+            if (!val || typeof val !== 'string') return '';
+            var v = val.trim();
+            if (!v) return '';
+            if (/^https?:\/\//i.test(v)) return v;
+            if (/^data:/.test(v)) return v;
+            var base = typeof window !== 'undefined' && window.IMAGE_BASE_URL && String(window.IMAGE_BASE_URL).trim();
+            if (base && v.charAt(0) === '/') return base.replace(/\/$/, '') + v;
+            if (typeof window !== 'undefined' && window.location) {
+                var origin = window.location.origin || '';
+                var pathname = window.location.pathname || '';
+                var basePath = pathname.indexOf('/admin') !== -1 ? pathname.split('/admin')[0] : '';
+                var prefix = basePath.slice(-1) === '/' ? basePath : basePath + '/';
+                return origin + prefix + (v.charAt(0) === '/' ? v.slice(1) : v);
+            }
+            return v.charAt(0) === '/' ? v : '/' + v;
+        }
         const mainImageFile = formData.get('mainImage');
         let mainImageUrl = '';
-        if (mainImageFile && mainImageFile.size > 0) {
+        if (mainImageUrlVal) {
+            mainImageUrl = toAbsoluteImageUrl(mainImageUrlVal);
+        } else if (mainImageFile && mainImageFile.size > 0) {
             mainImageUrl = await fileToBase64(mainImageFile);
         }
         
-        // 상세 이미지 처리 (개별 + 대량 업로드)
-        const detailImageFiles = formData.getAll('detailImages[]');
+        // 상세 이미지: URL 입력 + 파일 업로드
+        const detailImageUrlsInput = document.getElementById('detailImageUrlsInput');
+        const detailImageUrlsRaw = detailImageUrlsInput && detailImageUrlsInput.value ? detailImageUrlsInput.value.trim() : '';
         const detailImageUrls = [];
+        if (detailImageUrlsRaw) {
+            detailImageUrlsRaw.split(/[\s,;|\n]+/).forEach(function (s) {
+                var u = s.trim();
+                if (u) detailImageUrls.push(toAbsoluteImageUrl(u));
+            });
+        }
+        const detailImageFiles = formData.getAll('detailImages[]');
         for (const file of detailImageFiles) {
             if (file && file.size > 0) {
                 const base64 = await fileToBase64(file);
@@ -2850,24 +3000,33 @@ async function registerProduct(event) {
             }
         }
         
+        // 카테고리: 3차 || 2차 || 1차 (선택된 가장 하위)
+        const cat1 = document.getElementById('productRegisterCategory1');
+        const cat2 = document.getElementById('productRegisterCategory2');
+        const cat3 = document.getElementById('productRegisterCategory3');
+        const category = (cat3 && cat3.value) || (cat2 && cat2.value) || (cat1 && cat1.value) || data.category || '';
+        const hiddenCat = document.getElementById('productRegisterCategoryHidden');
+        if (hiddenCat) hiddenCat.value = category;
+
         // 숫자 필드 변환
         const productData = {
             name: data.productName,
-            category: data.category,
+            category: category,
             price: parseInt(data.salePrice) || 0,
             options: options,
             stock: parseInt(data.stock) || 0,
             status: data.status || 'sale',
             description: data.description || '',
-            details: details, // 상세 설명 항목 추가
-            mainImageUrl: mainImageUrl, // 대표 이미지
-            detailImageUrls: detailImageUrls, // 상세 이미지들
-            imageUrl: mainImageUrl, // 하위 호환성
-            brand: data.brand || '',
+            descriptionHtml: (data.descriptionHtml != null && String(data.descriptionHtml).trim()) ? String(data.descriptionHtml).trim() : '',
+            details: details,
+            mainImageUrl: mainImageUrl,
+            detailImageUrls: detailImageUrls,
+            imageUrl: mainImageUrl,
+            manufacturer: (data.manufacturer != null && String(data.manufacturer).trim()) ? String(data.manufacturer).trim() : '',
             shortDesc: data.shortDesc || '',
             originalPrice: parseInt(data.originalPrice) || 0,
             discountRate: parseInt(data.discountRate) || 0,
-            supportRate: parseInt(data.supportRate) || 5,
+            supportAmount: parseInt(data.supportAmount, 10) || 0,
             minOrder: parseInt(data.minOrder) || 1,
             maxOrder: parseInt(data.maxOrder) || 10,
             deliveryFee: parseInt(data.deliveryFee) || 0,
@@ -2886,12 +3045,16 @@ async function registerProduct(event) {
         // 폼 초기화
         event.target.reset();
         
-        // 이미지 미리보기 초기화
+        // 이미지 미리보기·URL 입력 초기화
         document.getElementById('mainImagePreview').innerHTML = `
             <i class="fas fa-cloud-upload-alt fa-3x"></i>
             <p>클릭하여 이미지 업로드</p>
             <small>권장 크기: 600x600px (JPG, PNG)</small>
         `;
+        var mainUrlEl = document.getElementById('mainImageUrlInput');
+        if (mainUrlEl) mainUrlEl.value = '';
+        var detailUrlsEl = document.getElementById('detailImageUrlsInput');
+        if (detailUrlsEl) detailUrlsEl.value = '';
         
         // 상세 설명 항목 초기화 (첫 번째 행만 남기기)
         const detailContainer = document.getElementById('detailRowsContainer');

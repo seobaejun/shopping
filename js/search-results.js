@@ -35,14 +35,13 @@ async function searchProductsFromFirestore(keyword) {
                 productDesc.includes(lowerKeyword) || 
                 productCategory.includes(lowerKeyword)) {
                 
-                const support = Math.floor(product.price * (product.supportRate || 5) / 100);
-                
+                const support = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : Math.floor(product.price * (product.supportRate || 5) / 100);
                 results.push({
                     id: doc.id,
                     title: product.name,
                     option: product.shortDesc || '',
-                    support: support.toLocaleString() + '원',
-                    image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                    support: support.toLocaleString() + ' trix',
+                    image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
                     category: product.category || '',
                     price: product.price,
                     badge: product.displayCategory || []

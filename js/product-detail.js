@@ -19,13 +19,16 @@ function _parseProductDoc(doc) {
         option: product.shortDesc || '',
         price: product.price != null ? Number(product.price) : 0,
         originalPrice: product.originalPrice != null ? Number(product.originalPrice) : 0,
-        image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/600x600/E0E0E0/999?text=No+Image',
-        detailImages: product.detailImageUrls || product.detailImages || [],
+        image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/600x600/E0E0E0/999?text=No+Image',
+        detailImages: (product.detailImageUrls || product.detailImages || []).map(function(u) { return (window.resolveProductImageUrl && window.resolveProductImageUrl(u)) || u; }),
         description: product.description || '',
+        descriptionHtml: product.descriptionHtml || '',
         details: product.details || [],
         category: product.category || '',
+        manufacturer: product.manufacturer || '',
         brand: product.brand || '',
         stock: product.stock != null ? Number(product.stock) : 0,
+        supportAmount: product.supportAmount != null ? Number(product.supportAmount) : null,
         supportRate: product.supportRate != null ? Number(product.supportRate) : 5,
         options: options
     };
@@ -98,10 +101,12 @@ async function getProductFromUrl() {
         image: 'https://placehold.co/600x600/E0E0E0/999?text=No+Product',
         detailImages: [],
         description: '',
+        descriptionHtml: '',
         details: [],
         category: '',
         brand: '',
         stock: 0,
+        supportAmount: null,
         supportRate: 5
     };
 }
@@ -469,8 +474,9 @@ function submitBuyNowOrder(delivery) {
     if (!loginUser || !PRODUCT_INFO || !PRODUCT_INFO.id) return;
     var totalQuantity = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.quantity || 1); }, 0);
     var totalPrice = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.price || 0) * (opt.quantity || 1); }, 0);
-    var supportRate = (PRODUCT_INFO.supportRate != null ? PRODUCT_INFO.supportRate : 5) / 100;
-    var supportAmount = Math.round(totalPrice * supportRate);
+    var supportAmount = (PRODUCT_INFO.supportAmount != null && PRODUCT_INFO.supportAmount > 0)
+        ? (PRODUCT_INFO.supportAmount * totalQuantity)
+        : Math.round(totalPrice * ((PRODUCT_INFO.supportRate != null ? PRODUCT_INFO.supportRate : 5) / 100));
     var orderData = {
         status: 'pending',
         userId: loginUser.userId,
@@ -736,14 +742,13 @@ function initTabs() {
     });
 }
 
-// 확대보기
+// 확대보기 (버튼이 있을 때만 동작)
 function initZoom() {
     const zoomBtn = document.querySelector('.zoom-btn');
-    
+    if (!zoomBtn) return;
     zoomBtn.addEventListener('click', () => {
         const mainImage = productDetailElements.mainImage;
-        
-        // 새 창에서 이미지 열기
+        if (!mainImage) return;
         const newWindow = window.open('', '_blank', 'width=800,height=800');
         newWindow.document.write(`
             <!DOCTYPE html>
@@ -881,18 +886,21 @@ function updatePageInfo() {
     // 부제목(옵션) 업데이트
     var productSubtitle = document.getElementById('productSubtitle');
     if (productSubtitle) {
-        productSubtitle.textContent = isError ? '상품 목록에서 상품을 선택해 주세요.' : (PRODUCT_INFO.option || PRODUCT_INFO.description || '');
+        var subtitleText = (PRODUCT_INFO.option || '').trim() || (PRODUCT_INFO.description || '').replace(/<[^>]+>/g, '').trim();
+        productSubtitle.textContent = isError ? '상품 목록에서 상품을 선택해 주세요.' : (subtitleText || '');
         console.log('✅ 부제목 업데이트:', PRODUCT_INFO.option);
     }
     
     // 카테고리 태그는 ID→이름 변환 후 아래에서 설정
     const categoryTag = productDetailElements.categoryTag;
     
-    // 쇼핑지원금 업데이트
-    const supportAmount = productDetailElements.supportAmount;
-    if (supportAmount) {
-        const support = Math.floor(PRODUCT_INFO.price * (PRODUCT_INFO.supportRate / 100));
-        supportAmount.textContent = support.toLocaleString() + '원';
+    // 쇼핑지원금 업데이트 (supportAmount 우선, 없으면 비율로 계산)
+    const supportAmountEl = productDetailElements.supportAmount;
+    if (supportAmountEl) {
+        const support = (PRODUCT_INFO.supportAmount != null && PRODUCT_INFO.supportAmount > 0)
+            ? PRODUCT_INFO.supportAmount
+            : Math.floor(PRODUCT_INFO.price * ((PRODUCT_INFO.supportRate || 5) / 100));
+        supportAmountEl.textContent = support.toLocaleString() + ' trix';
         console.log('✅ 지원금 업데이트:', support);
     }
     
@@ -913,30 +921,28 @@ function updatePageInfo() {
         console.log('✅ 메인 이미지 업데이트:', PRODUCT_INFO.image);
     }
     
-    // 상품 정보 고시 테이블 업데이트
+    // 상품 정보 테이블 업데이트 (오른쪽 패널, 데이터 있으면 사용/없으면 기본값)
     const productInfoTable = productDetailElements.productInfoTable;
-    if (productInfoTable && PRODUCT_INFO.details && PRODUCT_INFO.details.length > 0) {
-        const tableHTML = PRODUCT_INFO.details.map(detail => `
-            <tr>
-                <th>${detail.title}</th>
-                <td>${detail.content}</td>
-            </tr>
-        `).join('');
-        
-        productInfoTable.innerHTML = tableHTML;
-        console.log('✅ 상품 정보 고시 업데이트 완료');
-    } else {
-        // 기본 정보 표시 (카테고리 이름은 getCategoryNameMap 후 아래에서 보강)
-        productInfoTable.innerHTML = `
-            <tr>
-                <th>브랜드</th>
-                <td>${PRODUCT_INFO.brand || '상세페이지 참조'}</td>
-            </tr>
-            <tr>
-                <th>카테고리</th>
-                <td class="product-info-category-cell">${PRODUCT_INFO.category || '-'}</td>
-            </tr>
-        `;
+    var defaultTitles = ['카테고리', '제조사', '제품소재', '색상', '치수', '제조자', '제조국', '사용기한', '취급 시 주의사항', '품질보증기준'];
+    function buildInfoTableBody() {
+        var map = {};
+        if (PRODUCT_INFO.details && PRODUCT_INFO.details.length > 0) {
+            PRODUCT_INFO.details.forEach(function (d) { map[(d.title || '').trim()] = (d.content || '').trim(); });
+        }
+        function val(title) {
+            if (map[title] != null && String(map[title]).trim() !== '') return String(map[title]).trim();
+            if (title === '카테고리') return PRODUCT_INFO.category || '-';
+            if (title === '제조사' || title === '제조자') return PRODUCT_INFO.manufacturer || '-';
+            return '-';
+        }
+        return defaultTitles.map(function (title) {
+            var content = val(title);
+            var tdClass = title === '카테고리' ? ' class="product-info-category-cell"' : '';
+            return '<tr><th>' + String(title).replace(/</g, '&lt;') + '</th><td' + tdClass + '>' + String(content).replace(/</g, '&lt;') + '</td></tr>';
+        }).join('');
+    }
+    if (productInfoTable) {
+        productInfoTable.innerHTML = buildInfoTableBody();
     }
     
     // 총 상품금액 즉시 표시 (관리자에서 입력한 가격)
@@ -967,45 +973,63 @@ function updatePageInfo() {
         console.log('✅ 옵션 선택 박스 업데이트:', opts.length, '개');
     }
     
-    // 상세 설명 이미지 업데이트
+    // 상세 설명: 글(descriptionHtml) 먼저, 그 아래 상세 이미지
     const detailContent = document.querySelector('#detail .product-description');
-    if (detailContent && PRODUCT_INFO.detailImages && PRODUCT_INFO.detailImages.length > 0) {
-        const detailHTML = PRODUCT_INFO.detailImages.map(imageUrl => `
-            <div class="detail-image">
-                <img src="${imageUrl}" alt="상세 이미지" style="width: 100%; height: auto;">
-            </div>
-        `).join('');
-        
-        detailContent.innerHTML = detailHTML;
-        console.log('✅ 상세 이미지 업데이트 완료:', PRODUCT_INFO.detailImages.length, '개');
-    } else if (detailContent) {
-        detailContent.innerHTML = '<p>상세 이미지가 없습니다.</p>';
+    if (detailContent) {
+        const parts = [];
+        var descHtml = (PRODUCT_INFO.descriptionHtml || PRODUCT_INFO.description || '').trim();
+        if (descHtml && descHtml.replace(/<[^>]+>/g, '').trim()) {
+            parts.push('<div class="product-description-html">' + descHtml + '</div>');
+        }
+        if (PRODUCT_INFO.detailImages && PRODUCT_INFO.detailImages.length > 0) {
+            parts.push(PRODUCT_INFO.detailImages.map(imageUrl => `
+                <div class="detail-image">
+                    <img src="${imageUrl}" alt="상세 이미지" style="width: 100%; height: auto;">
+                </div>
+            `).join(''));
+        }
+        if (parts.length > 0) {
+            detailContent.innerHTML = parts.join('');
+        } else {
+            detailContent.innerHTML = '<p>상세 이미지가 없습니다.</p>';
+        }
+        console.log('✅ 상세 설명 업데이트 완료 (글:', !!PRODUCT_INFO.descriptionHtml, ', 이미지:', (PRODUCT_INFO.detailImages || []).length, '개)');
     }
     
-    // 상세정보 탭의 상품 정보 고시 테이블 업데이트
+    // 상세정보 탭의 상품 정보 테이블 업데이트 (엑셀/관리자 details 있으면 사용, 없으면 기본값)
     const productSpecTable = document.getElementById('productSpecTable');
-    if (productSpecTable && PRODUCT_INFO.details && PRODUCT_INFO.details.length > 0) {
-        const specTableHTML = PRODUCT_INFO.details.map(detail => `
-            <tr>
-                <th>${detail.title}</th>
-                <td>${detail.content}</td>
-            </tr>
-        `).join('');
-        
-        productSpecTable.innerHTML = specTableHTML;
-        console.log('✅ 상세정보 탭 - 상품 정보 고시 업데이트 완료');
-    } else if (productSpecTable) {
-        // 기본 정보 표시 (카테고리 이름은 getCategoryNameMap 후 보강)
-        productSpecTable.innerHTML = `
-            <tr>
-                <th>브랜드</th>
-                <td>${PRODUCT_INFO.brand || '상품페이지 참고'}</td>
-            </tr>
-            <tr>
-                <th>카테고리</th>
-                <td class="product-spec-category-cell">${PRODUCT_INFO.category || '-'}</td>
-            </tr>
-        `;
+    var defaultSpecTitles = ['카테고리', '제조사', '제품소재', '색상', '치수', '제조자', '제조국', '사용기한', '취급 시 주의사항', '품질보증기준'];
+    function buildSpecTableBody() {
+        var detailMap = {};
+        var extraDetails = [];
+        if (PRODUCT_INFO.details && PRODUCT_INFO.details.length > 0) {
+            PRODUCT_INFO.details.forEach(function (d) {
+                var t = (d.title || '').trim();
+                var c = (d.content || '').trim();
+                if (!t) return;
+                detailMap[t] = c;
+                if (defaultSpecTitles.indexOf(t) === -1) extraDetails.push({ title: t, content: c });
+            });
+        }
+        function getCellContent(title) {
+            var fromDetail = detailMap[title];
+            if (fromDetail != null && String(fromDetail).trim() !== '') return String(fromDetail).trim();
+            if (title === '카테고리') return PRODUCT_INFO.category || '-';
+            if (title === '제조사' || title === '제조자') return PRODUCT_INFO.manufacturer || '-';
+            return '-';
+        }
+        var rows = defaultSpecTitles.map(function (title) {
+            var content = getCellContent(title);
+            var tdClass = title === '카테고리' ? ' class="product-spec-category-cell"' : '';
+            return '<tr><th>' + String(title).replace(/</g, '&lt;') + '</th><td' + tdClass + '>' + String(content).replace(/</g, '&lt;') + '</td></tr>';
+        });
+        extraDetails.forEach(function (d) {
+            rows.push('<tr><th>' + String(d.title).replace(/</g, '&lt;') + '</th><td>' + String(d.content || '-').replace(/</g, '&lt;') + '</td></tr>');
+        });
+        return rows.join('');
+    }
+    if (productSpecTable) {
+        productSpecTable.innerHTML = buildSpecTableBody();
     }
     
     // 카테고리 ID → 이름 변환 후 태그/브레드크럼/테이블에 반영
@@ -1057,7 +1081,8 @@ async function loadRelatedProducts() {
                     id: doc.id,
                     name: product.name,
                     price: product.price,
-                    image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                    image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                    supportAmount: product.supportAmount,
                     supportRate: product.supportRate || 5
                 });
             }
@@ -1084,7 +1109,9 @@ async function loadRelatedProducts() {
                 `;
             } else {
                 const html = relatedProducts.map(product => {
-                    const support = Math.floor(product.price * (product.supportRate / 100));
+                    const support = (product.supportAmount != null && product.supportAmount > 0)
+                        ? product.supportAmount
+                        : Math.floor(product.price * ((product.supportRate || 5) / 100));
                     return `
                         <div class="product-card">
                             <a href="product-detail.html?id=${product.id}" class="product-link">
@@ -1093,7 +1120,7 @@ async function loadRelatedProducts() {
                                 </div>
                                 <div class="product-info">
                                     <h3 class="product-title">${product.name}</h3>
-                                    <div class="product-support">쇼핑지원금 ${support.toLocaleString()}원</div>
+                                    <div class="product-support">쇼핑지원금 ${support.toLocaleString()} trix</div>
                                 </div>
                             </a>
                         </div>

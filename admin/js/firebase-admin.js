@@ -142,6 +142,14 @@ const collections = {
     notifications: () => {
         if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
         return db.collection('notifications');
+    },
+    tokenDeposits: () => {
+        if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+        return db.collection('tokenDeposits');
+    },
+    tokenWithdrawals: () => {
+        if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+        return db.collection('tokenWithdrawals');
     }
 };
 
@@ -669,6 +677,112 @@ const visitorStatsService = {
     }
 };
 
+// 토큰 입금/출금 관리
+const tokenService = {
+    async addDeposit(data) {
+        const ref = await collections.tokenDeposits().add({
+            memberId: data.memberId,
+            userId: data.userId,
+            userName: data.userName || '',
+            quantity: data.quantity || 0,
+            amount: data.amount || 0,
+            status: 'pending',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return ref.id;
+    },
+    async addWithdrawal(data) {
+        const ref = await collections.tokenWithdrawals().add({
+            memberId: data.memberId,
+            userId: data.userId,
+            userName: data.userName || '',
+            walletAddress: data.walletAddress || '',
+            quantity: data.quantity || 0,
+            status: 'pending',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return ref.id;
+    },
+    async getPendingDeposits() {
+        const snap = await collections.tokenDeposits().where('status', '==', 'pending').get();
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        return list;
+    },
+    async getPendingWithdrawals() {
+        const snap = await collections.tokenWithdrawals().where('status', '==', 'pending').get();
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        return list;
+    },
+    async getAllDeposits(limitCount) {
+        const limit = Math.min(Number(limitCount) || 500, 1000);
+        const snap = await collections.tokenDeposits().orderBy('createdAt', 'desc').limit(limit).get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+    async getAllWithdrawals(limitCount) {
+        const limit = Math.min(Number(limitCount) || 500, 1000);
+        const snap = await collections.tokenWithdrawals().orderBy('createdAt', 'desc').limit(limit).get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+    async approveDeposit(depositId) {
+        const doc = await collections.tokenDeposits().doc(depositId).get();
+        if (!doc.exists) throw new Error('입금 건을 찾을 수 없습니다.');
+        const d = doc.data();
+        const memberId = d.memberId;
+        const quantity = Number(d.quantity) || 0;
+        await collections.tokenDeposits().doc(depositId).update({
+            status: 'approved',
+            approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        const memberRef = collections.members().doc(memberId);
+        const memberSnap = await memberRef.get();
+        const current = (memberSnap.exists && memberSnap.data().tokenBalance != null) ? Number(memberSnap.data().tokenBalance) : 0;
+        await memberRef.update({
+            tokenBalance: current + quantity,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    },
+    async completeWithdrawal(withdrawalId) {
+        const doc = await collections.tokenWithdrawals().doc(withdrawalId).get();
+        if (!doc.exists) throw new Error('출금 건을 찾을 수 없습니다.');
+        const d = doc.data();
+        const memberId = d.memberId;
+        const quantity = Number(d.quantity) || 0;
+        await collections.tokenWithdrawals().doc(withdrawalId).update({
+            status: 'completed',
+            completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        const memberRef = collections.members().doc(memberId);
+        const memberSnap = await memberRef.get();
+        const current = (memberSnap.exists && memberSnap.data().tokenBalance != null) ? Number(memberSnap.data().tokenBalance) : 0;
+        await memberRef.update({
+            tokenBalance: Math.max(0, current - quantity),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    },
+    async cancelDeposit(depositId) {
+        const doc = await collections.tokenDeposits().doc(depositId).get();
+        if (!doc.exists) throw new Error('입금 건을 찾을 수 없습니다.');
+        await collections.tokenDeposits().doc(depositId).update({
+            status: 'cancelled',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    },
+    async cancelWithdrawal(withdrawalId) {
+        const doc = await collections.tokenWithdrawals().doc(withdrawalId).get();
+        if (!doc.exists) throw new Error('출금 건을 찾을 수 없습니다.');
+        await collections.tokenWithdrawals().doc(withdrawalId).update({
+            status: 'cancelled',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+};
+
 // 전역으로 export (db는 getter + getDb 함수로 참조)
 function getDb() { return db; }
 window.firebaseAdmin = {
@@ -683,7 +797,8 @@ window.firebaseAdmin = {
     settingsService,
     adminService,
     visitorStatsService,
-    boardService
+    boardService,
+    tokenService
 };
 
 // 스크립트 실행 시점에 firebase가 이미 있으면 즉시 db 연결 (동기)

@@ -338,7 +338,18 @@
 
 .page-numbers {
     display: flex;
-    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+}
+.list-pagination .page-btn {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+}
+.list-pagination .page-btn:hover:not(:disabled) {
+    color: #fff;
 }
 
 .page-num {

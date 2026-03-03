@@ -288,6 +288,136 @@
     color: #333;
 }
 
+.btn-token-action {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--primary-color, #4A5FC1);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.btn-token-action:hover { opacity: 0.9; }
+.btn-token-action:last-of-type { margin-bottom: 0; margin-top: 12px; }
+
+.token-modal .token-modal-content { max-width: 400px; }
+.token-form-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.token-form-row label { min-width: 80px; font-size: 14px; color: #333; }
+.token-form-row .form-control { flex: 1; padding: 8px 12px; }
+.token-form-row .token-balance { font-weight: 700; color: #333; }
+.token-modal .modal-body .btn { margin-top: 10px; width: 100%; }
+
+/* 토큰 구매/출금 우측 영역 섹션 */
+.token-section .section-title {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--primary-color, #4A5FC1);
+}
+.token-section .section-title h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #1a1a2e;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.token-section .section-title h3 i {
+    color: var(--primary-color, #4A5FC1);
+}
+.token-panel {
+    background: linear-gradient(145deg, #f8f9ff 0%, #fff 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 28px;
+    max-width: 420px;
+    box-shadow: 0 4px 12px rgba(74, 95, 193, 0.06);
+}
+.token-desc {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+    margin: 0 0 24px 0;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+.token-form-group {
+    margin-bottom: 18px;
+}
+.token-form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+.token-form-group .token-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+.token-form-group .token-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #4A5FC1);
+    box-shadow: 0 0 0 3px rgba(74, 95, 193, 0.15);
+}
+.token-balance-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    margin-bottom: 20px;
+    background: #f0f4ff;
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+.token-balance-label {
+    font-size: 14px;
+    color: #555;
+}
+.token-form-group .token-balance,
+.token-balance-row .token-balance {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary-color, #4A5FC1);
+}
+.btn-token-submit {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 8px;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--primary-color, #4A5FC1);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.05s;
+}
+.btn-token-submit:hover {
+    background: #3d4fa8;
+}
+.btn-token-submit:active {
+    transform: scale(0.98);
+}
+
 /* 네비게이션 메뉴 */
 .mypage-nav {
     background: #fff;
