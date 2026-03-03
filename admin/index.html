@@ -160,7 +160,7 @@
                         </div>
                         <div class="stat-info">
                             <h3>총 지원금</h3>
-                            <p class="stat-number" id="totalSupport">0원</p>
+                            <p class="stat-number" id="totalSupport">0 trix</p>
                             <span class="stat-change" id="supportChange">-</span>
                         </div>
                     </div>
@@ -245,7 +245,7 @@
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">지원금 지급</span>
-                                    <span class="stat-value" id="weekSupport">0원</span>
+                                    <span class="stat-value" id="weekSupport">0 trix</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">추첨 진행</span>
@@ -325,7 +325,7 @@
                                 <input type="number" class="form-control" id="minPurchaseAmount" value="1000" step="1000">
                             </div>
                             <div class="form-group">
-                                <label>최대 지원금 (원)</label>
+                                <label>최대 지원금 (trix)</label>
                                 <input type="number" class="form-control" id="maxSupportAmount" value="100000" step="10000">
                             </div>
                             <div class="form-group">
@@ -1314,7 +1314,7 @@
                             </div>
                             <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
                                 <div style="color: #666; font-size: 13px; margin-bottom: 8px;">누적 지원금</div>
-                                <div style="font-size: 24px; font-weight: bold; color: #dc3545;"><span id="totalSupportAmount">0</span>원</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #dc3545;"><span id="totalSupportAmount">0</span> trix</div>
                             </div>
                         </div>
                     </div>
@@ -1380,7 +1380,7 @@
                                 <th>계좌번호</th>
                                 <th>상품명</th>
                                 <th>상품가격</th>
-                                <th>소팅지원금</th>
+                                <th>지원금</th>
                                 <th>날짜</th>
                                 <th>상태</th>
                                 <th>관리</th>
@@ -1404,7 +1404,7 @@
                                 <th>계좌번호</th>
                                 <th>상품명</th>
                                 <th>상품가격</th>
-                                <th>소팅지원금</th>
+                                <th>지원금</th>
                                 <th>날짜</th>
                                 <th>상태</th>
                                 <th>관리</th>
@@ -1428,7 +1428,7 @@
                                 <th>계좌번호</th>
                                 <th>상품명</th>
                                 <th>상품가격</th>
-                                <th>소팅지원금</th>
+                                <th>지원금</th>
                                 <th>날짜</th>
                                 <th>상태</th>
                                 <th>관리</th>
@@ -1452,7 +1452,7 @@
                                 <th>계좌번호</th>
                                 <th>상품명</th>
                                 <th>상품가격</th>
-                                <th>소팅지원금</th>
+                                <th>지원금</th>
                                 <th>날짜</th>
                                 <th>상태</th>
                                 <th>관리</th>
@@ -1469,7 +1469,7 @@
             <div id="draw-lottery" class="content-page">
                 <div class="page-header">
                     <h2>조별 추첨하기</h2>
-                    <p class="page-description">상품별로 10명씩 조를 구성하여 추첨을 진행합니다.</p>
+                    <p class="page-description">어떤 제품을 주문했든 관계없이 승인된 구매자 전체를 선착순으로 10명 1조, 2명 당첨·8명 탈락 후 탈락 8명+대기 2명으로 다음 조가 이어집니다.</p>
                 </div>
 
                 <!-- 추첨 설정 -->
@@ -1502,12 +1502,12 @@
                     </div>
                 </div>
 
-                <!-- 상품별 추첨 현황 -->
+                <!-- 전체 구매자 추첨 현황 -->
                 <div class="lottery-status-grid">
                     <!-- JavaScript로 동적 생성 -->
                 </div>
 
-                <!-- 상품별 추첨 대기자 목록 -->
+                <!-- 추첨 대기자 목록 (선착순) -->
                 <div class="lottery-product-section">
                     <div class="section-header">
                         <h3>
@@ -1540,7 +1540,7 @@
                             </thead>
                             <tbody id="lotteryWaitingList">
                                 <tr>
-                                    <td colspan="8" class="empty-message">상품을 선택하면 대기자 목록이 표시됩니다.</td>
+                                    <td colspan="8" class="empty-message">승인된 구매자가 선착순으로 표시됩니다.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1567,7 +1567,7 @@
                                 <p><strong>회차:</strong> <span id="resultRound"></span></p>
                                 <p><strong>총 참여인원:</strong> <span id="resultTotal"></span>명</p>
                                 <p><strong>당첨:</strong> <span id="resultWinners"></span>명</p>
-                                <p><strong>총 지원금:</strong> <span id="resultSupport"></span>원</p>
+                                <p><strong>총 지원금:</strong> <span id="resultSupport"></span> trix</p>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -1595,7 +1595,8 @@
                         <div class="form-group">
                             <label>상품 선택</label>
                             <select class="form-control" id="confirmProductFilter" onchange="filterConfirmResults()">
-                                <option value="">전체 상품</option>
+                                <option value="">전체</option>
+                                <option value="_all">전체 구매 추첨</option>
                                 <option value="product-1">메가커피 모바일금액권 3만원</option>
                                 <option value="product-2">스타벅스 아메리카노 Tall</option>
                                 <option value="product-3">배스킨라빈스 파인트</option>
@@ -1676,7 +1677,7 @@
                             </div>
                             <div class="summary-content">
                                 <h4>지원금 총액 (당일 지급)</h4>
-                                <p class="summary-value" id="totalSupport">0원</p>
+                                <p class="summary-value" id="totalSupport">0 trix</p>
                             </div>
                         </div>
                     </div>
@@ -1756,7 +1757,7 @@
                 <!-- 총 정산 (전체 기준, 검색과 무관) -->
                 <div class="stats-summary settlement-total-block">
                     <h4>총 정산</h4>
-                    <p>지원금 총지급액: <strong id="settlementPersonalTotalSupport">0</strong>원</p>
+                    <p>지원금 총지급액: <strong id="settlementPersonalTotalSupport">0</strong> trix</p>
                 </div>
 
                 <!-- 검색 결과 영역 (검색 버튼 클릭 시에만 표시, 구매요청과 동일) -->
@@ -1844,7 +1845,7 @@
                 <!-- 총 정산 (전체 기준, 검색과 무관) -->
                 <div class="stats-summary settlement-total-block">
                     <h4>총 정산</h4>
-                    <p>지원금 총지급액: <strong id="settlementRoundTotalSupport">0</strong>원</p>
+                    <p>지원금 총지급액: <strong id="settlementRoundTotalSupport">0</strong> trix</p>
                 </div>
 
                 <!-- 검색 결과 영역 (검색 버튼 클릭 시에만 표시, 구매요청과 동일) -->

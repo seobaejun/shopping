@@ -117,105 +117,47 @@ function isLotteryTimeAvailable() {
     return true;
 }
 
-// 자동 추첨 실행 (10명 달성 시)
+// 자동 추첨 실행 (전체 구매자 10명 1조 달성 시)
 async function checkAndExecuteAutoLottery() {
     if (!isLotteryTimeAvailable()) {
         return;
     }
-    
-    // 모든 상품에 대해 10명 달성 여부 확인
-    // LOTTERY_WAITING_DATA는 admin.js에 정의되어 있음
+    var globalKey = (typeof window !== 'undefined' && window.LOTTERY_GLOBAL_KEY) ? window.LOTTERY_GLOBAL_KEY : '_all';
     if (typeof LOTTERY_WAITING_DATA === 'undefined') {
         console.warn('⚠️ LOTTERY_WAITING_DATA가 정의되지 않았습니다.');
         return;
     }
-    
-    const groupSize = parseInt(document.getElementById('groupSize')?.value || 10);
-    const winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2);
-    
-    for (const productId in LOTTERY_WAITING_DATA) {
-        const waitingData = LOTTERY_WAITING_DATA[productId] || [];
-        
-        if (waitingData.length >= groupSize) {
-            console.log(`🔵 자동 추첨 실행: ${productId}, 대기 인원: ${waitingData.length}명`);
-            
-            // 상품 선택 (전역 변수에 설정)
-            if (typeof window !== 'undefined') {
-                window.selectedProductId = productId;
-            }
-            
-            // 자동 추첨 실행 (확인 없이)
-            try {
-                // 참가자 목록 (10명)
-                const participants = waitingData.slice(0, groupSize);
-                
-                // 랜덤 추첨 (암호학적 난수 사용 시뮬레이션)
-                const shuffled = [...participants].sort(() => Math.random() - 0.5);
-                const winners = shuffled.slice(0, winnerCount); // 당첨자 2명
-                const losers = shuffled.slice(winnerCount); // 미선정자 8명
-                
-                // 지원금 계산 (당첨자의 상품 표기 지원금 사용)
-                const winnersSupport = winners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
-                const losersTotal = losers.reduce((sum, l) => sum + (l.amount || 0), 0);
-                
-                losers.forEach(loser => {
-                    if (losersTotal > 0) {
-                        // 공식: (당첨자 표기 지원금 합계 / 미선정자 총 구매금) × 나의 구매금
-                        const supportAmount = (winnersSupport / losersTotal) * (loser.amount || 0);
-                        // 10원 단위 절삭
-                        loser.calculatedSupport = Math.floor(supportAmount / 10) * 10;
-                    } else {
-                        loser.calculatedSupport = 0;
-                    }
-                });
-                
-                // 결과 표시 (showLotteryResult 함수 사용)
-                if (typeof showLotteryResult === 'function') {
-                    showLotteryResult(winners, losers, participants.length);
-                } else {
-                    console.log('✅ 자동 추첨 완료:', {
-                        productId,
-                        winners: winners.length,
-                        losers: losers.length,
-                        total: participants.length
-                    });
-                }
-                
-                // ✅ 순환 구조: 당첨자 2명만 제거, 미선정자 8명은 다음 추첨에 포함
-                // 당첨자 2명의 인덱스를 찾아서 제거
-                const winnerIds = new Set(winners.map(w => w.id || w.userId));
-                const remainingData = waitingData.filter(person => {
-                    const personId = person.id || person.userId;
-                    return !winnerIds.has(personId);
-                });
-                
-                // 다음 대기 목록에서 2명 추가 (10명 유지)
-                const nextWaitingCount = groupSize - remainingData.length; // 필요한 인원 수
-                if (nextWaitingCount > 0 && waitingData.length > groupSize) {
-                    // 대기 목록에 더 많은 인원이 있으면 추가
-                    const additionalPeople = waitingData.slice(groupSize, groupSize + nextWaitingCount);
-                    remainingData.push(...additionalPeople);
-                }
-                
-                // 대기 목록 업데이트 (당첨자 제거 + 다음 인원 추가)
-                LOTTERY_WAITING_DATA[productId] = remainingData;
-                
-                // UI 업데이트
-                if (typeof renderLotteryStatus === 'function') {
-                    renderLotteryStatus();
-                }
-                if (typeof renderWaitingList === 'function') {
-                    renderWaitingList();
-                }
-                
-                console.log(`✅ 자동 추첨 완료: ${productId}, 당첨자 ${winners.length}명 제거, 미선정자 ${losers.length}명 유지, 남은 대기 인원: ${remainingData.length}명`);
-            } catch (error) {
-                console.error('자동 추첨 실행 오류:', error);
-            }
-            
-            // 한 번에 하나의 상품만 처리 (다음 간격에 다른 상품 처리)
-            break;
+    var groupSize = parseInt(document.getElementById('groupSize')?.value || 10, 10);
+    var winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2, 10);
+    var waitingData = LOTTERY_WAITING_DATA[globalKey] || [];
+    if (waitingData.length < groupSize) return;
+    try {
+        if (typeof window !== 'undefined') window.selectedProductId = globalKey;
+        var participants = waitingData.slice(0, groupSize);
+        var shuffled = participants.slice().sort(function () { return Math.random() - 0.5; });
+        var winners = shuffled.slice(0, winnerCount);
+        var losers = shuffled.slice(winnerCount);
+        var totalSupportPool = winners.reduce(function (sum, w) { return sum + (w.productSupport || 0); }, 0);
+        var totalGroupPurchase = participants.reduce(function (sum, p) { return sum + (Number(p.amount) || 0); }, 0);
+        function calcSupport(person) {
+            if (!totalGroupPurchase || totalGroupPurchase <= 0) return 0;
+            var myAmount = Number(person.amount) || 0;
+            var support = (totalSupportPool / totalGroupPurchase) * myAmount;
+            return Math.floor(support / 10) * 10;
         }
+        winners = winners.map(function (w) { return Object.assign({}, w, { calculatedSupport: calcSupport(w) }); });
+        losers = losers.map(function (l) { return Object.assign({}, l, { calculatedSupport: calcSupport(l) }); });
+        if (typeof window.currentLotteryWinners !== 'undefined') window.currentLotteryWinners = winners;
+        if (typeof window.currentLotteryLosers !== 'undefined') window.currentLotteryLosers = losers;
+        if (typeof showLotteryResult === 'function') showLotteryResult(winners, losers, participants.length);
+        var rest = waitingData.slice(groupSize);
+        var remainingData = losers.concat(rest);
+        LOTTERY_WAITING_DATA[globalKey] = remainingData;
+        if (typeof renderLotteryStatus === 'function') renderLotteryStatus();
+        if (typeof renderWaitingList === 'function') renderWaitingList(globalKey);
+        console.log('✅ 자동 추첨 완료: 당첨 ' + winners.length + '명, 미선정 ' + losers.length + '명, 남은 대기 ' + remainingData.length + '명');
+    } catch (error) {
+        console.error('자동 추첨 실행 오류:', error);
     }
 }
 

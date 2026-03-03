@@ -174,11 +174,11 @@ function updateDashboardStats(stats) {
     }
     
     if (totalSupportEl) {
-        totalSupportEl.textContent = `${stats.totalSupport.toLocaleString()}원`;
+        totalSupportEl.textContent = stats.totalSupport.toLocaleString() + ' trix';
     }
     if (supportChangeEl) {
         if (stats.monthSupport > 0) {
-            supportChangeEl.textContent = `+${stats.monthSupport.toLocaleString()}원 (이번 달)`;
+            supportChangeEl.textContent = '+' + stats.monthSupport.toLocaleString() + ' trix (이번 달)';
             supportChangeEl.className = 'stat-change positive';
         } else {
             supportChangeEl.textContent = '변동 없음';
@@ -266,7 +266,7 @@ function updateWeekStats(stats) {
         weekTotalAmountEl.textContent = `${stats.weekTotalAmount.toLocaleString()}원`;
     }
     if (weekSupportEl) {
-        weekSupportEl.textContent = `${stats.weekSupport.toLocaleString()}원`;
+        weekSupportEl.textContent = stats.weekSupport.toLocaleString() + ' trix';
     }
     if (weekLotteriesEl) {
         weekLotteriesEl.textContent = `${stats.weekLotteries}회`;

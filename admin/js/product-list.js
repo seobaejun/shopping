@@ -248,7 +248,7 @@ function renderSearchResultsTable(products) {
                 <td style="text-align: center;">${escapeHtml(product.name)}</td>
                 <td>${categoryName}</td>
                 <td>${formatPrice(product.price)}원</td>
-                <td>${formatPrice(supportAmount)}원</td>
+                <td>${formatPrice(supportAmount)} trix</td>
                 <td>${product.stock || 0}</td>
                 <td>
                     <select class="status-select" onchange="changeProductStatus('${product.id}', this.value)">
@@ -303,7 +303,7 @@ if (products.length === 0) {
                 <td style="text-align: center;">${escapeHtml(product.name)}</td>
                 <td>${categoryName}</td>
                 <td>${formatPrice(product.price)}원</td>
-                <td>${formatPrice(supportAmount)}원</td>
+                <td>${formatPrice(supportAmount)} trix</td>
                 <td>${product.stock || 0}</td>
                 <td>
                     <select class="status-select" onchange="changeProductStatus('${product.id}', this.value)">

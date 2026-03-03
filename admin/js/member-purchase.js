@@ -190,7 +190,7 @@ function renderPurchaseDetailTable(purchases) {
                 <td>${purchaseDate}</td>
                 <td>${purchase.productName || '-'}</td>
                 <td>${(purchase.productPrice || 0).toLocaleString()}원</td>
-                <td>${(purchase.supportAmount || 0).toLocaleString()}원</td>
+                <td>${(purchase.supportAmount || 0).toLocaleString()} trix</td>
                 <td><span class="badge ${statusClass}">${status}</span></td>
             </tr>
         `;

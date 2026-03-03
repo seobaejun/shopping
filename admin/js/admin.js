@@ -648,7 +648,7 @@ function renderPurchaseRequestTable(orders) {
             <td>${accountNumber}</td>
             <td>${_orderEscapeHtml(order.productName || '-')}</td>
             <td>${price}</td>
-            <td>${support}</td>
+            <td>${support} trix</td>
             <td>${date}</td>
             <td><span class="badge badge-warning">승인대기</span></td>
             <td>
@@ -682,7 +682,7 @@ function renderPurchaseRequestApprovedTable(orders) {
             '<option value="approved" selected>승인</option>' +
             '<option value="cancelled">취소</option></select>';
         return '<tr data-order-id="' + orderId + '"><td>' + (index + 1) + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
-            _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + '</td><td>' + date +
+            _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + ' trix</td><td>' + date +
             '</td><td><span class="badge badge-success">승인</span></td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
     }).join('');
     tbody.innerHTML = rows;
@@ -710,7 +710,7 @@ function renderPurchaseRequestCancelledTable(orders) {
             '<option value="approved">승인</option>' +
             '<option value="cancelled" selected>취소</option></select>';
         return '<tr data-order-id="' + orderId + '"><td>' + (index + 1) + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
-            _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + '</td><td>' + date +
+            _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + ' trix</td><td>' + date +
             '</td><td><span class="badge badge-secondary">취소</span></td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
     }).join('');
     tbody.innerHTML = rows;
@@ -804,7 +804,7 @@ async function loadSettlementPersonal() {
             var dateStr = _orderFormatDate(order.createdAt);
             var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
             var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     } catch (e) {
         console.error('개인별 정산 로드 오류:', e);
@@ -849,7 +849,7 @@ function applySettlementPersonalSearch() {
             var dateStr = _orderFormatDate(order.createdAt);
             var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
             var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     }
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -898,7 +898,7 @@ async function loadSettlementRound() {
             var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
             var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
             var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     } catch (e) {
         console.error('회차별 정산 로드 오류:', e);
@@ -956,7 +956,7 @@ function applySettlementRoundSearch() {
             var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
             var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
             var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + '</td><td><span class="badge badge-success">승인</span></td></tr>';
+            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     }
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1148,7 +1148,7 @@ function applyPurchaseRequestSearch() {
             '<td>' + accountNumber + '</td>' +
             '<td>' + _orderEscapeHtml(order.productName || '-') + '</td>' +
             '<td>' + price + '</td>' +
-            '<td>' + support + '</td>' +
+            '<td>' + support + ' trix</td>' +
             '<td>' + date + '</td>' +
             '<td><span class="badge badge-warning">승인대기</span></td>' +
             '<td><button class="btn btn-sm btn-primary btn-approve-order" data-order-id="' + orderId + '" type="button">승인</button> ' +
@@ -1830,7 +1830,7 @@ function renderMemberInfoTable(data = null) {
                 <td>${escapeHtml(accountNumber)}</td>
                 <td>${escapeHtml(referralCode)}</td>
                 <td>${purchaseAmount.toLocaleString()}</td>
-                <td>${supportAmount.toLocaleString()} / ${accumulatedSupport.toLocaleString()}</td>
+                <td>${supportAmount.toLocaleString()} trix / ${accumulatedSupport.toLocaleString()} trix</td>
                 <td>${statusCell}</td>
                 <td>
                     <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
@@ -2078,7 +2078,7 @@ function renderPurchaseTable(data) {
             <tr>
                 <td>${data.length}</td>
                 <td>${totalPrice.toLocaleString()}원</td>
-                <td>${totalSupport.toLocaleString()}원</td>
+                <td>${totalSupport.toLocaleString()} trix</td>
             </tr>
         `;
     }
@@ -2101,7 +2101,7 @@ function renderPurchaseTable(data) {
             <td>${item.date}</td>
             <td>${item.product}</td>
             <td>${item.price.toLocaleString()}원</td>
-            <td>${item.support.toLocaleString()}원</td>
+            <td>${item.support.toLocaleString()} trix</td>
         </tr>
     `).join('');
 }
@@ -3144,136 +3144,124 @@ document.addEventListener('click', (e) => {
 // 추첨 시스템
 // ============================================
 
-// 추첨 대기 데이터 — 승인(approved)된 주문을 조별 추첨 명단으로 사용. loadLotteryWaitingData()에서 Firestore 기준으로 채움.
+// 추첨 대기 데이터 — 승인(approved)된 주문 전체를 선착순 1개 대기열로 사용. 상품 구분 없음.
+var LOTTERY_GLOBAL_KEY = '_all';
+window.LOTTERY_GLOBAL_KEY = LOTTERY_GLOBAL_KEY;
 let LOTTERY_WAITING_DATA = {};
 window.LOTTERY_PRODUCTS = [];
 
-let selectedProductId = null;
+let selectedProductId = LOTTERY_GLOBAL_KEY;
 let currentRound = 1;
 
-// 승인된 주문을 조별 추첨 대기 명단으로 로드 (구매요청에서 승인 시 여기로 넘어감)
+// 승인된 주문 전체를 선착순(createdAt) 1개 대기열로 로드
 async function loadLotteryWaitingData() {
     try {
-        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService || !window.firebaseAdmin.productService) return;
+        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) return;
         const allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
         const approved = allOrders.filter(function (o) { return o.status === 'approved'; });
-        const products = await window.firebaseAdmin.productService.getProducts() || [];
-        window.LOTTERY_PRODUCTS = Array.isArray(products) ? products : [];
-        const byProduct = {};
-        approved.forEach(function (order) {
-            const pid = order.productId || 'unknown';
-            if (!byProduct[pid]) byProduct[pid] = [];
-            byProduct[pid].push({
+        var sorted = approved.slice().sort(function (a, b) {
+            var at = a.createdAt && (a.createdAt.seconds != null ? a.createdAt.seconds : (a.createdAt.toDate ? a.createdAt.toDate().getTime() / 1000 : 0));
+            var bt = b.createdAt && (b.createdAt.seconds != null ? b.createdAt.seconds : (b.createdAt.toDate ? b.createdAt.toDate().getTime() / 1000 : 0));
+            return (at || 0) - (bt || 0);
+        });
+        var memberMap = {};
+        if (window.firebaseAdmin.memberService) {
+            try {
+                var members = await window.firebaseAdmin.memberService.getMembers() || [];
+                members.forEach(function (m) {
+                    var uid = m.userId || m.id;
+                    if (uid) memberMap[uid] = m;
+                    var docId = m.id;
+                    if (docId) memberMap[docId] = m;
+                });
+            } catch (e) { console.warn('추첨 대기 명단 회원 로드 실패:', e); }
+        }
+        var list = sorted.map(function (order) {
+            return {
                 id: order.id,
+                orderId: order.id,
                 name: order.userName || order.name || '-',
-                phone: order.phone || '-',
-                amount: order.productPrice || 0,
+                phone: _orderPhoneWithMember(order, memberMap),
+                amount: order.productPrice || order.amount || 0,
                 productSupport: order.supportAmount || 0,
+                productId: order.productId,
                 confirmed: true,
                 date: _orderFormatDate(order.createdAt)
-            });
+            };
         });
-        LOTTERY_WAITING_DATA = byProduct;
+        LOTTERY_WAITING_DATA = {};
+        LOTTERY_WAITING_DATA[LOTTERY_GLOBAL_KEY] = list;
+        selectedProductId = LOTTERY_GLOBAL_KEY;
         if (typeof renderLotteryStatus === 'function') renderLotteryStatus();
-        if (selectedProductId && typeof renderWaitingList === 'function') renderWaitingList(selectedProductId);
+        if (typeof renderWaitingList === 'function') renderWaitingList(LOTTERY_GLOBAL_KEY);
+        var groupSize = parseInt(document.getElementById('groupSize')?.value || 10, 10);
+        var canDraw = list.length >= groupSize;
+        var btn = document.getElementById('executeLotteryBtn');
+        if (btn) btn.disabled = !canDraw;
     } catch (e) {
         console.error('추첨 대기 명단 로드 오류:', e);
     }
 }
 
-// 추첨 현황 카드 렌더링 (실제 상품 + 승인 주문 기준 대기 인원)
+// 추첨 현황 카드 렌더링 — 전체 구매자 선착순 1개 대기열
 function renderLotteryStatus() {
-    const container = document.querySelector('.lottery-status-grid');
+    var container = document.querySelector('.lottery-status-grid');
     if (!container) return;
 
-    const products = (window.LOTTERY_PRODUCTS && window.LOTTERY_PRODUCTS.length > 0)
-        ? window.LOTTERY_PRODUCTS.map(function (p) {
-            const waitingList = LOTTERY_WAITING_DATA[p.id] || [];
-            const firstSupport = waitingList[0] ? (waitingList[0].productSupport || 0) : 0;
-            return { id: p.id, name: p.name, price: p.price || 0, productSupport: firstSupport, waiting: waitingList.length };
-        })
-        : [];
+    var waitingList = LOTTERY_WAITING_DATA[LOTTERY_GLOBAL_KEY] || [];
+    var total = waitingList.length;
+    var groupSize = parseInt(document.getElementById('groupSize')?.value || 10, 10);
+    var winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2, 10);
+    var canDraw = total >= groupSize;
+    var nextGroupRemain = total > 0 ? (groupSize - (total % groupSize)) % groupSize : groupSize;
+    if (nextGroupRemain === 0 && total > 0) nextGroupRemain = groupSize;
+    var progress = groupSize > 0 ? Math.min((total % groupSize) / groupSize * 100, 100) : 0;
+    if (total === 0) progress = 0;
 
-    if (products.length === 0) {
-        container.innerHTML = '<p class="empty-message">등록된 상품이 없거나, 승인된 구매가 없습니다. 구매 요청에서 승인하면 여기 명단에 올라옵니다.</p>';
-        return;
-    }
-
-    container.innerHTML = products.map(function (product) {
-        const groupSize = parseInt(document.getElementById('groupSize')?.value || 10);
-        const winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2);
-        const canDraw = product.waiting >= groupSize;
-        const progress = Math.min((product.waiting / groupSize) * 100, 100);
-        
-        // 당첨자 인원 × 상품 표기 지원금 = 총 지원금
-        const totalSupport = product.productSupport * winnerCount;
-
-        var safeId = (product.id || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-        return `
-            <div class="lottery-product-card ${selectedProductId === product.id ? 'selected' : ''}" 
-                 data-product-id="${safeId}" onclick="selectProduct(this.getAttribute('data-product-id'))">
-                <div class="product-card-header">
-                    <h4 class="product-card-title">${product.name}</h4>
-                    <div class="product-card-price">${product.price.toLocaleString()}원</div>
-                </div>
-                <div class="product-card-info">
-                    <div class="info-row">
-                        <span class="info-label">대기 인원</span>
-                        <span class="info-value ${canDraw ? 'highlight' : 'ready'}">${product.waiting}명 / ${groupSize}명</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">진행률</span>
-                        <span class="info-value">${progress.toFixed(0)}%</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">지원금</span>
-                        <span class="info-value">${totalSupport.toLocaleString()}원</span>
-                    </div>
-                    ${canDraw ? '<div class="info-row"><span class="badge badge-success">추첨 가능</span></div>' : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
+    container.innerHTML = '<div class="lottery-product-card selected" data-product-id="' + LOTTERY_GLOBAL_KEY + '">' +
+        '<div class="product-card-header">' +
+        '<h4 class="product-card-title">전체 구매자</h4>' +
+        '</div>' +
+        '<div class="product-card-info">' +
+        '<div class="info-row"><span class="info-label">대기 인원</span><span class="info-value ' + (canDraw ? 'highlight' : 'ready') + '">' + total + '명</span></div>' +
+        '<div class="info-row"><span class="info-label">다음 조</span><span class="info-value">' + (canDraw ? '추첨 가능 (10명 1조)' : (nextGroupRemain + '명 더 있으면 1조') + '') + '</span></div>' +
+        '<div class="info-row"><span class="info-label">조당</span><span class="info-value">' + groupSize + '명 중 ' + winnerCount + '명 당첨</span></div>' +
+        (canDraw ? '<div class="info-row"><span class="badge badge-success">추첨 가능</span></div>' : '') +
+        '</div></div>';
 }
 
-// 상품 선택
+// 상품 선택 (전체 추첨에서는 항상 _all)
 function selectProduct(productId) {
-    selectedProductId = productId;
+    selectedProductId = productId || LOTTERY_GLOBAL_KEY;
     renderLotteryStatus();
-    renderWaitingList(productId);
-    
-    const waitingData = LOTTERY_WAITING_DATA[productId] || [];
-    const groupSize = parseInt(document.getElementById('groupSize')?.value || 10);
-    const canDraw = waitingData.length >= groupSize;
-    
-    document.getElementById('executeLotteryBtn').disabled = !canDraw;
+    renderWaitingList(selectedProductId);
+    var waitingData = LOTTERY_WAITING_DATA[selectedProductId] || [];
+    var groupSize = parseInt(document.getElementById('groupSize')?.value || 10, 10);
+    var canDraw = waitingData.length >= groupSize;
+    var btn = document.getElementById('executeLotteryBtn');
+    if (btn) btn.disabled = !canDraw;
 }
 
-// 대기자 목록 렌더링
+// 대기자 목록 렌더링 (전체 구매자 선착순)
 function renderWaitingList(productId) {
-    const tbody = document.getElementById('lotteryWaitingList');
-    const productNameEl = document.getElementById('selectedProductName');
-    const countEl = document.getElementById('waitingCount');
-    
+    var tbody = document.getElementById('lotteryWaitingList');
+    var productNameEl = document.getElementById('selectedProductName');
+    var countEl = document.getElementById('waitingCount');
+    var pid = productId || LOTTERY_GLOBAL_KEY;
+
     if (!tbody) return;
 
-    const waitingData = LOTTERY_WAITING_DATA[productId] || [];
+    var waitingData = LOTTERY_WAITING_DATA[pid] || [];
     
     if (waitingData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-message">대기 중인 참가자가 없습니다.</td></tr>';
-        if (productNameEl) productNameEl.textContent = '대기자 없음';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-message">대기 중인 참가자가 없습니다. 구매 요청에서 승인하면 선착순으로 올라옵니다.</td></tr>';
+        if (productNameEl) productNameEl.textContent = '전체 구매자';
         if (countEl) countEl.textContent = '0명';
         return;
     }
 
-    var productName = '상품';
-    if (window.LOTTERY_PRODUCTS && window.LOTTERY_PRODUCTS.length > 0) {
-        var p = window.LOTTERY_PRODUCTS.find(function (x) { return x.id === productId; });
-        if (p && p.name) productName = p.name;
-    }
-
-    if (productNameEl) productNameEl.textContent = productName;
-    if (countEl) countEl.textContent = `${waitingData.length}명 대기`;
+    if (productNameEl) productNameEl.textContent = '전체 구매자';
+    if (countEl) countEl.textContent = waitingData.length + '명 대기';
 
     // 대기 목록에서 계산된 지원금 표시
     const groupSize = parseInt(document.getElementById('groupSize')?.value || 10);
@@ -3281,77 +3269,32 @@ function renderWaitingList(productId) {
     
     console.log('🔍 대기자 데이터 확인:', waitingData[0]);
     
-    // 당첨자가 받을 표기 지원금 합계 계산
-    const participants = waitingData.slice(0, groupSize);
-    const winnersSupport = participants.slice(0, winnerCount).reduce((sum, p) => sum + (p.productSupport || 0), 0);
-    // 미선정자 수 계산
-    const losersCount = Math.max(0, participants.length - winnerCount);
-    
-    console.log('🔍 지원금 계산 정보:');
-    console.log('  - 대기자 수:', waitingData.length);
-    console.log('  - 그룹 크기:', groupSize);
-    console.log('  - 당첨자 수:', winnerCount);
-    console.log('  - 참가자 수:', participants.length);
-    console.log('  - 당첨자 지원금 합계:', winnersSupport);
-    console.log('  - 미선정자 수:', losersCount);
-    
-    // 실제 추첨 결과가 있으면 사용 (확정된 지원금)
-    const hasCurrentResult = currentLotteryLosers && currentLotteryLosers.length > 0 && selectedProductId === productId;
-    
-    const htmlContent = waitingData.map((person, index) => {
-        let displaySupport = 0;
-        
-        // 1순위: 현재 추첨 결과에서 calculatedSupport 사용
+    var participants = waitingData.slice(0, groupSize);
+    var totalGroupPurchasePreview = participants.reduce(function (sum, p) { return sum + (Number(p.amount) || 0); }, 0);
+    var supportPoolPreview = participants.slice(0, winnerCount).reduce(function (sum, p) { return sum + (p.productSupport || 0); }, 0);
+    var hasCurrentResult = (currentLotteryWinners && currentLotteryWinners.length > 0) || (currentLotteryLosers && currentLotteryLosers.length > 0);
+    if (selectedProductId !== pid && pid !== LOTTERY_GLOBAL_KEY) hasCurrentResult = false;
+
+    var htmlContent = waitingData.map(function (person, index) {
+        var displaySupport = 0;
         if (hasCurrentResult) {
-            const actualLoser = currentLotteryLosers.find(l => (l.id === person.id || (l.name === person.name && l.phone === person.phone)));
-            if (actualLoser && actualLoser.calculatedSupport !== undefined && !isNaN(actualLoser.calculatedSupport) && actualLoser.calculatedSupport !== null) {
-                displaySupport = actualLoser.calculatedSupport;
-                console.log(`✅ ${person.name}: 현재 추첨 결과 사용 (${displaySupport}원)`);
-            }
+            var inWinners = currentLotteryWinners && currentLotteryWinners.find(function (w) { return (w.id === person.id) || (w.name === person.name && w.phone === person.phone); });
+            var inLosers = currentLotteryLosers && currentLotteryLosers.find(function (l) { return (l.id === person.id) || (l.name === person.name && l.phone === person.phone); });
+            var who = inWinners || inLosers;
+            if (who && who.calculatedSupport != null && !isNaN(who.calculatedSupport)) displaySupport = who.calculatedSupport;
         }
-        
-        // 2순위: 확정 결과에서 support 사용 (이미 확정된 경우)
         if (displaySupport === 0) {
-            const confirmedResult = LOTTERY_CONFIRMED_RESULTS.find(r => 
-                r.result === 'loser' && 
-                (r.name === person.name && r.phone === person.phone) &&
-                r.productId === productId
-            );
-            if (confirmedResult && confirmedResult.support !== undefined && !isNaN(confirmedResult.support) && confirmedResult.support !== null) {
-                displaySupport = confirmedResult.support;
-                console.log(`✅ ${person.name}: 확정 결과 사용 (${displaySupport}원)`);
-            }
+            var confirmedResult = LOTTERY_CONFIRMED_RESULTS.find(function (r) {
+                return (r.name === person.name && r.phone === person.phone) && (r.productId === pid || r.productId === LOTTERY_GLOBAL_KEY);
+            });
+            if (confirmedResult && confirmedResult.support != null && !isNaN(confirmedResult.support)) displaySupport = confirmedResult.support;
         }
-        
-        // 3순위: 예상 지원금 계산 (추첨 전 또는 확정되지 않은 경우)
-        if (displaySupport === 0) {
-            // 미선정자 예상 지원금 계산 (균등 분배)
-            // 당첨자는 index < winnerCount, 미선정자는 winnerCount <= index < groupSize
-            // 대기자 수가 그룹 크기보다 작아도 참가자 범위 내에서는 계산 가능
-            const isParticipant = index < Math.min(waitingData.length, groupSize);
-            const isLoser = index >= winnerCount;
-            
-            if (isParticipant && isLoser && losersCount > 0) {
-                displaySupport = winnersSupport / losersCount;
-                displaySupport = Math.floor(displaySupport / 10) * 10;
-                console.log(`${person.name}: 예상 지원금 계산 (${displaySupport}원, ${winnersSupport}원 ÷ ${losersCount}명)`);
-            }
+        if (displaySupport === 0 && index < participants.length && totalGroupPurchasePreview > 0) {
+            var myAmount = Number(person.amount) || 0;
+            displaySupport = (supportPoolPreview / totalGroupPurchasePreview) * myAmount;
+            displaySupport = Math.floor(displaySupport / 10) * 10;
         }
-        
-        console.log(`${person.name} (index: ${index}, amount: ${person.amount}): displaySupport = ${displaySupport}원`);
-        
-        return `
-        <tr>
-            <td><input type="checkbox" class="person-select" data-id="${person.id}"></td>
-            <td>${index + 1}</td>
-            <td>${person.name}</td>
-            <td>${person.phone}</td>
-            <td>${person.amount.toLocaleString()}원</td>
-            <td>${displaySupport.toLocaleString()}원</td>
-            <td><span class="badge badge-success">확인완료</span></td>
-            <td>${person.date}</td>
-        </tr>
-        `;
+        return '<tr><td><input type="checkbox" class="person-select" data-id="' + (person.id || '') + '"></td><td>' + (index + 1) + '</td><td>' + (person.name || '') + '</td><td>' + (person.phone || '') + '</td><td>' + (person.amount || 0).toLocaleString() + '원</td><td>' + displaySupport.toLocaleString() + ' trix</td><td><span class="badge badge-success">확인완료</span></td><td>' + (person.date || '') + '</td></tr>';
     }).join('');
     
     console.log('🔍 생성된 HTML (첫 번째 행):', htmlContent.substring(0, 300));
@@ -3380,97 +3323,53 @@ function toggleAutoMode() {
 let currentLotteryWinners = [];
 let currentLotteryLosers = [];
 
-// 추첨 실행
+// 추첨 실행 — 전체 구매자 선착순: 10명 1조 → 2명 당첨, 8명 탈락 후 8명 + 대기 2명으로 다음 조
 function executeLottery() {
-    if (!selectedProductId) {
-        alert('상품을 선택해주세요.');
-        return;
-    }
-
-    const waitingData = LOTTERY_WAITING_DATA[selectedProductId] || [];
-    const groupSize = parseInt(document.getElementById('groupSize').value);
-    const winnerCount = parseInt(document.getElementById('winnerCount').value);
+    var pid = selectedProductId || LOTTERY_GLOBAL_KEY;
+    var waitingData = LOTTERY_WAITING_DATA[pid] || [];
+    var groupSize = parseInt(document.getElementById('groupSize').value, 10);
+    var winnerCount = parseInt(document.getElementById('winnerCount').value, 10);
 
     if (waitingData.length < groupSize) {
-        if (!confirm(`현재 ${waitingData.length}명만 대기 중입니다.\n${groupSize}명 미만으로 추첨하시겠습니까?`)) {
+        if (!confirm('현재 ' + waitingData.length + '명만 대기 중입니다.\n' + groupSize + '명 미만으로 추첨하시겠습니까?')) {
             return;
         }
     }
 
-    // 참가자 목록 (10명)
-    const participants = waitingData.slice(0, groupSize);
-    
-    // 랜덤 추첨 (암호학적 난수 사용 시뮬레이션)
-    const shuffled = [...participants].sort(() => Math.random() - 0.5);
-    const winners = shuffled.slice(0, winnerCount); // 당첨자 2명
-    let losers = shuffled.slice(winnerCount); // 미선정자 8명
-    
-    // 지원금 계산 (먼저 계산)
-    // 당첨자의 상품 표기 지원금 합계 (productSupport 사용)
-    const winnersSupport = winners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
-    const losersCount = losers.length;
-    
-    console.log('🔵 지원금 계산 시작:');
-    console.log('  - 당첨자 표기 지원금 합계:', winnersSupport);
-    console.log('  - 미선정자 수:', losersCount);
-    
-    // 지원금 계산 및 새로운 객체로 생성 (참조 문제 완전 해결)
-    // 공식: 당첨자 지원금 합계 / 미선정자 수 (균등 분배)
-    losers = losers.map((loser, index) => {
-        let supportAmount = 0;
-        if (losersCount > 0) {
-            supportAmount = winnersSupport / losersCount;
-        }
-        // 10원 단위 절삭
-        const calculatedSupport = Math.floor(supportAmount / 10) * 10;
-        
-        console.log(`  - ${loser.name}: 지원금 ${calculatedSupport}원 (${winnersSupport}원 ÷ ${losersCount}명)`);
-        
-        // 새로운 객체 반환 (calculatedSupport 포함)
-        return {
-            ...loser,
-            calculatedSupport: calculatedSupport // 반드시 설정
-        };
-    });
-    
-    console.log('✅ 지원금 계산 완료');
-    console.log('🔵 계산된 losers 배열:', losers.map(l => ({ name: l.name, calculatedSupport: l.calculatedSupport, hasSupport: !!l.support })));
-    
-    // 전역 변수에 저장 (confirmLotteryResult에서 사용)
+    var participants = waitingData.slice(0, groupSize);
+    var shuffled = participants.slice().sort(function () { return Math.random() - 0.5; });
+    var winners = shuffled.slice(0, winnerCount);
+    var losers = shuffled.slice(winnerCount);
+
+    // 지원금: [당첨 2명 제품 표기 지원 포인트 합] ÷ [조 10명 총 구매 참여금] × [나의 구매 참여금] — 10명 전원 지급
+    var totalSupportPool = winners.reduce(function (sum, w) { return sum + (w.productSupport || 0); }, 0);
+    var totalGroupPurchase = participants.reduce(function (sum, p) { return sum + (Number(p.amount) || 0); }, 0);
+    function calcSupport(person) {
+        if (!totalGroupPurchase || totalGroupPurchase <= 0) return 0;
+        var myAmount = Number(person.amount) || 0;
+        var support = (totalSupportPool / totalGroupPurchase) * myAmount;
+        return Math.floor(support / 10) * 10;
+    }
+    winners = winners.map(function (w) { return Object.assign({}, w, { calculatedSupport: calcSupport(w) }); });
+    losers = losers.map(function (l) { return Object.assign({}, l, { calculatedSupport: calcSupport(l) }); });
+
     currentLotteryWinners = winners;
     currentLotteryLosers = losers;
 
-    // 결과 표시
     showLotteryResult(winners, losers, participants.length);
-    
-    // ✅ 순환 구조: 당첨자 2명만 제거, 미선정자 8명은 다음 추첨에 포함
-    // 당첨자 2명의 인덱스를 찾아서 제거
-    const winnerIds = new Set(winners.map(w => w.id || w.userId));
-    const remainingData = waitingData.filter(person => {
-        const personId = person.id || person.userId;
-        return !winnerIds.has(personId);
-    });
-    
-    // 다음 대기 목록에서 2명 추가 (10명 유지)
-    const nextWaitingCount = groupSize - remainingData.length; // 필요한 인원 수
-    if (nextWaitingCount > 0 && waitingData.length > groupSize) {
-        // 대기 목록에 더 많은 인원이 있으면 추가
-        const additionalPeople = waitingData.slice(groupSize, groupSize + nextWaitingCount);
-        remainingData.push(...additionalPeople);
-    }
-    
-    // 대기 목록 업데이트 (당첨자 제거 + 다음 인원 추가)
-    LOTTERY_WAITING_DATA[selectedProductId] = remainingData;
-    
-    // UI 업데이트
-    if (typeof renderLotteryStatus === 'function') {
-        renderLotteryStatus();
-    }
-    if (typeof renderWaitingList === 'function') {
-        renderWaitingList();
-    }
-    
-    console.log(`✅ 추첨 완료: 당첨자 ${winners.length}명 제거, 미선정자 ${losers.length}명 유지, 남은 대기 인원: ${remainingData.length}명`);
+
+    // 당첨 2명 제거, 탈락 8명은 다음 조에 포함 + 나머지 대기열에서 순서 유지 → 새 대기열 = 8명 + (기존 10번째 이후)
+    var rest = waitingData.slice(groupSize);
+    var remainingData = losers.concat(rest);
+    LOTTERY_WAITING_DATA[pid] = remainingData;
+
+    if (typeof renderLotteryStatus === 'function') renderLotteryStatus();
+    if (typeof renderWaitingList === 'function') renderWaitingList(pid);
+
+    var btn = document.getElementById('executeLotteryBtn');
+    if (btn) btn.disabled = remainingData.length < groupSize;
+
+    console.log('추첨 완료: 당첨 ' + winners.length + '명 제거, 미선정 ' + losers.length + '명 다음 조 포함, 남은 대기: ' + remainingData.length + '명');
 }
 
 // 추첨 결과 표시
@@ -3489,13 +3388,17 @@ function showLotteryResult(winners, losers, totalCount) {
         calculatedSupport: l.calculatedSupport 
     })));
     
-    // 당첨자 렌더링 (지원금 없음)
+    // 당첨자 렌더링 (10명 전원 지원금 지급 — 당첨자도 비례 지급)
+    var winnerSupport = function (w) {
+        var s = (w.calculatedSupport !== undefined && w.calculatedSupport !== null && !isNaN(w.calculatedSupport)) ? w.calculatedSupport : 0;
+        return s;
+    };
     winnersListEl.innerHTML = displayWinners.map(w => `
         <div class="result-person winner">
             <div class="person-name">🎉 ${w.name}</div>
             <div class="person-phone">${w.phone}</div>
-            <div class="person-amount">구매 확정: ${w.amount.toLocaleString()}원</div>
-            <div class="person-support" style="color: #999;">지원금: 없음</div>
+            <div class="person-amount">구매 확정: ${(w.amount || 0).toLocaleString()}원</div>
+            <div class="person-support">지원금: ${winnerSupport(w).toLocaleString()} trix</div>
         </div>
     `).join('');
 
@@ -3507,52 +3410,26 @@ function showLotteryResult(winners, losers, totalCount) {
         amount: l.amount
     })));
     
-    losersListEl.innerHTML = displayLosers.map((l, index) => {
-        // ✅ 추첨 확정 현황과 동일: calculatedSupport 직접 사용
-        let supportAmount = 0;
-        
-        // calculatedSupport가 있으면 사용 (추첨 확정 현황과 동일)
-        if (l.calculatedSupport !== undefined && !isNaN(l.calculatedSupport) && l.calculatedSupport !== null) {
-            supportAmount = l.calculatedSupport;
-            console.log(`✅ ${l.name}: calculatedSupport 사용 (${supportAmount}원)`);
-        } else {
-            // calculatedSupport가 없으면 재계산 (균등 분배)
-            console.warn(`⚠️ ${l.name}: calculatedSupport가 없어서 재계산합니다.`);
-            const winnersSupport = displayWinners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
-            const losersCount = displayLosers.length;
-            if (losersCount > 0) {
-                supportAmount = winnersSupport / losersCount;
-                supportAmount = Math.floor(supportAmount / 10) * 10;
-                console.log(`✅ ${l.name}: 재계산 완료 (${supportAmount}원, ${winnersSupport}원 ÷ ${losersCount}명)`);
-            }
+    var allTen = (displayWinners || []).concat(displayLosers || []);
+    var poolForRecalc = (displayWinners || []).reduce(function (s, w) { return s + (w.productSupport || 0); }, 0);
+    var totalForRecalc = allTen.reduce(function (s, p) { return s + (Number(p.amount) || 0); }, 0);
+    losersListEl.innerHTML = displayLosers.map(function (l) {
+        var supportAmount = (l.calculatedSupport != null && !isNaN(l.calculatedSupport)) ? l.calculatedSupport : 0;
+        if (supportAmount === 0 && totalForRecalc > 0) {
+            var myAmt = Number(l.amount) || 0;
+            supportAmount = (poolForRecalc / totalForRecalc) * myAmt;
+            supportAmount = Math.floor(supportAmount / 10) * 10;
         }
-        
-        return `
-        <div class="result-person loser">
-            <div class="person-name">💰 ${l.name}</div>
-            <div class="person-phone">${l.phone}</div>
-            <div class="person-amount">구매금: ${l.amount.toLocaleString()}원</div>
-            <div class="person-support">지원금: ${supportAmount.toLocaleString()}원</div>
-        </div>
-        `;
+        return '<div class="result-person loser"><div class="person-name">💰 ' + (l.name || '') + '</div><div class="person-phone">' + (l.phone || '') + '</div><div class="person-amount">구매금: ' + (l.amount || 0).toLocaleString() + '원</div><div class="person-support">지원금: ' + supportAmount.toLocaleString() + ' trix</div></div>';
     }).join('');
 
-    // 요약 정보 (calculatedSupport 직접 사용 - 추첨 확정 현황과 동일)
-    const totalSupport = displayLosers.reduce((sum, l) => {
-        // ✅ calculatedSupport 직접 사용 (추첨 확정 현황과 동일)
-        let support = 0;
-        if (l.calculatedSupport !== undefined && !isNaN(l.calculatedSupport) && l.calculatedSupport !== null) {
-            support = l.calculatedSupport;
-        } else {
-            // calculatedSupport가 없으면 재계산 (균등 분배)
-            const winnersSupport = displayWinners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
-            const losersCount = displayLosers.length;
-            if (losersCount > 0) {
-                support = winnersSupport / losersCount;
-                support = Math.floor(support / 10) * 10;
-            }
-        }
-        return sum + support;
+    // 요약 정보 — 10명 전원 지원금 합계 (당첨자 + 미선정자)
+    var totalSupport = (displayWinners || []).reduce(function (sum, w) {
+        var s = (w.calculatedSupport != null && !isNaN(w.calculatedSupport)) ? w.calculatedSupport : 0;
+        return sum + s;
+    }, 0) + (displayLosers || []).reduce(function (sum, l) {
+        var s = (l.calculatedSupport != null && !isNaN(l.calculatedSupport)) ? l.calculatedSupport : 0;
+        return sum + s;
     }, 0);
     document.getElementById('resultRound').textContent = `${currentRound}회차`;
     document.getElementById('resultTotal').textContent = totalCount;
@@ -3587,7 +3464,10 @@ function confirmLotteryResult() {
         return;
     }
     
-    // 저장된 데이터로 확정 결과 생성 (orderId: 배송 진행 목록에서 사용)
+    // 저장된 데이터로 확정 결과 생성 — 10명 전원 지원금 지급 (당첨자도 비례 지급)
+    var winnerSupportVal = function (w) {
+        return (w.calculatedSupport != null && !isNaN(w.calculatedSupport)) ? w.calculatedSupport : 0;
+    };
     const winners = currentLotteryWinners.map((w, index) => ({
         id: Date.now() + index,
         orderId: w.id || w.orderId,
@@ -3598,8 +3478,8 @@ function confirmLotteryResult() {
         phone: w.phone,
         amount: w.amount,
         result: 'winner',
-        support: 0, // 당첨자는 지원금 없음
-        paymentStatus: 'completed', // 당첨자는 지급 완료 상태
+        support: winnerSupportVal(w),
+        paymentStatus: 'completed',
         date: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0]
     }));
     
@@ -3612,25 +3492,7 @@ function confirmLotteryResult() {
     })));
     
     const losers = currentLotteryLosers.map((l, index) => {
-        // ✅ calculatedSupport가 제대로 계산되었는지 확인
-        let supportAmount = 0;
-        
-        // calculatedSupport 우선 사용 (반드시)
-        if (l.calculatedSupport !== undefined && !isNaN(l.calculatedSupport) && l.calculatedSupport !== null) {
-            supportAmount = l.calculatedSupport;
-            console.log(`✅ ${l.name}: calculatedSupport 사용 (${supportAmount}원)`);
-        } else {
-            // calculatedSupport가 없으면 재계산 (균등 분배)
-            console.warn(`⚠️ ${l.name}: calculatedSupport가 없어서 재계산합니다.`);
-            const winnersSupport = currentLotteryWinners.reduce((sum, w) => sum + (w.productSupport || 0), 0);
-            const losersCount = currentLotteryLosers.length;
-            if (losersCount > 0) {
-                supportAmount = winnersSupport / losersCount;
-                supportAmount = Math.floor(supportAmount / 10) * 10;
-                console.log(`✅ ${l.name}: 재계산 완료 (${supportAmount}원, ${winnersSupport}원 ÷ ${losersCount}명)`);
-            }
-        }
-        
+        var supportAmount = (l.calculatedSupport != null && !isNaN(l.calculatedSupport)) ? l.calculatedSupport : 0;
         return {
             id: Date.now() + winners.length + index,
             orderId: l.id || l.orderId,
@@ -3656,7 +3518,8 @@ function confirmLotteryResult() {
     // 확정 결과에 추가
     LOTTERY_CONFIRMED_RESULTS.push(...winners, ...losers);
     
-    alert(`추첨 결과가 확정되었습니다!\n\n회차: ${currentRound}회\n당첨: ${winners.length}명\n미선정: ${losers.length}명\n총 지원금: ${losers.reduce((sum, l) => sum + l.support, 0).toLocaleString()}원\n\n※ 지원금은 당일 일괄 지급됩니다.`);
+    var totalSupportConfirmed = winners.reduce(function (s, w) { return s + (w.support || 0); }, 0) + losers.reduce(function (s, l) { return s + (l.support || 0); }, 0);
+    alert('추첨 결과가 확정되었습니다!\n\n회차: ' + currentRound + '회\n당첨: ' + winners.length + '명\n미선정: ' + losers.length + '명\n총 지원금(10명 전원): ' + totalSupportConfirmed.toLocaleString() + ' trix\n\n※ 지원금은 당일 일괄 지급됩니다.');
     
     // ✅ 순환 구조: 당첨자만 제거 (이미 executeLottery에서 처리됨)
     // confirmLotteryResult는 결과를 확정하는 것이므로 여기서는 제거하지 않음
@@ -3673,14 +3536,14 @@ function confirmLotteryResult() {
     updateConfirmPage();
 }
 
-// 상품명 가져오기
+// 상품명 가져오기 (전체 추첨은 상품 구분 없음)
 function getProductName(productId) {
-    const productNames = {
-        'product-1': '메가커피 모바일금액권 3만원',
-        'product-2': '스타벅스 아메리카노 Tall',
-        'product-3': '배스킨라빈스 파인트'
-    };
-    return productNames[productId] || '알 수 없는 상품';
+    if (productId === LOTTERY_GLOBAL_KEY || !productId) return '전체 구매 추첨';
+    if (window.LOTTERY_PRODUCTS && window.LOTTERY_PRODUCTS.length > 0) {
+        var p = window.LOTTERY_PRODUCTS.find(function (x) { return x.id === productId; });
+        if (p && p.name) return p.name;
+    }
+    return '알 수 없는 상품';
 }
 
 // ============================================
@@ -3711,7 +3574,7 @@ function updateConfirmSummary() {
     if (totalRoundsEl) totalRoundsEl.textContent = `${rounds}회`;
     if (totalWinnersEl) totalWinnersEl.textContent = `${winners}명`;
     if (totalLosersEl) totalLosersEl.textContent = `${losers}명`;
-    if (totalSupportEl) totalSupportEl.textContent = `${totalSupport.toLocaleString()}원`;
+    if (totalSupportEl) totalSupportEl.textContent = totalSupport.toLocaleString() + ' trix';
 }
 
 // 회차 필터 업데이트
@@ -3815,7 +3678,7 @@ function renderConfirmResults() {
                     ? '<span class="badge badge-success">당첨</span>' 
                     : '<span class="badge badge-info">미선정</span>'}
             </td>
-            <td>${result.result === 'winner' ? '-' : support.toLocaleString() + '원'}</td>
+            <td>${(result.support || 0).toLocaleString()} trix</td>
             <td>
                 ${result.result === 'winner'
                     ? '<span class="payment-status paid">구매확정</span>'
@@ -3872,7 +3735,7 @@ function togglePaymentStatus(resultId) {
         }
     } else {
         // 지급대기 → 지급완료
-        if (confirm(`${result.name}님에게 ${result.support.toLocaleString()}원을 지급하시겠습니까?`)) {
+        if (confirm(result.name + '님에게 ' + result.support.toLocaleString() + ' trix를 지급하시겠습니까?')) {
             result.paymentStatus = 'paid';
             
             // 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
@@ -3888,7 +3751,7 @@ function togglePaymentStatus(resultId) {
                                     userId,
                                     'support_paid',
                                     '쇼핑지원금이 지급되었습니다',
-                                    result.support.toLocaleString() + '원의 쇼핑지원금이 지급되었습니다.',
+                                    result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.',
                                     'mypage.html?section=support'
                                 );
                             }
@@ -3899,7 +3762,7 @@ function togglePaymentStatus(resultId) {
                 })();
             }
             
-            alert(`${result.name}님에게 ${result.support.toLocaleString()}원이 지급되었습니다.`);
+            alert(result.name + '님에게 ' + result.support.toLocaleString() + ' trix가 지급되었습니다.');
             renderConfirmResults();
             updateConfirmSummary();
         }
@@ -4006,7 +3869,7 @@ function completeDailyPayment() {
                                             userId,
                                             'support_paid',
                                             '쇼핑지원금이 지급되었습니다',
-                                            result.support.toLocaleString() + '원의 쇼핑지원금이 지급되었습니다.',
+                                            result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.',
                                             'mypage.html?section=support'
                                         ).catch(function(err) {
                                             console.error('개별 알림 생성 오류 (무시됨):', err);
@@ -4079,7 +3942,7 @@ function renderDailyPaymentResults(pendingResults) {
             <td>${escapeHtml(phone)}</td>
             <td>${amount.toLocaleString()}원</td>
             <td><span class="badge badge-info">미선정</span></td>
-            <td style="font-weight: bold; color: #e74c3c;">${support.toLocaleString()}원</td>
+            <td style="font-weight: bold; color: #e74c3c;">${support.toLocaleString()} trix</td>
             <td><span class="badge badge-warning">지급대기</span></td>
             <td>${escapeHtml(date)}</td>
         </tr>
@@ -4722,7 +4585,7 @@ async function loadProductSales() {
         } else {
             tbody.innerHTML = rows.map(function (r, i) {
                 var rankBadge = (i === 0) ? '<span class="rank-badge-small gold">1</span>' : (i === 1) ? '<span class="rank-badge-small silver">2</span>' : (i === 2) ? '<span class="rank-badge-small bronze">3</span>' : (i + 1);
-                return '<tr><td>' + rankBadge + '</td><td style="text-align:left;padding-left:15px;">' + escapeHtmlSales(r.productName) + '</td><td>' + escapeHtmlSales(r.categoryName) + '</td><td>' + r.count.toLocaleString() + '건</td><td>' + r.totalSales.toLocaleString() + '원</td><td>' + r.supportTotal.toLocaleString() + '원</td><td>' + r.netProfit.toLocaleString() + '원</td></tr>';
+                return '<tr><td>' + rankBadge + '</td><td style="text-align:left;padding-left:15px;">' + escapeHtmlSales(r.productName) + '</td><td>' + escapeHtmlSales(r.categoryName) + '</td><td>' + r.count.toLocaleString() + '건</td><td>' + r.totalSales.toLocaleString() + '원</td><td>' + r.supportTotal.toLocaleString() + ' trix</td><td>' + r.netProfit.toLocaleString() + '원</td></tr>';
             }).join('');
         }
     } catch (err) {
