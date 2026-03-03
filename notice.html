@@ -76,39 +76,7 @@
                 <span>전체카테고리</span>
             </button>
 
-            <ul class="main-nav">
-                <li><a href="products-list.html?type=hit">히트상품</a></li>
-                <li><a href="products-list.html?type=recommend">추천상품</a></li>
-                <li><a href="products-list.html?type=new">최신상품</a></li>
-                <li><a href="products-list.html?type=popular">인기상품</a></li>
-            </ul>
-
-            <!-- 인기 검색어 -->
-            <div class="popular-search">
-                <div class="keyword-header">
-                    <span class="current-keyword" id="currentKeyword">
-                        <span class="rank">1</span>
-                        <span class="text">고양이사료</span>
-                    </span>
-                    <button class="toggle-btn" id="keywordToggle">
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                </div>
-                <div class="popular-keywords" id="popularKeywords">
-                    <ul>
-                        <li data-rank="1"><span class="rank">1</span> 고양이사료</li>
-                        <li data-rank="2"><span class="rank">2</span> 500g</li>
-                        <li data-rank="3"><span class="rank">3</span> 건채담</li>
-                        <li data-rank="4"><span class="rank">4</span> 열무</li>
-                        <li data-rank="5"><span class="rank">5</span> 아비가일</li>
-                        <li data-rank="6"><span class="rank">6</span> 열무김치</li>
-                        <li data-rank="7"><span class="rank">7</span> VDG</li>
-                        <li data-rank="8"><span class="rank">8</span> 어성초</li>
-                        <li data-rank="9"><span class="rank">9</span> -1</li>
-                        <li data-rank="10"><span class="rank">10</span> --</li>
-                    </ul>
-                </div>
-            </div>
+            <ul class="main-nav main-nav-categories" id="mainNavCategories"></ul>
         </div>
     </nav>
 
@@ -123,10 +91,7 @@
                 <a href="#"><i class="fas fa-sign-in-alt"></i> 로그인</a>
                 <a href="#"><i class="fas fa-user-plus"></i> 회원가입</a>
             </div>
-            <ul class="category-list" id="categoryList">
-                <!-- JavaScript로 동적 생성 -->
-                <li><a href="#">카테고리를 불러오는 중...</a></li>
-            </ul>
+            <ul class="category-list" id="categoryList"></ul>
             <div class="sidebar-info">
                 <div class="customer-service">
                     <h3>고객센터</h3>
@@ -274,7 +239,7 @@
     
     <!-- 공통 스크립트 -->
     <script src="js/admin-link-visibility.js"></script>
-    <script src="js/script.js?v=23"></script>
+    <script src="js/nav-categories.js?v=1"></script>
     
     <!-- 공지사항 전용 스크립트 -->
     <script src="js/notice.js"></script>

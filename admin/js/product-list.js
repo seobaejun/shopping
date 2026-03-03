@@ -19,74 +19,6 @@ async function waitForFirebaseAdmin(maxWait = 10000) {
     return window.firebaseAdmin;
 }
 
-// 테스트 상품 데이터 추가 함수
-async function addTestProducts() {
-    try {
-        const firebaseAdmin = await waitForFirebaseAdmin();
-        console.log('✅ 테스트 상품 추가 시작');
-
-        const testProducts = [
-            {
-                name: '메가커피 모바일금액권 3만원',
-                category: 'coffee',
-                price: 30000,
-                stock: 100,
-                status: 'sale',
-                description: '메가커피에서 사용 가능한 모바일 금액권',
-                createdAt: new Date()
-            },
-            {
-                name: '스타벅스 아메리카노 Tall',
-                category: 'coffee',
-                price: 4500,
-                stock: 50,
-                status: 'sale',
-                description: '스타벅스 아메리카노 톨 사이즈',
-                createdAt: new Date()
-            },
-            {
-                name: 'CU 편의점 금액권 1만원',
-                category: 'food',
-                price: 10000,
-                stock: 200,
-                status: 'sale',
-                description: 'CU 편의점에서 사용 가능한 금액권',
-                createdAt: new Date()
-            },
-            {
-                name: '올리브영 상품권 2만원',
-                category: 'beauty',
-                price: 20000,
-                stock: 150,
-                status: 'sale',
-                description: '올리브영에서 사용 가능한 상품권',
-                createdAt: new Date()
-            },
-            {
-                name: '다이소 상품권 5천원',
-                category: 'life',
-                price: 5000,
-                stock: 300,
-                status: 'sale',
-                description: '다이소에서 사용 가능한 상품권',
-                createdAt: new Date()
-            }
-        ];
-
-        for (const product of testProducts) {
-            await firebaseAdmin.productService.addProduct(product);
-            console.log('✅ 테스트 상품 추가 완료:', product.name);
-        }
-
-        alert('테스트 상품 5개가 추가되었습니다!');
-        await loadAllProducts();
-
-    } catch (error) {
-        console.error('❌ 테스트 상품 추가 오류:', error);
-        alert('테스트 상품 추가 중 오류가 발생했습니다: ' + error.message);
-    }
-}
-
 // 모든 상품 로드 함수
 async function loadAllProducts() {
     console.log('🔵🔵🔵 loadAllProducts 함수 호출됨');
@@ -130,16 +62,7 @@ async function loadAllProducts() {
         // 상품이 없으면 안내 메시지 표시
         if (products.length === 0) {
             const tbody = document.getElementById('productListBody');
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="empty-message">
-                        등록된 상품이 없습니다.<br>
-                        <button class="btn btn-primary" onclick="addTestProducts()" style="margin-top: 10px;">
-                            테스트 상품 5개 추가하기
-                        </button>
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-message">등록된 상품이 없습니다.<br><a href="#" onclick="document.querySelector(\'[data-page=product-register]\').click(); return false;" class="btn btn-primary" style="margin-top:10px;display:inline-block;">상품 등록</a></td></tr>';
         } else {
             renderAllProductsTable(allProductsData);
         }
@@ -452,16 +375,6 @@ async function openEditProductModal(productId) {
         // 기본 정보
         document.getElementById('editProductId').value = product.id;
         document.getElementById('editProductName').value = product.name || '';
-        
-        // 분류 체크박스 설정 (배열 처리)
-        const displayCategories = Array.isArray(product.displayCategory) 
-            ? product.displayCategory 
-            : [product.displayCategory || 'all'];
-        
-        document.querySelectorAll('#editDisplayCategoryCheckboxes input[type="checkbox"]').forEach(checkbox => {
-            checkbox.checked = displayCategories.includes(checkbox.value);
-        });
-        
         document.getElementById('editProductCategory').value = product.category || '';
         document.getElementById('editProductBrand').value = product.brand || '';
         document.getElementById('editProductShortDesc').value = product.shortDesc || '';
@@ -590,10 +503,6 @@ async function saveEditProduct() {
     // 기본 정보
     const name = document.getElementById('editProductName').value.trim();
     
-    // 분류 체크박스 값 수집 (배열)
-    const displayCategoryCheckboxes = document.querySelectorAll('#editDisplayCategoryCheckboxes input[type="checkbox"]:checked');
-    const displayCategory = Array.from(displayCategoryCheckboxes).map(cb => cb.value);
-    
     const category = document.getElementById('editProductCategory').value;
     const brand = document.getElementById('editProductBrand').value.trim();
     const shortDesc = document.getElementById('editProductShortDesc').value.trim();
@@ -684,7 +593,6 @@ async function saveEditProduct() {
         
         const updateData = {
             name,
-            displayCategory,
             category,
             brand,
             shortDesc,

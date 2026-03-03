@@ -75,39 +75,7 @@
                 <span>전체카테고리</span>
             </button>
 
-            <ul class="main-nav">
-                <li><a href="products-list.html?type=hit">히트상품</a></li>
-                <li><a href="products-list.html?type=recommend">추천상품</a></li>
-                <li><a href="products-list.html?type=new">최신상품</a></li>
-                <li><a href="products-list.html?type=popular">인기상품</a></li>
-            </ul>
-
-            <!-- 인기 검색어 -->
-            <div class="popular-search">
-                <div class="keyword-header">
-                    <span class="current-keyword" id="currentKeyword">
-                        <span class="rank">1</span>
-                        <span class="text">고양이사료</span>
-                    </span>
-                    <button class="toggle-btn" id="keywordToggle">
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                </div>
-                <div class="popular-keywords" id="popularKeywords">
-                    <ul>
-                        <li data-rank="1"><span class="rank">1</span> 고양이사료</li>
-                        <li data-rank="2"><span class="rank">2</span> 500g</li>
-                        <li data-rank="3"><span class="rank">3</span> 건채담</li>
-                        <li data-rank="4"><span class="rank">4</span> 열무</li>
-                        <li data-rank="5"><span class="rank">5</span> 아비가일</li>
-                        <li data-rank="6"><span class="rank">6</span> 열무김치</li>
-                        <li data-rank="7"><span class="rank">7</span> VDG</li>
-                        <li data-rank="8"><span class="rank">8</span> 어성초</li>
-                        <li data-rank="9"><span class="rank">9</span> -1</li>
-                        <li data-rank="10"><span class="rank">10</span> --</li>
-                    </ul>
-                </div>
-            </div>
+            <ul class="main-nav main-nav-categories" id="mainNavCategories"></ul>
         </div>
     </nav>
 
@@ -122,10 +90,7 @@
                 <a href="#"><i class="fas fa-sign-in-alt"></i> 로그인</a>
                 <a href="#"><i class="fas fa-user-plus"></i> 회원가입</a>
             </div>
-            <ul class="category-list" id="categoryList">
-                <!-- JavaScript로 동적 생성 -->
-                <li><a href="#">카테고리를 불러오는 중...</a></li>
-            </ul>
+            <ul class="category-list" id="categoryList"></ul>
             <div class="sidebar-info">
                 <div class="customer-service">
                     <h3>고객센터</h3>
@@ -165,7 +130,7 @@
             <img src="image/trolley-removebg-preview.png" alt="쇼핑카트" class="floating-img img-6">
         </div>
         <!-- 스크롤 다운 버튼 -->
-        <a href="#hit-products" class="scroll-down-btn" id="scrollDownBtn" aria-label="더 알아보기">
+        <a href="#main-products" class="scroll-down-btn" id="scrollDownBtn" aria-label="더 알아보기">
             <i class="fas fa-mouse"></i>
         </a>
     </section>
@@ -192,55 +157,16 @@
         </div>
     </section>
 
-    <!-- 히트상품 섹션 -->
-    <section class="product-section" id="hit-products">
+    <!-- 전체 상품 (섹션 제목 없음, 등록된 모든 상품 표시) -->
+    <section class="product-section" id="main-products">
         <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-fire"></i> 히트상품 🔥</h2>
-                <p>요즘 잘나가는 인기 상품입니다.</p>
-            </div>
-            <div class="product-grid" id="hitProducts">
-                <!-- 상품 카드는 JavaScript로 동적 생성 -->
-            </div>
-            <div class="section-footer">
-                <a href="products-list.html?type=hit" class="btn-more">더보기</a>
+            <div class="product-grid" id="mainProductGrid">
+                <!-- 등록된 모든 상품이 여기 한 그리드에 표시 -->
             </div>
         </div>
     </section>
 
-    <!-- 추천상품 섹션 -->
-    <section class="product-section bg-light">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-thumbs-up"></i> 추천상품 👍</h2>
-                <p>요즘 잘나가는 추천 상품입니다.</p>
-            </div>
-            <div class="product-grid" id="recommendProducts">
-                <!-- 상품 카드는 JavaScript로 동적 생성 -->
-            </div>
-            <div class="section-footer">
-                <a href="products-list.html?type=recommend" class="btn-more">더보기</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- 최신상품 섹션 -->
-    <section class="product-section">
-        <div class="container">
-            <div class="section-header">
-                <h2>🅝 최신상품 ✨</h2>
-                <p>요즘 잘나가는 최신 상품입니다.</p>
-            </div>
-            <div class="product-grid" id="newProducts">
-                <!-- 상품 카드는 JavaScript로 동적 생성 -->
-            </div>
-            <div class="section-footer">
-                <a href="products-list.html?type=new" class="btn-more">더보기</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- 인기상품 배너 슬라이더 -->
+    <!-- 배너 슬라이더 -->
     <section class="popular-banner-slider">
         <div class="banner-slider-container">
                 <div class="banner-slide active" style="background: #FFC107;">
@@ -279,22 +205,6 @@
                     </div>
                 </div>
             </div>
-    </section>
-
-    <!-- 인기상품 섹션 -->
-    <section class="product-section bg-light">
-        <div class="container">
-            <div class="section-header">
-                <h2><i class="fas fa-heart"></i> 인기상품 ❤️</h2>
-                <p>요즘 잘나가는 인기 상품입니다.</p>
-            </div>
-            <div class="product-grid" id="popularProducts">
-                <!-- 상품 카드는 JavaScript로 동적 생성 -->
-            </div>
-            <div class="section-footer">
-                <a href="products-list.html?type=popular" class="btn-more">더보기</a>
-            </div>
-        </div>
     </section>
 
     <!-- 사용후기 섹션 (가로 슬라이더, 박스 하나씩) -->
@@ -474,6 +384,8 @@
     <script src="js/share-utils.js?v=4"></script>
     
     <script src="js/admin-link-visibility.js"></script>
+    <script src="js/nav-categories.js?v=1"></script>
+    <script src="js/today-viewed.js?v=1"></script>
     <script src="js/script.js?v=30"></script>
     
     <!-- 서비스 이용약관 모달 -->

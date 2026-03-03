@@ -42,8 +42,8 @@
                 </div>
                 <div class="user-menu">
                     <a href="#" class="search-btn"><i class="fas fa-search"></i> 검색</a>
-                    <a href="#"><i class="fas fa-user"></i> 로그인</a>
-                    <a href="#" class="signup-btn">
+                    <a href="login.html"><i class="fas fa-user"></i> 로그인</a>
+                    <a href="signup.html" class="signup-btn">
                         <i class="fas fa-user-plus"></i> 회원가입
                     </a>
                 </div>
@@ -58,12 +58,7 @@
                 <i class="fas fa-bars"></i>
                 <span>전체카테고리</span>
             </button>
-            <ul class="main-nav">
-                <li><a href="#"><i class="fas fa-fire"></i> 히트상품</a></li>
-                <li><a href="#"><i class="fas fa-thumbs-up"></i> 추천상품</a></li>
-                <li><a href="#"><i class="fas fa-sparkles"></i> 최신상품</a></li>
-                <li><a href="#"><i class="fas fa-heart"></i> 인기상품</a></li>
-            </ul>
+            <ul class="main-nav main-nav-categories" id="mainNavCategories"></ul>
         </div>
     </nav>
 
@@ -78,7 +73,7 @@
                 <a href="#"><i class="fas fa-sign-in-alt"></i> 로그인</a>
                 <a href="#"><i class="fas fa-user-plus"></i> 회원가입</a>
             </div>
-            <ul class="category-list">
+            <ul class="category-list" id="categoryList">
                 <li class="has-submenu">
                     <a href="#"><i class="fas fa-paw"></i> 반려동물</a>
                     <ul class="submenu">
@@ -479,6 +474,8 @@
     
     <!-- SNS 공유 유틸리티 -->
     <script src="js/share-utils.js?v=4"></script>
+    <script src="js/header-login.js?v=1"></script>
+    <script src="js/today-viewed.js?v=1"></script>
     
     <!-- 상품후기 작성 모달 -->
     <div id="reviewModal" class="modal" style="display: none;">
@@ -579,7 +576,7 @@
         </div>
     </div>
 
-    <script src="js/script.js?v=23"></script>
+    <script src="js/nav-categories.js?v=1"></script>
     <script src="js/product-detail.js?v=24"></script>
 </body>
 </html>

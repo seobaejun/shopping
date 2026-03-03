@@ -398,6 +398,53 @@ img {
     color: var(--bg-white);
 }
 
+/* 네비게이션 카테고리 (호버 시 하위 카테고리 표시) */
+.main-nav-categories {
+    flex-wrap: wrap;
+}
+.main-nav-categories li a {
+    white-space: nowrap;
+}
+.main-nav-categories .nav-cat-chevron {
+    font-size: 10px;
+    margin-left: 4px;
+    opacity: 0.7;
+}
+.main-nav-categories li {
+    position: relative;
+}
+.main-nav-categories li .submenu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 180px;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 8px 0;
+    z-index: 1000;
+    list-style: none;
+    margin: 0;
+}
+.main-nav-categories li:hover .submenu {
+    display: block;
+}
+.main-nav-categories li .submenu li {
+    margin: 0;
+}
+.main-nav-categories li .submenu a {
+    display: block;
+    padding: 10px 16px;
+    color: var(--text-dark);
+    font-size: 14px;
+}
+.main-nav-categories li .submenu a:hover {
+    background: var(--secondary-color);
+    color: var(--bg-white);
+}
+
 .popular-search {
     position: relative;
     min-width: 200px;

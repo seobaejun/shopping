@@ -13,9 +13,9 @@ const firebaseConfig = {
 // Firebase 초기화 (브라우저 환경)
 if (typeof firebase !== 'undefined') {
   try {
-    // Firebase App 초기화
     firebase.initializeApp(firebaseConfig);
     console.log('✅ Firebase App 초기화 완료');
+    try { window.dispatchEvent(new Event('firebase-ready')); } catch (e) {}
   } catch (error) {
     // 이미 초기화된 경우 무시
     if (error.code !== 'app/duplicate-app') {

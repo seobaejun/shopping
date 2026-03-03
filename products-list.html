@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title id="pageTitle">히트상품 - 10쇼핑게임</title>
+    <title id="pageTitle">상품목록 - 10쇼핑게임</title>
     <link rel="stylesheet" href="css/style.css?v=23">
     <link rel="stylesheet" href="css/products-list.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -41,8 +41,8 @@
                 </div>
                 <div class="user-menu">
                     <a href="#" class="search-btn"><i class="fas fa-search"></i> 검색</a>
-                    <a href="#"><i class="fas fa-user"></i> 로그인</a>
-                    <a href="#" class="signup-btn">
+                    <a href="login.html"><i class="fas fa-user"></i> 로그인</a>
+                    <a href="signup.html" class="signup-btn">
                         <i class="fas fa-user-plus"></i> 회원가입
                     </a>
                 </div>
@@ -57,29 +57,7 @@
                 <i class="fas fa-bars"></i>
                 <span>전체카테고리</span>
             </button>
-            <ul class="main-nav">
-                <li><a href="products-list.html?type=hit"><i class="fas fa-fire"></i> 히트상품</a></li>
-                <li><a href="products-list.html?type=recommend"><i class="fas fa-thumbs-up"></i> 추천상품</a></li>
-                <li><a href="products-list.html?type=new"><i class="fas fa-sparkles"></i> 최신상품</a></li>
-                <li><a href="products-list.html?type=popular"><i class="fas fa-heart"></i> 인기상품</a></li>
-            </ul>
-            <div class="popular-search">
-                <button id="searchToggle"><i class="fas fa-search"></i></button>
-                <div class="popular-keywords" id="popularKeywords">
-                    <ul>
-                        <li><span>1</span> 고양이사료</li>
-                        <li><span>2</span> 500g</li>
-                        <li><span>3</span> 건채담</li>
-                        <li><span>4</span> 열무</li>
-                        <li><span>5</span> 아비가일</li>
-                        <li><span>6</span> 열무김치</li>
-                        <li><span>7</span> VDG</li>
-                        <li><span>8</span> 어성초</li>
-                        <li><span>9</span> -1</li>
-                        <li><span>10</span> --</li>
-                    </ul>
-                </div>
-            </div>
+            <ul class="main-nav main-nav-categories" id="mainNavCategories"></ul>
         </div>
     </nav>
 
@@ -91,13 +69,10 @@
         </div>
         <div class="sidebar-content">
             <div class="user-quick">
-                <a href="#"><i class="fas fa-sign-in-alt"></i> 로그인</a>
-                <a href="#"><i class="fas fa-user-plus"></i> 회원가입</a>
+                <a href="login.html"><i class="fas fa-sign-in-alt"></i> 로그인</a>
+                <a href="signup.html"><i class="fas fa-user-plus"></i> 회원가입</a>
             </div>
-            <ul class="category-list" id="categoryList">
-                <!-- JavaScript로 동적 생성 -->
-                <li><a href="#">카테고리를 불러오는 중...</a></li>
-            </ul>
+            <ul class="category-list" id="categoryList"></ul>
             <div class="sidebar-info">
                 <div class="customer-service">
                     <h3>고객센터</h3>
@@ -130,11 +105,9 @@
     <section class="products-list-section">
         <div class="container">
             <!-- 페이지 헤더 -->
-            <div class="page-header">
-                <h1 id="pageHeading">
-                    <i class="fas fa-fire"></i> 히트상품 🔥
-                </h1>
-                <p id="pageDescription">요즘 잘나가는 인기 상품입니다.</p>
+            <div class="page-header" id="pageHeader">
+                <h1 id="pageHeading"></h1>
+                <p id="pageDescription"></p>
             </div>
 
             <!-- 필터 및 정렬 -->
@@ -311,8 +284,9 @@
     
     <!-- SNS 공유 유틸리티 -->
     <script src="js/share-utils.js?v=4"></script>
-    
-    <script src="js/script.js?v=23"></script>
+    <script src="js/header-login.js?v=1"></script>
+    <script src="js/today-viewed.js?v=1"></script>
+    <script src="js/nav-categories.js?v=1"></script>
     <script src="js/products-list.js?v=22"></script>
 </body>
 </html>

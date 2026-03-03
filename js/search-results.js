@@ -4,29 +4,6 @@ function getSearchKeyword() {
     return urlParams.get('q') || '';
 }
 
-// 검색어 로그 저장
-async function saveSearchLog(keyword) {
-    if (!keyword || keyword.trim() === '') return;
-    
-    try {
-        if (typeof firebase === 'undefined' || !firebase.firestore) {
-            console.warn('Firebase가 초기화되지 않아 검색 로그를 저장할 수 없습니다.');
-            return;
-        }
-        
-        const db = firebase.firestore();
-        await db.collection('searchLogs').add({
-            keyword: keyword.trim(),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            createdAt: new Date()
-        });
-        
-        console.log('✅ 검색어 저장:', keyword);
-    } catch (error) {
-        console.error('❌ 검색어 저장 오류:', error);
-    }
-}
-
 // Firestore에서 상품 검색
 async function searchProductsFromFirestore(keyword) {
     console.log('🔍 Firestore에서 검색 시작:', keyword);
@@ -180,9 +157,6 @@ async function renderSearchResults() {
         productGrid.style.display = 'none';
         return;
     }
-    
-    // 검색어 로그 저장
-    await saveSearchLog(keyword);
     
     // 검색어 표시
     if (keywordElement) {
@@ -481,9 +455,9 @@ async function init() {
     console.log('✅ 검색 결과 페이지 초기화 완료');
 }
 
-// 검색 결과 페이지용 최근 본 상품 초기화
+// 검색 결과 페이지용 최근 본 상품 초기화 (today-viewed.js 사용 시 스킵)
 function initSearchResultsViewedProducts() {
-    console.log('🔵 initSearchResultsViewedProducts 실행 중...');
+    if (typeof window.updateViewedCount === 'function') return;
     const toggleViewed = document.getElementById('toggleViewed');
     const viewedPanel = document.getElementById('viewedPanel');
     const viewedPanelClose = document.getElementById('viewedPanelClose');

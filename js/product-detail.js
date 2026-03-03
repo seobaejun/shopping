@@ -844,172 +844,17 @@ function initHomeButton() {
     });
 }
 
-// 최근 본 상품 관리 (product-detail.js용)
+// 최근 본 상품: today-viewed.js 공통 스크립트 사용 (현재 상품만 추가 후 배지 갱신)
 function initTodayViewedDetail() {
-    // 최근 본 상품에 현재 상품 추가
-    if (PRODUCT_INFO && PRODUCT_INFO.id) {
-        addToTodayViewed({
+    if (PRODUCT_INFO && PRODUCT_INFO.id && typeof window.addToTodayViewed === 'function') {
+        window.addToTodayViewed({
             id: PRODUCT_INFO.id,
             name: PRODUCT_INFO.name,
             price: PRODUCT_INFO.price,
             image: PRODUCT_INFO.image
         });
     }
-
-    // 퀵메뉴 버튼 클릭 시 패널 열기
-    const toggleViewed = document.getElementById('toggleViewed');
-    const viewedPanel = document.getElementById('viewedPanel');
-    
-    if (toggleViewed && viewedPanel) {
-        toggleViewed.addEventListener('click', () => {
-            viewedPanel.classList.add('active');
-            updateViewedListDetail();
-        });
-    }
-
-    // X 버튼 클릭 시 패널 닫기
-    const viewedPanelClose = document.getElementById('viewedPanelClose');
-    if (viewedPanelClose && viewedPanel) {
-        viewedPanelClose.addEventListener('click', () => {
-            viewedPanel.classList.remove('active');
-        });
-    }
-
-    // 오버레이 클릭 시 패널 닫기
-    if (viewedPanel) {
-        const overlay = viewedPanel.querySelector('.viewed-panel-overlay');
-        if (overlay) {
-            overlay.addEventListener('click', () => {
-                viewedPanel.classList.remove('active');
-            });
-        }
-    }
-
-    // 전체삭제 버튼
-    const btnClearAll = document.getElementById('btnClearAll');
-    if (btnClearAll) {
-        btnClearAll.addEventListener('click', () => {
-            if (confirm('최근 본 상품을 모두 삭제하시겠습니까?')) {
-                localStorage.removeItem('todayViewedProducts');
-                updateViewedListDetail();
-                updateViewedCountDetail();
-            }
-        });
-    }
-
-    // 초기 목록 업데이트
-    updateViewedCountDetail();
-}
-
-// 최근 본 상품 목록 업데이트 (product-detail.js용)
-function updateViewedListDetail() {
-    const viewedList = document.getElementById('viewedList');
-    if (!viewedList) return;
-
-    const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
-    
-    // 중복 제거: 같은 ID의 상품이 여러 개 있으면 첫 번째 것만 유지
-    const uniqueProducts = [];
-    const seenIds = new Set();
-    for (let i = 0; i < viewedProducts.length; i++) {
-        const product = viewedProducts[i];
-        if (product && product.id && !seenIds.has(product.id)) {
-            seenIds.add(product.id);
-            uniqueProducts.push(product);
-        }
-    }
-    
-    // 중복 제거된 목록을 localStorage에 다시 저장
-    if (uniqueProducts.length !== viewedProducts.length) {
-        localStorage.setItem('todayViewedProducts', JSON.stringify(uniqueProducts));
-    }
-    
-    if (uniqueProducts.length === 0) {
-        viewedList.innerHTML = '<p class="empty-message">최근 본 상품이 없습니다.</p>';
-        return;
-    }
-
-    const listHTML = uniqueProducts.map(product => `
-        <div class="viewed-item" data-product-id="${product.id || ''}" style="cursor: pointer;">
-            <img src="${product.image || 'https://via.placeholder.com/80x80'}" alt="${product.name}">
-            <div class="viewed-item-info">
-                <p>${product.name}</p>
-                <span class="price">${product.price ? product.price.toLocaleString() + '원' : ''}</span>
-            </div>
-        </div>
-    `).join('');
-
-    viewedList.innerHTML = listHTML;
-
-    // 클릭 이벤트 추가
-    const viewedItems = viewedList.querySelectorAll('.viewed-item');
-    viewedItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const productId = item.getAttribute('data-product-id');
-            if (productId) {
-                // 패널 닫기
-                const viewedPanel = document.getElementById('viewedPanel');
-                if (viewedPanel) {
-                    viewedPanel.classList.remove('active');
-                }
-                // 상품 상세 페이지로 이동
-                window.location.href = `product-detail.html?id=${productId}`;
-            }
-        });
-    });
-}
-
-// 최근 본 상품 개수 업데이트 (product-detail.js용)
-function updateViewedCountDetail() {
-    const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
-    // 중복 제거된 개수 계산
-    const uniqueIds = new Set();
-    viewedProducts.forEach(product => {
-        if (product && product.id) {
-            uniqueIds.add(product.id);
-        }
-    });
-    const count = uniqueIds.size;
-
-    // 퀵메뉴 뱃지 업데이트
-    const toggleViewed = document.getElementById('toggleViewed');
-    if (toggleViewed) {
-        const countBadge = toggleViewed.querySelector('.count');
-        if (countBadge) {
-            countBadge.textContent = count;
-            countBadge.style.display = count > 0 ? 'flex' : 'none';
-        }
-    }
-
-    // 패널 헤더 뱃지 업데이트
-    const viewedCountBadge = document.getElementById('viewedCountBadge');
-    if (viewedCountBadge) {
-        viewedCountBadge.textContent = count;
-    }
-}
-
-// 최근 본 상품에 추가 (product-detail.js용)
-function addToTodayViewed(product) {
-    if (!product || !product.id) return;
-
-    const viewedProducts = JSON.parse(localStorage.getItem('todayViewedProducts') || '[]');
-    
-    // 이미 있는 상품 제거 (중복 방지)
-    const filtered = viewedProducts.filter(p => p.id !== product.id);
-    
-    // 최신 상품을 맨 앞에 추가
-    filtered.unshift({
-        id: product.id,
-        name: product.name || '',
-        price: product.price || 0,
-        image: product.image || ''
-    });
-
-    // 최대 20개까지만 저장
-    const limited = filtered.slice(0, 20);
-    
-    localStorage.setItem('todayViewedProducts', JSON.stringify(limited));
-    updateViewedCountDetail();
+    if (typeof window.updateViewedCount === 'function') window.updateViewedCount();
 }
 
 // 페이지 정보 업데이트
@@ -1324,24 +1169,11 @@ async function initProductDetail() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         // 로그인 상태 업데이트 (script.js 로드 대기)
-        setTimeout(() => {
-            if (typeof updateHeaderForLoginStatus === 'function') {
-                updateHeaderForLoginStatus();
-            } else {
-                console.warn('updateHeaderForLoginStatus 함수를 찾을 수 없습니다.');
-            }
-        }, 100);
+        if (typeof updateHeaderForLoginStatus === 'function') updateHeaderForLoginStatus();
         initProductDetail();
     });
 } else {
-    // 로그인 상태 업데이트 (script.js 로드 대기)
-    setTimeout(() => {
-        if (typeof updateHeaderForLoginStatus === 'function') {
-            updateHeaderForLoginStatus();
-        } else {
-            console.warn('updateHeaderForLoginStatus 함수를 찾을 수 없습니다.');
-        }
-    }, 100);
+    if (typeof updateHeaderForLoginStatus === 'function') updateHeaderForLoginStatus();
     initProductDetail();
 }
 

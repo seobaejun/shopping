@@ -63,20 +63,6 @@ async function loadCategoriesForProduct() {
         
         console.log('✅ 상품용 카테고리 로드 완료:', categories.length, '개 (표시:', visibleCategories.length, '개)');
         
-        // 상품등록 페이지의 카테고리 select 업데이트
-        const registerCategorySelect = document.querySelector('#product-register select[name="category"]');
-        if (registerCategorySelect) {
-            registerCategorySelect.innerHTML = '<option value="">선택하세요</option>';
-            visibleCategories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.id;
-                const levelLabel = cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차';
-                option.textContent = `${levelLabel} - ${cat.name || cat.id}`;
-                registerCategorySelect.appendChild(option);
-            });
-            console.log('✅ 상품등록 카테고리 select 업데이트 완료');
-        }
-        
         // 상품수정 모달의 카테고리 select 업데이트
         const editCategorySelect = document.getElementById('editProductCategory');
         if (editCategorySelect) {
@@ -122,6 +108,19 @@ async function loadCategoriesForProduct() {
                     searchCategorySelect.value = currentValue;
                 }
             }
+        }
+        
+        // 상품 등록 페이지 카테고리 select
+        const registerCategorySelect = document.getElementById('productRegisterCategory');
+        if (registerCategorySelect) {
+            registerCategorySelect.innerHTML = '<option value="">선택하세요</option>';
+            visibleCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                const levelLabel = cat.level === 1 ? '1차' : cat.level === 2 ? '2차' : '3차';
+                option.textContent = `${levelLabel} - ${cat.name || cat.id}`;
+                registerCategorySelect.appendChild(option);
+            });
         }
         
         return categories;
@@ -295,11 +294,6 @@ async function loadPageData(pageId) {
                 await loadBoardPosts(window._currentBoardType);
             }
             break;
-        case 'product-register':
-            // 상품등록 페이지 진입 시 카테고리 로드
-            console.log('🔵 상품등록 페이지 로드 - 카테고리 로드 시작');
-            await loadCategoriesForProduct();
-            break;
         case 'member-search':
             // 회원조회 페이지 로드 (기본환경설정과 동일한 패턴)
             console.log('🔵🔵🔵 회원조회 페이지 로드 시작 (loadPageData)');
@@ -345,6 +339,14 @@ async function loadPageData(pageId) {
                 if (memberTableBody) {
                     memberTableBody.innerHTML = '<tr><td colspan="13" class="empty-message">loadAllMembers 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.</td></tr>';
                 }
+            }
+            break;
+        case 'product-register':
+            try {
+                await loadCategoriesForProduct();
+                if (typeof initProductOptionButtons === 'function') initProductOptionButtons();
+            } catch (error) {
+                console.error('❌ 상품 등록 페이지 로드 오류:', error);
             }
             break;
         case 'product-list':
@@ -2747,6 +2749,21 @@ function previewMainImage(event) {
     }
 }
 
+// 대량 이미지 선택 시 개수 표시
+function updateBulkImageCount() {
+    const input = document.getElementById('bulkImages');
+    const countEl = document.getElementById('bulkImageCount');
+    if (!input || !countEl) return;
+    const count = input.files ? input.files.length : 0;
+    if (count > 0) {
+        countEl.textContent = count + '개 이미지가 선택되었습니다. (상세 이미지로 추가됩니다)';
+        countEl.style.display = 'block';
+    } else {
+        countEl.textContent = '';
+        countEl.style.display = 'none';
+    }
+}
+
 // 상세 이미지 미리보기
 function previewDetailImage(event, imageId) {
     const file = event.target.files[0];
@@ -2798,7 +2815,7 @@ async function registerProduct(event) {
             mainImageUrl = await fileToBase64(mainImageFile);
         }
         
-        // 상세 이미지 처리
+        // 상세 이미지 처리 (개별 + 대량 업로드)
         const detailImageFiles = formData.getAll('detailImages[]');
         const detailImageUrls = [];
         for (const file of detailImageFiles) {
@@ -2807,9 +2824,16 @@ async function registerProduct(event) {
                 detailImageUrls.push(base64);
             }
         }
-        
-        // 분류 체크박스 값 수집 (배열)
-        const displayCategories = formData.getAll('displayCategory');
+        const bulkInput = document.getElementById('bulkImages');
+        if (bulkInput && bulkInput.files && bulkInput.files.length > 0) {
+            for (let i = 0; i < bulkInput.files.length; i++) {
+                const file = bulkInput.files[i];
+                if (file && file.size > 0) {
+                    const base64 = await fileToBase64(file);
+                    detailImageUrls.push(base64);
+                }
+            }
+        }
         
         // 선택 옵션 수집 (옵션명, 가격)
         const optionLabels = formData.getAll('optionLabel[]');
@@ -2829,7 +2853,6 @@ async function registerProduct(event) {
         // 숫자 필드 변환
         const productData = {
             name: data.productName,
-            displayCategory: displayCategories.length > 0 ? displayCategories : ['all'], // 분류 배열로 저장
             category: data.category,
             price: parseInt(data.salePrice) || 0,
             options: options,
@@ -2896,6 +2919,15 @@ async function registerProduct(event) {
             }
         });
         detailImageUploadCounter = 0;
+        
+        // 대량 이미지 업로드 초기화
+        const bulkEl = document.getElementById('bulkImages');
+        if (bulkEl) bulkEl.value = '';
+        const bulkCountEl = document.getElementById('bulkImageCount');
+        if (bulkCountEl) {
+            bulkCountEl.textContent = '';
+            bulkCountEl.style.display = 'none';
+        }
         
         // 선택 옵션 초기화 (첫 번째 행만 남기기)
         const optionsContainer = document.getElementById('productOptionsContainer');

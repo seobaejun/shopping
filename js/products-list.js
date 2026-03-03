@@ -3,28 +3,28 @@
 // 페이지 설정
 const PAGE_CONFIG = {
     hit: {
-        title: '히트상품 🔥',
-        icon: 'fa-fire',
-        description: '요즘 잘나가는 인기 상품입니다.',
-        breadcrumb: '히트상품'
+        title: '상품목록',
+        icon: 'fa-shopping-bag',
+        description: '상품 목록입니다.',
+        breadcrumb: '상품목록'
     },
     recommend: {
-        title: '추천상품 👍',
-        icon: 'fa-thumbs-up',
-        description: '10쇼핑게임이 자신있게 추천하는 상품입니다.',
-        breadcrumb: '추천상품'
+        title: '상품목록',
+        icon: 'fa-shopping-bag',
+        description: '상품 목록입니다.',
+        breadcrumb: '상품목록'
     },
     new: {
-        title: '최신상품 ✨',
-        icon: 'fa-sparkles',
-        description: '새롭게 입고된 따끈따끈한 상품입니다.',
-        breadcrumb: '최신상품'
+        title: '상품목록',
+        icon: 'fa-shopping-bag',
+        description: '상품 목록입니다.',
+        breadcrumb: '상품목록'
     },
     popular: {
-        title: '인기상품 ❤️',
-        icon: 'fa-heart',
-        description: '고객님들이 가장 많이 찾는 상품입니다.',
-        breadcrumb: '인기상품'
+        title: '상품목록',
+        icon: 'fa-shopping-bag',
+        description: '상품 목록입니다.',
+        breadcrumb: '상품목록'
     }
 };
 
@@ -63,9 +63,13 @@ async function initPage() {
     const urlParams = new URLSearchParams(window.location.search);
     currentCategory = urlParams.get('category');
     currentType = urlParams.get('type');
+    if (currentCategory !== null && currentCategory.trim() === '') currentCategory = null;
+    if (currentType !== null && currentType.trim() === '') currentType = null;
     
-    // category가 있으면 type 무시, 없으면 type 사용 (기본값: hit)
-    if (!currentCategory && !currentType) {
+    // category가 있으면 type 완전히 무시 (카테고리 전용 모드)
+    if (currentCategory) {
+        currentType = null;
+    } else if (!currentType) {
         currentType = 'hit';
     }
     
@@ -176,6 +180,13 @@ async function getSiblingCategories(categoryId) {
     }
 }
 
+// 브레드크럼 현재 카테고리 옆에 상품 개수 표시
+function updateBreadcrumbProductCount(count) {
+    const el = document.getElementById('breadcrumbProductCount');
+    if (!el) return;
+    el.textContent = count >= 0 ? ' (' + count + '개)' : '';
+}
+
 // 브레드크럼 렌더링
 async function renderCategoryBreadcrumb() {
     console.log('🔍 브레드크럼 렌더링 시작, currentCategory:', currentCategory);
@@ -227,8 +238,8 @@ async function renderCategoryBreadcrumb() {
         html += '<li><i class="fas fa-chevron-right"></i></li>';
         
         if (isLast) {
-            // 마지막 항목은 텍스트만
-            html += `<li class="current">${category.name}</li>`;
+            // 마지막 항목: 카테고리명 + 상품 개수(로드 후 updateBreadcrumbProductCount에서 채움)
+            html += `<li class="current">${category.name}<span class="breadcrumb-product-count" id="breadcrumbProductCount"></span></li>`;
         } else {
             // 중간 항목은 드롭다운 가능한 링크
             const siblings = await getSiblingCategories(category.id);
@@ -252,8 +263,9 @@ async function renderCategoryBreadcrumb() {
     }
     
     breadcrumbList.innerHTML = html;
-    console.log('✅ 브레드크럼 HTML 생성 완료, HTML:', html.substring(0, 200));
-    
+    updateBreadcrumbProductCount(currentProducts.length);
+    console.log('✅ 브레드크럼 HTML 생성 완료');
+
     // 드롭다운 이벤트 리스너 추가
     const dropdownLinks = breadcrumbList.querySelectorAll('.breadcrumb-dropdown > .breadcrumb-link');
     dropdownLinks.forEach(link => {
@@ -323,54 +335,88 @@ async function updatePageInfo() {
                     
                     return;
                 }
+                // 카테고리 문서가 없으면 "카테고리를 찾을 수 없습니다" 표시 (히트상품으로 넘어가지 않음)
+                if (listElements.pageTitle) listElements.pageTitle.textContent = '카테고리 - 10쇼핑게임';
+                if (listElements.pageHeading) listElements.pageHeading.innerHTML = '<i class="fas fa-tag"></i> 카테고리를 찾을 수 없습니다';
+                if (listElements.pageDescription) listElements.pageDescription.textContent = '해당 카테고리가 없거나 삭제되었습니다.';
+                if (listElements.breadcrumbCurrent) listElements.breadcrumbCurrent.textContent = '카테고리 없음';
+                const pageHeader = document.querySelector('.page-header');
+                if (pageHeader) {
+                    pageHeader.setAttribute('data-category', currentCategory);
+                    pageHeader.removeAttribute('data-type');
+                }
+                return;
             }
         } catch (error) {
             console.error('카테고리 정보 로드 오류:', error);
         }
+        // 카테고리 로드 실패 시에도 히트상품으로 넘기지 않음
+        if (listElements.pageTitle) listElements.pageTitle.textContent = '카테고리 - 10쇼핑게임';
+        if (listElements.pageHeading) listElements.pageHeading.innerHTML = '<i class="fas fa-tag"></i> 카테고리 정보를 불러올 수 없습니다';
+        if (listElements.pageDescription) listElements.pageDescription.textContent = '잠시 후 다시 시도해 주세요.';
+        const pageHeader = document.querySelector('.page-header');
+        if (pageHeader) pageHeader.setAttribute('data-category', currentCategory);
+        return;
     } else {
         // 타입 모드일 때는 브레드크럼 숨기기
         const breadcrumbContainer = document.getElementById('categoryBreadcrumb');
         if (breadcrumbContainer) breadcrumbContainer.style.display = 'none';
     }
     
-    // 타입 모드인 경우
-    const config = PAGE_CONFIG[currentType];
-    
-    if (config) {
-        if (listElements.pageTitle) {
-            listElements.pageTitle.textContent = `${config.breadcrumb} - 10쇼핑게임`;
-        }
-        if (listElements.pageHeading) {
-            listElements.pageHeading.innerHTML = `<i class="fas ${config.icon}"></i> ${config.title}`;
-        }
-        if (listElements.pageDescription) {
-            listElements.pageDescription.textContent = config.description;
-        }
-        if (listElements.breadcrumbCurrent) {
-            listElements.breadcrumbCurrent.textContent = config.breadcrumb;
-        }
-        
-        // 페이지 헤더에 타입 데이터 속성 추가
-        const pageHeader = document.querySelector('.page-header');
-        if (pageHeader) {
-            pageHeader.setAttribute('data-type', currentType);
-            pageHeader.removeAttribute('data-category');
-        }
+    // category 없을 때: 상단 멘트 비움 (카테고리 선택 시에만 카테고리명 표시)
+    const pageHeader = document.querySelector('.page-header');
+    if (pageHeader) {
+        pageHeader.removeAttribute('data-category');
+        pageHeader.setAttribute('data-type', currentType || '');
     }
+    if (listElements.pageTitle) listElements.pageTitle.textContent = '10쇼핑게임';
+    if (listElements.pageHeading) listElements.pageHeading.innerHTML = '';
+    if (listElements.pageDescription) listElements.pageDescription.textContent = '';
+    if (listElements.breadcrumbCurrent) listElements.breadcrumbCurrent.textContent = '';
 }
 
-// 상품 로드
+// Firestore 조회 타임아웃 (ms) - 이 시간 안에 응답 없으면 상품 없음 처리
+const PRODUCTS_LOAD_TIMEOUT_MS = 10000;
+
+// 상품에 저장된 카테고리 ID 하나 추출 (관리자 입력폼에서 선택한 값). 문자열/Reference 모두 처리.
+function getProductCategoryId(product) {
+    const raw = product.category != null ? product.category : product.categoryId;
+    if (raw == null || raw === '') return '';
+    if (Array.isArray(raw) && raw.length > 0) {
+        const c = raw[0];
+        if (c && typeof c === 'object' && (c.id != null || c.path)) return (c.id != null ? c.id : (c.path || '').split('/').pop()) || '';
+        return String(c).trim();
+    }
+    if (typeof raw === 'object') {
+        if (raw.id != null) return String(raw.id).trim();
+        if (raw.path) return String((raw.path || '').split('/').pop()).trim();
+        return '';
+    }
+    return String(raw).trim();
+}
+
+// 상품이 지정한 카테고리 ID에 속하는지 (관리자에서 정한 카테고리 1개만 사용)
+function productBelongsToCategory(product, categoryId) {
+    const productCatId = getProductCategoryId(product);
+    if (productCatId === '') return false;
+    const idToMatch = String(categoryId).trim();
+    return productCatId === idToMatch;
+}
+
+// 상품 로드 (로딩 스피너 없이 완료 시 바로 목록 또는 '상품 없음' 표시)
+// ?category=ID 가 있으면 해당 카테고리 상품만, 없으면 전체 상품 표시
 async function loadProducts() {
-    // 로딩 표시
-    showLoading();
-    
+    const urlCategory = new URLSearchParams(window.location.search).get('category');
+    const isCategoryPage = urlCategory != null && String(urlCategory).trim() !== '';
+
     try {
-        // Firebase가 초기화될 때까지 대기
         if (typeof firebase !== 'undefined' && firebase.firestore) {
             const db = firebase.firestore();
-            
-            // where와 orderBy를 함께 사용하면 인덱스가 필요하므로 분리
-            const productsSnapshot = await db.collection('products').get();
+            const fetchPromise = db.collection('products').get();
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('LOAD_TIMEOUT')), PRODUCTS_LOAD_TIMEOUT_MS);
+            });
+            const productsSnapshot = await Promise.race([fetchPromise, timeoutPromise]);
 
             if (!productsSnapshot.empty) {
                 // 클라이언트에서 필터링 및 정렬
@@ -395,59 +441,10 @@ async function loadProducts() {
                 // Firestore 데이터를 기존 형식으로 변환
                 const firestoreProducts = [];
                 
-                allProducts.forEach(product => {
-                    let shouldInclude = false;
-                    
-                    // 카테고리 모드인 경우
-                    if (currentCategory) {
-                        // 상품의 category 필드가 현재 카테고리와 일치하는지 확인
-                        const productCategory = product.category;
-                        
-                        if (!productCategory) {
-                            // category 필드가 없으면 제외
-                            shouldInclude = false;
-                        } else if (Array.isArray(productCategory)) {
-                            // 배열인 경우 포함 여부 확인
-                            shouldInclude = productCategory.some(catId => String(catId) === String(currentCategory));
-                        } else {
-                            // 문자열인 경우 직접 비교 (양쪽 모두 문자열로 변환하여 비교)
-                            shouldInclude = String(productCategory) === String(currentCategory);
-                        }
-                        
-                        // 디버깅 로그 (처음 몇 개만)
-                        if (shouldInclude && firestoreProducts.length < 3) {
-                            console.log(`✅ 카테고리 매칭: 상품 ${product.name} (카테고리: ${productCategory}, 현재: ${currentCategory})`);
-                        }
-                    } else if (currentType) {
-                        // 타입 모드인 경우 - 메인 페이지와 완전히 동일한 로직 사용
-                        // displayCategory가 없거나 undefined/null이면 'all'로 처리
-                        let displayCategories;
-                        if (!product.displayCategory) {
-                            // displayCategory가 없으면 'all'로 처리 (모든 타입에 포함)
-                            displayCategories = ['all'];
-                        } else if (Array.isArray(product.displayCategory)) {
-                            displayCategories = product.displayCategory.length > 0 ? product.displayCategory : ['all'];
-                        } else {
-                            displayCategories = [product.displayCategory];
-                        }
-                        
-                        // 메인 페이지 로직: displayCategories.forEach로 각 카테고리를 확인
-                        displayCategories.forEach(category => {
-                            // 'all'이거나 현재 타입이면 포함
-                            if (category === 'all' || category === currentType) {
-                                shouldInclude = true;
-                            }
-                        });
-                        
-                        // 디버깅 로그
-                        if (shouldInclude && firestoreProducts.length < 5) {
-                            console.log(`✅ 타입 매칭: 상품 ${product.name} (displayCategory: ${JSON.stringify(product.displayCategory)}, 처리된 categories: ${JSON.stringify(displayCategories)}, 현재 타입: ${currentType})`);
-                        } else if (!shouldInclude && firestoreProducts.length < 5) {
-                            console.log(`❌ 타입 불일치: 상품 ${product.name} (displayCategory: ${JSON.stringify(product.displayCategory)}, 처리된 categories: ${JSON.stringify(displayCategories)}, 현재 타입: ${currentType})`);
-                        }
-                    }
-                    
-                    if (shouldInclude) {
+                if (isCategoryPage) {
+                    const catId = String(urlCategory).trim();
+                    allProducts.forEach(product => {
+                        if (!productBelongsToCategory(product, catId)) return;
                         firestoreProducts.push({
                             id: product.id,
                             title: product.name,
@@ -457,75 +454,32 @@ async function loadProducts() {
                             image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
                             description: product.description || product.shortDesc || ''
                         });
-                    }
-                });
-                
-                // 카테고리 모드일 때 디버깅 정보
-                if (currentCategory) {
-                    console.log(`🔍 카테고리 필터링 결과: ${firestoreProducts.length}개 상품 (카테고리 ID: ${currentCategory})`);
-                    if (firestoreProducts.length === 0) {
-                        console.warn('⚠️ 해당 카테고리의 상품이 없습니다.');
-                        console.warn('   상품의 category 필드를 확인하세요.');
-                        console.warn('   전체 상품 수:', allProducts.length);
-                        // 샘플 상품의 category 필드 확인 (처음 5개)
-                        const sampleProducts = allProducts.slice(0, 5);
-                        sampleProducts.forEach((p, idx) => {
-                            console.log(`   샘플 상품 ${idx + 1}: ${p.name}, category: ${p.category} (타입: ${typeof p.category})`);
+                    });
+                    console.log('[카테고리] URL category=' + catId + ', 전체 ' + allProducts.length + '개 중 ' + firestoreProducts.length + '개만 표시');
+                } else {
+                    // 카테고리 파라미터 없음: 전체 상품 표시. displayCategory는 사용하지 않음(관리자 카테고리만 기준).
+                    allProducts.forEach(product => {
+                        firestoreProducts.push({
+                            id: product.id,
+                            title: product.name,
+                            option: product.shortDesc || '',
+                            support: `${(product.price * (product.supportRate || 5) / 100).toLocaleString()}원`,
+                            rating: 0,
+                            image: product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                            description: product.description || product.shortDesc || ''
                         });
-                        console.log(`   찾는 카테고리 ID: ${currentCategory} (타입: ${typeof currentCategory})`);
-                    } else {
-                        console.log(`✅ 카테고리 필터링 성공: ${firestoreProducts.length}개 상품 발견`);
-                    }
-                } else if (currentType) {
-                    console.log(`🔍 타입 필터링 결과: ${firestoreProducts.length}개 상품 (타입: ${currentType})`);
-                    console.log(`   전체 상품 수: ${allProducts.length}`);
-                    if (firestoreProducts.length === 0 && allProducts.length > 0) {
-                        console.warn('⚠️ 필터링된 상품이 없습니다. displayCategory 필드를 확인하세요.');
-                        // 샘플 상품의 displayCategory 확인
-                        const sampleProducts = allProducts.slice(0, 3);
-                        sampleProducts.forEach((p, idx) => {
-                            console.log(`   샘플 상품 ${idx + 1}: ${p.name}, displayCategory: ${JSON.stringify(p.displayCategory)}`);
-                        });
-                    }
+                    });
                 }
-                
                 if (firestoreProducts.length > 0) {
                     currentProducts = firestoreProducts;
-                    console.log('✅ Firestore에서 상품 로드 성공:', currentProducts.length);
                 } else {
-                    // 카테고리 모드일 때는 빈 배열 유지 (기본 데이터 사용 안 함)
-                    if (currentCategory) {
-                        currentProducts = [];
-                        console.log('ℹ️ 해당 카테고리의 Firestore 상품이 없습니다.');
-                    } else {
-                        // 타입 모드일 때만 기본 데이터 사용
-                        currentProducts = PRODUCTS_DATA[currentType] || [];
-                        console.log('ℹ️ 해당 타입의 Firestore 상품이 없어 기본 데이터 사용');
-                    }
+                    currentProducts = isCategoryPage ? [] : (PRODUCTS_DATA[currentType] || []);
                 }
             } else {
-                // Firestore에 상품이 없으면
-                if (currentCategory) {
-                    // 카테고리 모드일 때는 빈 배열
-                    currentProducts = [];
-                    console.log('ℹ️ Firestore에 상품이 없습니다.');
-                } else {
-                    // 타입 모드일 때만 기본 데이터 사용
-                    currentProducts = PRODUCTS_DATA[currentType] || [];
-                    console.log('ℹ️ Firestore에 상품이 없어 기본 데이터 사용');
-                }
+                currentProducts = isCategoryPage ? [] : (PRODUCTS_DATA[currentType] || []);
             }
         } else {
-            // Firebase가 초기화되지 않았으면
-            if (currentCategory) {
-                // 카테고리 모드일 때는 빈 배열
-                currentProducts = [];
-                console.log('ℹ️ Firebase 미초기화, 카테고리 모드에서는 상품을 불러올 수 없습니다.');
-            } else {
-                // 타입 모드일 때만 기본 데이터 사용
-                currentProducts = PRODUCTS_DATA[currentType] || [];
-                console.log('ℹ️ Firebase 미초기화, 기본 데이터 사용');
-            }
+            currentProducts = isCategoryPage ? [] : (PRODUCTS_DATA[currentType] || []);
         }
         
         console.log('Loaded Products:', currentProducts);
@@ -542,41 +496,27 @@ async function loadProducts() {
         
         // 총 개수 업데이트
         listElements.totalCount.textContent = currentProducts.length;
+        if (currentCategory) updateBreadcrumbProductCount(currentProducts.length);
     } catch (error) {
-        console.error('❌ 상품 로드 오류:', error);
-        // 오류 발생 시
-        if (currentCategory) {
-            // 카테고리 모드일 때는 빈 배열
-            currentProducts = [];
-            console.log('⚠️ 오류로 인해 카테고리 상품을 불러올 수 없습니다.');
+        const isTimeout = error && error.message === 'LOAD_TIMEOUT';
+        if (isTimeout) {
+            console.warn('⏱️ 상품 로드 타임아웃 - 상품 없음으로 표시');
         } else {
-            // 타입 모드일 때만 기본 데이터 사용
+            console.error('❌ 상품 로드 오류:', error);
+        }
+        // 오류/타임아웃 시: 상품 없으면 없다고 표시 (무한 로딩 방지)
+        if (currentCategory || isTimeout) {
+            currentProducts = [];
+        } else {
             currentProducts = PRODUCTS_DATA[currentType] || [];
-            console.log('⚠️ 오류로 인해 기본 데이터 사용');
         }
         
-        // 정렬 적용
         sortProducts();
-        
-        // 상품 렌더링
         renderProducts();
-        
-        // 페이지네이션 업데이트
         updatePagination();
-        
-        // 총 개수 업데이트
         listElements.totalCount.textContent = currentProducts.length;
+        if (currentCategory) updateBreadcrumbProductCount(currentProducts.length);
     }
-}
-
-// 로딩 표시
-function showLoading() {
-    listElements.productGrid.innerHTML = `
-        <div class="loading-spinner" style="grid-column: 1 / -1;">
-            <div class="spinner"></div>
-            <p>상품을 불러오는 중입니다...</p>
-        </div>
-    `;
 }
 
 // 상품 정렬
@@ -630,28 +570,15 @@ function renderProducts() {
     updateProductRatingsInGrid(pageProducts);
 }
 
-// 상품 카드 생성
+// 상품 카드 생성 (히트/추천/최신/인기 배지 없음)
 function createProductCard(product, index) {
-    const badgeClass = currentType;
-    const badgeLabels = {
-        hit: '히트',
-        recommend: '추천',
-        new: '최신',
-        popular: '인기'
-    };
-    
-    // Firestore ID 사용
     const productId = product.id;
-    
     const ratingVal = (product.rating != null && product.rating !== undefined) ? product.rating : 0;
     return `
         <div class="product-card" data-product-id="${productId}">
             <a href="product-detail.html?id=${productId}" class="product-link">
                 <div class="product-image">
                     <img src="${product.image}" alt="${product.title}">
-                    <div class="product-badge">
-                        <span class="badge ${badgeClass}">${badgeLabels[badgeClass]}</span>
-                    </div>
                 </div>
             </a>
             <div class="product-info">
@@ -707,11 +634,25 @@ async function updateProductRatingsInGrid(products) {
 
 // 빈 상태 표시
 function showEmptyState() {
+    const hasCategoryParam = new URLSearchParams(window.location.search).get('category');
+    if (!hasCategoryParam) {
+        listElements.productGrid.innerHTML = `
+            <div class="empty-products" style="grid-column: 1 / -1;">
+                <i class="fas fa-folder-open"></i>
+                <h3>카테고리를 선택해 주세요</h3>
+                <p>상단 <strong>전체카테고리</strong> 또는 네비게이션에서 카테고리를 선택하시면 해당 카테고리 상품만 표시됩니다.</p>
+                <a href="index.html" class="btn-home">
+                    <i class="fas fa-home"></i> 메인에서 전체 상품 보기
+                </a>
+            </div>
+        `;
+        return;
+    }
     listElements.productGrid.innerHTML = `
         <div class="empty-products" style="grid-column: 1 / -1;">
             <i class="fas fa-box-open"></i>
             <h3>등록된 상품이 없습니다</h3>
-            <p>새로운 상품이 곧 준비될 예정입니다.</p>
+            <p>이 카테고리에 등록된 상품이 없습니다.</p>
             <a href="index.html" class="btn-home">
                 <i class="fas fa-home"></i> 홈으로 가기
             </a>
@@ -888,6 +829,13 @@ function buildCategoryTree(categories) {
     });
 }
 
+// 상품목록 페이지에서는 현재 경로에 ?category=ID 만 붙여서 쿼리 유실 방지
+function categoryListHref(categoryId) {
+    const path = window.location.pathname || '';
+    if (/products-list/.test(path)) return '?category=' + encodeURIComponent(categoryId);
+    return 'products-list.html?category=' + encodeURIComponent(categoryId);
+}
+
 function renderCategoryMenu(categoryTree) {
     if (!categoryTree || categoryTree.length === 0) {
         return '<li><a href="#">등록된 카테고리가 없습니다.</a></li>';
@@ -899,10 +847,9 @@ function renderCategoryMenu(categoryTree) {
         html += `<li${hasChildren ? ' class="has-submenu"' : ''}>`;
         
         if (hasChildren) {
-            // 하위 카테고리가 있으면 클릭으로 펼치기 (하위 카테고리로 이동)
             html += `<a href="#" onclick="toggleSubmenu(event, this)">${(cat1.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
         } else {
-            html += `<a href="products-list.html?category=${cat1.id}">${(cat1.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
+            html += `<a href="${categoryListHref(cat1.id)}">${(cat1.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
         }
         
         if (hasChildren) {
@@ -915,13 +862,13 @@ function renderCategoryMenu(categoryTree) {
                     // 3차 카테고리가 있으면 클릭으로 펼치기 (하위 카테고리로 이동)
                     html += `<a href="#" onclick="toggleSubmenu(event, this)">${(cat2.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
                 } else {
-                    html += `<a href="products-list.html?category=${cat2.id}">${(cat2.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
+                    html += `<a href="${categoryListHref(cat2.id)}">${(cat2.name || '(이름 없음)').replace(/</g, '&lt;')}</a>`;
                 }
                 
                 if (hasGrandChildren) {
                     html += '<ul class="submenu">';
                     cat2.children.forEach(cat3 => {
-                        html += `<li><a href="products-list.html?category=${cat3.id}">${(cat3.name || '(이름 없음)').replace(/</g, '&lt;')}</a></li>`;
+                        html += `<li><a href="${categoryListHref(cat3.id)}">${(cat3.name || '(이름 없음)').replace(/</g, '&lt;')}</a></li>`;
                     });
                     html += '</ul>';
                 }
@@ -988,14 +935,7 @@ function initShareButtonsForProductList() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 로그인 상태 업데이트 (script.js 로드 대기)
-    setTimeout(() => {
-        if (typeof updateHeaderForLoginStatus === 'function') {
-            updateHeaderForLoginStatus();
-        } else {
-            console.warn('updateHeaderForLoginStatus 함수를 찾을 수 없습니다.');
-        }
-    }, 100);
+    if (typeof updateHeaderForLoginStatus === 'function') updateHeaderForLoginStatus();
     
     await initPage();
     setTimeout(loadCategoriesMenu, 1000);
