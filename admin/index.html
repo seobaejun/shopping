@@ -1618,11 +1618,11 @@
                         </div>
                         <div class="form-group">
                             <label>시작일</label>
-                            <input type="date" class="form-control" id="confirmStartDate" value="2026-01-01" onchange="filterConfirmResults()">
+                            <input type="date" class="form-control" id="confirmStartDate" value="" placeholder="전체" onchange="filterConfirmResults()">
                         </div>
                         <div class="form-group">
                             <label>종료일</label>
-                            <input type="date" class="form-control" id="confirmEndDate" value="2026-02-04" onchange="filterConfirmResults()">
+                            <input type="date" class="form-control" id="confirmEndDate" value="" placeholder="전체" onchange="filterConfirmResults()">
                         </div>
                     </div>
                     <div class="search-actions">
@@ -1677,7 +1677,7 @@
                             </div>
                             <div class="summary-content">
                                 <h4>지원금 총액 (당일 지급)</h4>
-                                <p class="summary-value" id="totalSupport">0 trix</p>
+                                <p class="summary-value" id="confirmTotalSupport">0 trix</p>
                             </div>
                         </div>
                     </div>
@@ -1689,9 +1689,14 @@
                         <p class="info-text">
                             총 <strong id="confirmCount">0</strong>건의 추첨 결과가 확정되었습니다.
                         </p>
-                        <button class="btn btn-primary btn-sm" onclick="processDailyPayment()">
-                            <i class="fas fa-money-bill-wave"></i> 당일 지원금 일괄 지급
-                        </button>
+                        <span class="confirm-payment-buttons" style="display: inline-flex; gap: 6px; align-items: center;">
+                            <button class="btn btn-secondary btn-sm" onclick="completePagePayment()">
+                                <i class="fas fa-file-invoice-dollar"></i> 이페이지 일괄지급
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="processDailyPayment()">
+                                <i class="fas fa-money-bill-wave"></i> 당일 지원금 일괄 지급
+                            </button>
+                        </span>
                     </div>
                     <table class="data-table">
                         <thead>

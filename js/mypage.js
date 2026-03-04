@@ -183,22 +183,23 @@ if (document.readyState === 'loading') {
     initMypageOnLoad();
 }
 
-// 사용자 정보 표시 (회원 tokenBalance 우선, 없으면 주문 기반 지원금)
+// 사용자 정보 표시 — 보유 토큰 = 쇼핑지원금(승인된 주문 지원금 합계)와 동일하게 표시
 function displayUserInfo(user, member, orders) {
     member = member || user;
     const name = (member && member.name) || user.name || user.userId || (user.email && user.email.split('@')[0]) || '사용자';
     const userNameEl = document.getElementById('userName');
     if (userNameEl) userNameEl.textContent = name;
 
-    let totalSupport = 0;
-    if (member && typeof member.tokenBalance === 'number') {
-        totalSupport = member.tokenBalance;
-    } else if (orders && orders.length) {
-        const approved = orders.filter(function (o) { return o.status === 'approved'; });
-        approved.forEach(function (o) { totalSupport += (o.supportAmount || 0); });
+    var totalSupport = 0;
+    if (orders && orders.length) {
+        var approved = orders.filter(function (o) { return o.status === 'approved'; });
+        approved.forEach(function (o) { totalSupport += (Number(o.supportAmount) || 0); });
     }
-    const currentSupportEl = document.getElementById('currentSupport');
-    const supportStr = totalSupport.toLocaleString() + ' trix';
+    if (totalSupport === 0 && member && typeof member.tokenBalance === 'number') {
+        totalSupport = member.tokenBalance;
+    }
+    var currentSupportEl = document.getElementById('currentSupport');
+    var supportStr = totalSupport.toLocaleString() + ' trix';
     if (currentSupportEl) currentSupportEl.textContent = supportStr;
     var withdrawBalanceEl = document.getElementById('tokenWithdrawBalance');
     if (withdrawBalanceEl) withdrawBalanceEl.textContent = supportStr;
@@ -989,9 +990,8 @@ function showSection(sectionName, clickedLink) {
     const sections = document.querySelectorAll('.mypage-section');
     sections.forEach(function (sec) {
         const dataSection = sec.getAttribute('data-section');
-        const isOrders = dataSection === 'orders';
         const isSelected = dataSection === sectionName;
-        sec.style.display = (isOrders || isSelected) ? 'block' : 'none';
+        sec.style.display = isSelected ? 'block' : 'none';
     });
     if (sectionName === 'support') renderSupportList();
     if (sectionName === 'coupons') renderLotteryList();

@@ -522,18 +522,25 @@ async function loadPageData(pageId) {
         case 'purchase-request':
             await loadPurchaseRequests();
             break;
-        case 'draw-lottery':
-            // 승인된 주문을 조별 추첨 대기 명단으로 로드 후 현황 표시
+        case 'draw-lottery': {
+            var loadedConfirmed = [];
+            if (typeof loadLotteryConfirmedFromFirebase === 'function') {
+                loadedConfirmed = await loadLotteryConfirmedFromFirebase();
+                if (!Array.isArray(loadedConfirmed)) loadedConfirmed = [];
+            }
             if (typeof loadLotteryWaitingData === 'function') {
-                await loadLotteryWaitingData();
+                await loadLotteryWaitingData(loadedConfirmed);
             } else if (typeof renderLotteryStatus === 'function') {
                 setTimeout(renderLotteryStatus, 100);
             }
             break;
+        }
         case 'draw-confirm':
-            // 추첨 확정 현황 업데이트
+            if (typeof loadLotteryConfirmedFromFirebase === 'function') {
+                await loadLotteryConfirmedFromFirebase();
+            }
             if (typeof updateConfirmPage === 'function') {
-                setTimeout(updateConfirmPage, 100);
+                updateConfirmPage();
             }
             break;
         case 'settlement-personal':
@@ -3153,12 +3160,43 @@ window.LOTTERY_PRODUCTS = [];
 let selectedProductId = LOTTERY_GLOBAL_KEY;
 let currentRound = 1;
 
-// 승인된 주문 전체를 선착순(createdAt) 1개 대기열로 로드
-async function loadLotteryWaitingData() {
+// Firestore에서 추첨 확정 결과·회차 로드 (페이지 로드·탭 전환 시 유지). 반환: 로드된 확정 목록(배열)
+async function loadLotteryConfirmedFromFirebase() {
+    try {
+        if (!window.firebaseAdmin) return [];
+        if (typeof window.firebaseAdmin.getInitPromise === 'function') {
+            await window.firebaseAdmin.getInitPromise();
+        }
+        if (!window.firebaseAdmin.lotteryConfirmedService) return (window.LOTTERY_CONFIRMED_RESULTS || []);
+        var list = await window.firebaseAdmin.lotteryConfirmedService.getConfirmedResults();
+        var meta = await window.firebaseAdmin.lotteryConfirmedService.getLotteryMeta();
+        if (Array.isArray(list)) LOTTERY_CONFIRMED_RESULTS = list;
+        if (meta && typeof meta.currentRound === 'number') currentRound = meta.currentRound;
+        return list || [];
+    } catch (e) {
+        console.error('추첨 확정 데이터 로드 오류:', e);
+        return (window.LOTTERY_CONFIRMED_RESULTS || []);
+    }
+}
+
+// 승인된 주문 전체를 선착순(createdAt) 1개 대기열로 로드 (이미 당첨 확정된 주문은 제외)
+// confirmedList: 생략 시 LOTTERY_CONFIRMED_RESULTS 사용. 조별추첨 탭 진입 시 방금 로드한 목록을 넘기면 당첨자 제외가 확실히 적용됨.
+async function loadLotteryWaitingData(confirmedList) {
     try {
         if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) return;
+        var confirmed = confirmedList != null ? confirmedList : (window.LOTTERY_CONFIRMED_RESULTS || []);
+        var winnerOrderIds = new Set();
+        confirmed.forEach(function (r) {
+            if (r.result !== 'winner') return;
+            var oid = r.orderId;
+            if (oid != null && oid !== '') winnerOrderIds.add(String(oid));
+        });
         const allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
-        const approved = allOrders.filter(function (o) { return o.status === 'approved'; });
+        const approved = allOrders.filter(function (o) {
+            if (o.status !== 'approved') return false;
+            if (winnerOrderIds.has(String(o.id))) return false;
+            return true;
+        });
         var sorted = approved.slice().sort(function (a, b) {
             var at = a.createdAt && (a.createdAt.seconds != null ? a.createdAt.seconds : (a.createdAt.toDate ? a.createdAt.toDate().getTime() / 1000 : 0));
             var bt = b.createdAt && (b.createdAt.seconds != null ? b.createdAt.seconds : (b.createdAt.toDate ? b.createdAt.toDate().getTime() / 1000 : 0));
@@ -3447,51 +3485,50 @@ function closeLotteryResult() {
 // 추첨 확정 결과 저장소 (페이지 로드 시 초기화)
 let LOTTERY_CONFIRMED_RESULTS = [];
 
-// 기존 확정 결과 초기화 함수
-function clearConfirmedResults() {
-    if (confirm('⚠️ 모든 확정된 추첨 결과를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+// 기존 확정 결과 초기화 함수 (Firestore에서도 삭제)
+async function clearConfirmedResults() {
+    if (!confirm('⚠️ 모든 확정된 추첨 결과를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) return;
+    try {
+        if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
+            await window.firebaseAdmin.lotteryConfirmedService.clearAllConfirmed();
+        }
         LOTTERY_CONFIRMED_RESULTS = [];
+        currentRound = 1;
         updateConfirmPage();
         alert('✅ 모든 확정 결과가 삭제되었습니다.');
+    } catch (e) {
+        console.error('확정 결과 삭제 오류:', e);
+        alert('삭제 중 오류가 발생했습니다.');
     }
 }
 
-// 추첨 결과 확정
-function confirmLotteryResult() {
-    // executeLottery에서 저장된 데이터 사용 (calculatedSupport 포함)
+// 추첨 결과 확정 (Firestore에 저장하여 나갔다 들어와도 유지)
+async function confirmLotteryResult() {
     if (!currentLotteryWinners || !currentLotteryLosers || currentLotteryWinners.length === 0) {
         alert('추첨 결과를 찾을 수 없습니다. 다시 추첨해주세요.');
         return;
     }
     
-    // 저장된 데이터로 확정 결과 생성 — 10명 전원 지원금 지급 (당첨자도 비례 지급)
     var winnerSupportVal = function (w) {
         return (w.calculatedSupport != null && !isNaN(w.calculatedSupport)) ? w.calculatedSupport : 0;
     };
-    const winners = currentLotteryWinners.map((w, index) => ({
-        id: Date.now() + index,
-        orderId: w.id || w.orderId,
-        round: currentRound,
-        productId: selectedProductId,
-        productName: getProductName(selectedProductId),
-        name: w.name,
-        phone: w.phone,
-        amount: w.amount,
-        result: 'winner',
+    var winners = currentLotteryWinners.map(function (w, index) {
+        return {
+            id: Date.now() + index,
+            orderId: w.id || w.orderId,
+            round: currentRound,
+            productId: selectedProductId,
+            productName: getProductName(selectedProductId),
+            name: w.name,
+            phone: w.phone,
+            amount: w.amount,
+result: 'winner',
         support: winnerSupportVal(w),
-        paymentStatus: 'completed',
+        paymentStatus: 'pending',
         date: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0]
-    }));
-    
-    // ✅ 디버깅: currentLotteryLosers 확인
-    console.log('🔵 confirmLotteryResult - currentLotteryLosers:', currentLotteryLosers.map(l => ({
-        name: l.name,
-        calculatedSupport: l.calculatedSupport,
-        support: l.support,
-        amount: l.amount
-    })));
-    
-    const losers = currentLotteryLosers.map((l, index) => {
+        };
+    });
+    var losers = currentLotteryLosers.map(function (l, index) {
         var supportAmount = (l.calculatedSupport != null && !isNaN(l.calculatedSupport)) ? l.calculatedSupport : 0;
         return {
             id: Date.now() + winners.length + index,
@@ -3503,36 +3540,36 @@ function confirmLotteryResult() {
             phone: l.phone,
             amount: l.amount,
             result: 'loser',
-            support: supportAmount, // ✅ calculatedSupport 사용 (절대 1500원 아님)
+            support: supportAmount,
             paymentStatus: 'pending',
             date: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0]
         };
     });
     
-    // ✅ 저장 전 최종 확인
-    console.log('🔵 confirmLotteryResult - 저장할 losers:', losers.map(l => ({
-        name: l.name,
-        support: l.support
-    })));
-    
-    // 확정 결과에 추가
-    LOTTERY_CONFIRMED_RESULTS.push(...winners, ...losers);
-    
-    var totalSupportConfirmed = winners.reduce(function (s, w) { return s + (w.support || 0); }, 0) + losers.reduce(function (s, l) { return s + (l.support || 0); }, 0);
-    alert('추첨 결과가 확정되었습니다!\n\n회차: ' + currentRound + '회\n당첨: ' + winners.length + '명\n미선정: ' + losers.length + '명\n총 지원금(10명 전원): ' + totalSupportConfirmed.toLocaleString() + ' trix\n\n※ 지원금은 당일 일괄 지급됩니다.');
-    
-    // ✅ 순환 구조: 당첨자만 제거 (이미 executeLottery에서 처리됨)
-    // confirmLotteryResult는 결과를 확정하는 것이므로 여기서는 제거하지 않음
-    // executeLottery에서 이미 당첨자만 제거하고 미선정자는 유지하도록 수정됨
-    
-    currentRound++;
-    closeLotteryResult();
-    renderLotteryStatus();
-    if (selectedProductId) {
-        renderWaitingList(selectedProductId);
+    var toSave = winners.concat(losers);
+    try {
+        if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
+            var ids = await window.firebaseAdmin.lotteryConfirmedService.addConfirmedResults(toSave);
+            if (ids && ids.length === toSave.length) {
+                for (var i = 0; i < ids.length; i++) toSave[i].id = ids[i];
+            }
+            await window.firebaseAdmin.lotteryConfirmedService.saveLotteryMeta({ currentRound: currentRound + 1 });
+        }
+    } catch (e) {
+        console.error('추첨 확정 저장 오류:', e);
+        alert('저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+        return;
     }
     
-    // 확정 현황 페이지 업데이트
+    LOTTERY_CONFIRMED_RESULTS.push.apply(LOTTERY_CONFIRMED_RESULTS, toSave);
+    currentRound++;
+    
+    var totalSupportConfirmed = winners.reduce(function (s, w) { return s + (w.support || 0); }, 0) + losers.reduce(function (s, l) { return s + (l.support || 0); }, 0);
+    alert('추첨 결과가 확정되었습니다!\n\n회차: ' + (currentRound - 1) + '회\n당첨: ' + winners.length + '명\n미선정: ' + losers.length + '명\n총 지원금(10명 전원): ' + totalSupportConfirmed.toLocaleString() + ' trix\n\n※ 지원금은 당일 일괄 지급됩니다.');
+    
+    closeLotteryResult();
+    renderLotteryStatus();
+    if (selectedProductId) renderWaitingList(selectedProductId);
     updateConfirmPage();
 }
 
@@ -3563,17 +3600,16 @@ function updateConfirmSummary() {
     const winners = LOTTERY_CONFIRMED_RESULTS.filter(r => r.result === 'winner').length;
     const losers = LOTTERY_CONFIRMED_RESULTS.filter(r => r.result === 'loser').length;
     const totalSupport = LOTTERY_CONFIRMED_RESULTS
-        .filter(r => r.result === 'loser')
-        .reduce((sum, r) => sum + r.support, 0);
+        .reduce(function (sum, r) { return sum + (Number(r.support) || 0); }, 0);
     
     const totalRoundsEl = document.getElementById('totalRounds');
     const totalWinnersEl = document.getElementById('totalWinners');
     const totalLosersEl = document.getElementById('totalLosers');
-    const totalSupportEl = document.getElementById('totalSupport');
+    const totalSupportEl = document.getElementById('confirmTotalSupport');
     
-    if (totalRoundsEl) totalRoundsEl.textContent = `${rounds}회`;
-    if (totalWinnersEl) totalWinnersEl.textContent = `${winners}명`;
-    if (totalLosersEl) totalLosersEl.textContent = `${losers}명`;
+    if (totalRoundsEl) totalRoundsEl.textContent = rounds + '회';
+    if (totalWinnersEl) totalWinnersEl.textContent = winners + '명';
+    if (totalLosersEl) totalLosersEl.textContent = losers + '명';
     if (totalSupportEl) totalSupportEl.textContent = totalSupport.toLocaleString() + ' trix';
 }
 
@@ -3637,6 +3673,7 @@ function renderConfirmResults() {
         });
     }
     
+    lastConfirmFiltered = filtered;
     if (countEl) {
         if (LOTTERY_CONFIRMED_RESULTS.length === 0) {
             countEl.textContent = '0';
@@ -3646,16 +3683,22 @@ function renderConfirmResults() {
     }
     
     if (filtered.length === 0) {
-        // 원본 데이터가 없으면 "추첨 확정 내역이 없습니다" 표시
         if (LOTTERY_CONFIRMED_RESULTS.length === 0) {
             tbody.innerHTML = '<tr><td colspan="10" class="empty-message">추첨 확정 내역이 없습니다.</td></tr>';
         } else {
             tbody.innerHTML = '<tr><td colspan="10" class="empty-message">조건에 맞는 결과가 없습니다.</td></tr>';
         }
+        renderConfirmPagination(0, 1);
         return;
     }
     
-    tbody.innerHTML = filtered.map((result, index) => {
+    const totalPages = Math.max(1, Math.ceil(filtered.length / CONFIRM_PAGE_SIZE));
+    if (confirmCurrentPage > totalPages) confirmCurrentPage = totalPages;
+    const start = (confirmCurrentPage - 1) * CONFIRM_PAGE_SIZE;
+    const pageSlice = filtered.slice(start, start + CONFIRM_PAGE_SIZE);
+    
+    tbody.innerHTML = pageSlice.map((result, index) => {
+        const rowNum = start + index + 1;
         const round = result.round || 0;
         const productName = result.productName || '알 수 없음';
         const name = result.name || '이름 없음';
@@ -3667,7 +3710,7 @@ function renderConfirmResults() {
         
         return `
         <tr>
-            <td>${index + 1}</td>
+            <td>${rowNum}</td>
             <td><span class="badge badge-info">${round}회</span></td>
             <td style="text-align: left; padding-left: 15px;">${escapeHtml(productName)}</td>
             <td>${escapeHtml(name)}</td>
@@ -3680,18 +3723,43 @@ function renderConfirmResults() {
             </td>
             <td>${(result.support || 0).toLocaleString()} trix</td>
             <td>
-                ${result.result === 'winner'
-                    ? '<span class="payment-status paid">구매확정</span>'
-                    : `<button class="btn btn-sm ${paymentStatus === 'paid' ? 'btn-success' : 'btn-secondary'}" 
-                              onclick="togglePaymentStatus(${result.id})" 
-                              style="min-width: 80px;">
-                          ${paymentStatus === 'paid' ? '지급완료' : '지급대기'}
-                       </button>`}
+                <button class="btn btn-sm ${paymentStatus === 'paid' ? 'btn-success' : 'btn-secondary'}" 
+                    data-id="${escapeHtml(String(result.id))}" 
+                    onclick="togglePaymentStatus(this.getAttribute('data-id'))" 
+                    style="min-width: 80px;">
+                    ${paymentStatus === 'paid' ? '지급완료' : '지급대기'}
+                </button>
             </td>
             <td>${escapeHtml(date)}</td>
         </tr>
         `;
     }).join('');
+    renderConfirmPagination(filtered.length, confirmCurrentPage);
+}
+
+// 확정 현황 페이징 렌더
+function renderConfirmPagination(totalCount, currentPage) {
+    const paginationEl = document.getElementById('confirmPagination');
+    if (!paginationEl) return;
+    const totalPages = Math.max(1, Math.ceil(totalCount / CONFIRM_PAGE_SIZE));
+    if (totalCount === 0) {
+        paginationEl.style.display = 'none';
+        return;
+    }
+    paginationEl.style.display = 'flex';
+    let html = '<button class="page-btn" ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="changeConfirmPage(' + (currentPage - 1) + ')"><i class="fas fa-chevron-left"></i></button>';
+    for (var i = 1; i <= totalPages; i++) {
+        html += '<button class="page-num ' + (i === currentPage ? 'active' : '') + '" onclick="changeConfirmPage(' + i + ')">' + i + '</button>';
+    }
+    html += '<button class="page-btn" ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="changeConfirmPage(' + (currentPage + 1) + ')"><i class="fas fa-chevron-right"></i></button>';
+    paginationEl.innerHTML = html;
+}
+
+function changeConfirmPage(page) {
+    const totalPages = Math.max(1, Math.ceil(lastConfirmFiltered.length / CONFIRM_PAGE_SIZE));
+    if (page < 1 || page > totalPages) return;
+    confirmCurrentPage = page;
+    renderConfirmResults();
 }
 
 // 필터 적용
@@ -3701,16 +3769,17 @@ function filterConfirmResults() {
 
 // 필터 초기화
 function resetConfirmFilter() {
-    // 지급 대상 모드 해제
     isShowingDailyPayment = false;
     dailyPaymentResults = [];
+    confirmCurrentPage = 1;
+    dailyPaymentCurrentPage = 1;
     hidePaymentCompleteButton();
     
     document.getElementById('confirmProductFilter').value = '';
     document.getElementById('confirmRoundFilter').value = '';
     document.getElementById('confirmResultFilter').value = '';
-    document.getElementById('confirmStartDate').value = '2026-01-01';
-    document.getElementById('confirmEndDate').value = '2026-02-04';
+    document.getElementById('confirmStartDate').value = '';
+    document.getElementById('confirmEndDate').value = '';
     renderConfirmResults();
 }
 
@@ -3720,24 +3789,27 @@ function exportConfirmResults() {
 }
 
 // 개별 지급 상태 토글
-function togglePaymentStatus(resultId) {
-    const result = LOTTERY_CONFIRMED_RESULTS.find(r => r.id === resultId);
+async function togglePaymentStatus(resultId) {
+    var result = LOTTERY_CONFIRMED_RESULTS.find(function (r) { return r.id === resultId; });
     
     if (!result) return;
     
     if (result.paymentStatus === 'paid') {
-        // 지급완료 → 지급대기
-        if (confirm(`${result.name}님의 지급 상태를 '지급대기'로 변경하시겠습니까?`)) {
+        if (confirm(result.name + '님의 지급 상태를 \'지급대기\'로 변경하시겠습니까?')) {
             result.paymentStatus = 'pending';
+            if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
+                try { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(result.id, 'pending'); } catch (e) { console.error(e); }
+            }
             alert('지급대기 상태로 변경되었습니다.');
             renderConfirmResults();
             updateConfirmSummary();
         }
     } else {
-        // 지급대기 → 지급완료
         if (confirm(result.name + '님에게 ' + result.support.toLocaleString() + ' trix를 지급하시겠습니까?')) {
             result.paymentStatus = 'paid';
-            
+            if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
+                try { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(result.id, 'paid'); } catch (e) { console.error(e); }
+            }
             // 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
             if (result.orderId) {
                 (async function() {
@@ -3754,10 +3826,13 @@ function togglePaymentStatus(resultId) {
                                     result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.',
                                     'mypage.html?section=support'
                                 );
+                                if (window.firebaseAdmin.tokenService && typeof window.firebaseAdmin.tokenService.addSupportToMemberBalance === 'function') {
+                                    await window.firebaseAdmin.tokenService.addSupportToMemberBalance(userId, result.support);
+                                }
                             }
                         }
                     } catch (error) {
-                        console.error('쇼핑지원금 알림 생성 오류 (무시됨):', error);
+                        console.error('쇼핑지원금 알림/토큰 반영 오류 (무시됨):', error);
                     }
                 })();
             }
@@ -3811,30 +3886,31 @@ function removeImage(inputId, previewId) {
 // 당일 지원금 일괄 지급 대상 표시
 let isShowingDailyPayment = false;
 let dailyPaymentResults = [];
+const CONFIRM_PAGE_SIZE = 10;
+let confirmCurrentPage = 1;
+let dailyPaymentCurrentPage = 1;
+let lastConfirmFiltered = [];
 
 function processDailyPayment() {
     const today = new Date().toISOString().split('T')[0];
-    const pendingResults = LOTTERY_CONFIRMED_RESULTS.filter(r => 
-        r.paymentStatus === 'pending' && 
-        r.result === 'loser' && 
-        r.date.startsWith(today)
-    );
+    const pendingResults = LOTTERY_CONFIRMED_RESULTS.filter(function (r) {
+        return r.paymentStatus === 'pending' && r.date && r.date.startsWith(today);
+    });
     
     if (pendingResults.length === 0) {
-        alert('오늘 지급할 지원금이 없습니다.\n\n※ 지급대기 상태의 미선정자만 대상입니다.');
+        alert('오늘 지급할 지원금이 없습니다.\n\n※ 지급대기 상태(당첨·미선정 모두)만 대상입니다.');
         return;
     }
     
     // 지급 대상 목록 저장
     dailyPaymentResults = pendingResults;
     isShowingDailyPayment = true;
-    
-    // 테이블에 지급 대상만 표시
+    dailyPaymentCurrentPage = 1;
     renderDailyPaymentResults(pendingResults);
 }
 
 // 당일 지원금 일괄 지급 완료
-function completeDailyPayment() {
+async function completeDailyPayment() {
     if (dailyPaymentResults.length === 0) {
         alert('지급할 지원금이 없습니다.');
         return;
@@ -3843,70 +3919,138 @@ function completeDailyPayment() {
     const totalAmount = dailyPaymentResults.reduce((sum, r) => sum + r.support, 0);
     const paymentCount = dailyPaymentResults.length;
     
-    if (confirm(`총 ${paymentCount}명, ${totalAmount.toLocaleString()}원을 일괄 지급하시겠습니까?`)) {
-        // 지급 상태 업데이트
-        dailyPaymentResults.forEach(result => {
+    if (confirm('총 ' + paymentCount + '명, ' + totalAmount.toLocaleString() + ' trix를 일괄 지급하시겠습니까?')) {
+        dailyPaymentResults.forEach(function (result) {
             result.paymentStatus = 'paid';
         });
+        if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
+            try {
+                for (var i = 0; i < dailyPaymentResults.length; i++) {
+                    await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(dailyPaymentResults[i].id, 'paid');
+                }
+            } catch (e) { console.error(e); }
+        }
         
-        // 알림 생성 (비동기로 처리하여 지급 처리가 지연되지 않도록 함)
         (async function() {
             try {
-                var notificationPromises = [];
+                var tokenService = window.firebaseAdmin && window.firebaseAdmin.tokenService;
+                var addSupport = tokenService && typeof tokenService.addSupportToMemberBalance === 'function';
                 for (var i = 0; i < dailyPaymentResults.length; i++) {
                     var result = dailyPaymentResults[i];
-                    
-                    // 알림 생성 (orderId로 주문 정보 조회하여 userId 찾기)
                     if (result.orderId) {
                         try {
                             var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
                             if (orderDoc.exists) {
-                                var orderData = orderDoc.data();
-                                var userId = orderData.userId;
+                                var userId = orderDoc.data().userId;
                                 if (userId) {
-                                    notificationPromises.push(
-                                        createNotificationForUser(
-                                            userId,
-                                            'support_paid',
-                                            '쇼핑지원금이 지급되었습니다',
-                                            result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.',
-                                            'mypage.html?section=support'
-                                        ).catch(function(err) {
-                                            console.error('개별 알림 생성 오류 (무시됨):', err);
-                                        })
-                                    );
+                                    await createNotificationForUser(
+                                        userId,
+                                        'support_paid',
+                                        '쇼핑지원금이 지급되었습니다',
+                                        result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.',
+                                        'mypage.html?section=support'
+                                    ).catch(function() {});
+                                    if (addSupport) await tokenService.addSupportToMemberBalance(userId, result.support);
                                 }
                             }
-                        } catch (error) {
-                            console.error('주문 조회 오류 (무시됨):', error);
-                        }
+                        } catch (e) {}
                     }
                 }
-                
-                // 모든 알림 생성 (병렬 처리, 실패해도 계속 진행)
-                if (notificationPromises.length > 0) {
-                    await Promise.allSettled(notificationPromises);
-                    console.log('✅ 쇼핑지원금 알림 생성 완료:', notificationPromises.length, '명');
-                }
             } catch (error) {
-                console.error('쇼핑지원금 알림 생성 오류 (무시됨):', error);
+                console.error('쇼핑지원금 알림/토큰 반영 오류 (무시됨):', error);
             }
         })();
         
-        // 지급 대상 목록 초기화
-        dailyPaymentResults = [];
-        isShowingDailyPayment = false;
-        
-        // 필터 초기화 및 전체 목록 표시
-        resetConfirmFilter();
-        
-        alert(`✅ 지급이 완료되었습니다!\n\n지급 인원: ${paymentCount}명\n지급 금액: ${totalAmount.toLocaleString()}원\n\n각 회원의 계좌로 현금이 입금되었습니다.`);
-        
-        updateConfirmPage();
+        // 화면 유지: 같은 목록을 지급완료 상태로 다시 표시
+        renderDailyPaymentResults(dailyPaymentResults);
+        hidePaymentCompleteButton();
+        alert('✅ 지급이 완료되었습니다!\n\n지급 인원: ' + paymentCount + '명\n지급 금액: ' + totalAmount.toLocaleString() + ' trix\n\n각 회원의 계좌로 현금이 입금되었습니다.');
     }
 }
 
-// 당일 지원금 지급 대상 목록 렌더링
+// 이페이지 일괄지급 (현재 페이지 10건만 지급)
+async function completePagePayment() {
+    if (isShowingDailyPayment && dailyPaymentResults.length > 0) {
+        var start = (dailyPaymentCurrentPage - 1) * CONFIRM_PAGE_SIZE;
+        var pageSlice = dailyPaymentResults.slice(start, start + CONFIRM_PAGE_SIZE);
+        var toPay = pageSlice.filter(function (r) { return r.paymentStatus !== 'paid'; });
+        if (toPay.length === 0) {
+            alert('이 페이지에는 지급대기 건이 없습니다.');
+            return;
+        }
+        var amount = toPay.reduce(function (s, r) { return s + r.support; }, 0);
+        if (!confirm('이 페이지 ' + toPay.length + '명, ' + amount.toLocaleString() + ' trix를 지급하시겠습니까?')) return;
+        toPay.forEach(function (result) { result.paymentStatus = 'paid'; });
+        if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
+            try { for (var i = 0; i < toPay.length; i++) { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(toPay[i].id, 'paid'); } } catch (e) {}
+        }
+        (async function () {
+            try {
+                var tokenService = window.firebaseAdmin && window.firebaseAdmin.tokenService;
+                var addSupport = tokenService && typeof tokenService.addSupportToMemberBalance === 'function';
+                for (var i = 0; i < toPay.length; i++) {
+                    var result = toPay[i];
+                    if (result.orderId) {
+                        try {
+                            var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
+                            if (orderDoc.exists) {
+                                var uid = orderDoc.data().userId;
+                                if (uid) {
+                                    await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
+                                    if (addSupport) await tokenService.addSupportToMemberBalance(uid, result.support);
+                                }
+                            }
+                        } catch (e) {}
+                    }
+                }
+            } catch (e) {}
+        })();
+        renderDailyPaymentResults(dailyPaymentResults);
+        return;
+    }
+    if (lastConfirmFiltered.length === 0) {
+        alert('지급할 대상이 없습니다.');
+        return;
+    }
+    var start = (confirmCurrentPage - 1) * CONFIRM_PAGE_SIZE;
+    var pageSlice = lastConfirmFiltered.slice(start, start + CONFIRM_PAGE_SIZE);
+    var toPay = pageSlice.filter(function (r) { return r.paymentStatus !== 'paid'; });
+    if (toPay.length === 0) {
+        alert('이 페이지에는 지급대기 건이 없습니다.');
+        return;
+    }
+    var amount = toPay.reduce(function (s, r) { return s + r.support; }, 0);
+    if (!confirm('이 페이지 ' + toPay.length + '명, ' + amount.toLocaleString() + ' trix를 지급하시겠습니까?')) return;
+    toPay.forEach(function (result) { result.paymentStatus = 'paid'; });
+    if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
+        try { for (var i = 0; i < toPay.length; i++) { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(toPay[i].id, 'paid'); } } catch (e) {}
+    }
+    (async function () {
+        try {
+            var tokenService = window.firebaseAdmin && window.firebaseAdmin.tokenService;
+            var addSupport = tokenService && typeof tokenService.addSupportToMemberBalance === 'function';
+            for (var i = 0; i < toPay.length; i++) {
+                var result = toPay[i];
+                if (result.orderId) {
+                    try {
+                        var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
+                        if (orderDoc.exists) {
+                            var uid = orderDoc.data().userId;
+                            if (uid) {
+                                await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
+                                if (addSupport) await tokenService.addSupportToMemberBalance(uid, result.support);
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+        } catch (e) {}
+    })();
+    renderConfirmResults();
+}
+
+
+// 당일 지원금 지급 대상 목록 렌더링 (10개씩 페이징)
 function renderDailyPaymentResults(pendingResults) {
     const tbody = document.getElementById('confirmResultsBody');
     const countEl = document.getElementById('confirmCount');
@@ -3914,17 +4058,27 @@ function renderDailyPaymentResults(pendingResults) {
     if (!tbody) return;
     
     const totalAmount = pendingResults.reduce((sum, r) => sum + r.support, 0);
+    const pendingCount = pendingResults.filter(function (r) { return r.paymentStatus !== 'paid'; }).length;
+    const pendingAmount = pendingResults.filter(function (r) { return r.paymentStatus !== 'paid'; }).reduce(function (s, r) { return s + r.support; }, 0);
     
     if (countEl) {
-        countEl.textContent = `${pendingResults.length}건 (지급 대상)`;
+        countEl.textContent = pendingResults.length + '건 (지급 대상)';
     }
     
     if (pendingResults.length === 0) {
         tbody.innerHTML = '<tr><td colspan="10" class="empty-message">오늘 지급할 지원금이 없습니다.</td></tr>';
+        renderDailyPaymentPagination(0);
+        hidePaymentCompleteButton();
         return;
     }
     
-    tbody.innerHTML = pendingResults.map((result, index) => {
+    const totalPages = Math.max(1, Math.ceil(pendingResults.length / CONFIRM_PAGE_SIZE));
+    if (dailyPaymentCurrentPage > totalPages) dailyPaymentCurrentPage = totalPages;
+    const start = (dailyPaymentCurrentPage - 1) * CONFIRM_PAGE_SIZE;
+    const pageSlice = pendingResults.slice(start, start + CONFIRM_PAGE_SIZE);
+    
+    tbody.innerHTML = pageSlice.map((result, index) => {
+        const rowNum = start + index + 1;
         const round = result.round || 0;
         const productName = result.productName || '알 수 없음';
         const name = result.name || '이름 없음';
@@ -3932,25 +4086,55 @@ function renderDailyPaymentResults(pendingResults) {
         const amount = result.amount || 0;
         const support = result.support || 0;
         const date = result.date || '-';
+        const isPaid = result.paymentStatus === 'paid';
         
         return `
         <tr style="background-color: #fff9e6;">
-            <td>${index + 1}</td>
+            <td>${rowNum}</td>
             <td><span class="badge badge-info">${round}회</span></td>
             <td style="text-align: left; padding-left: 15px;">${escapeHtml(productName)}</td>
             <td>${escapeHtml(name)}</td>
             <td>${escapeHtml(phone)}</td>
             <td>${amount.toLocaleString()}원</td>
-            <td><span class="badge badge-info">미선정</span></td>
+            <td>${result.result === 'winner' ? '<span class="badge badge-success">당첨</span>' : '<span class="badge badge-info">미선정</span>'}</td>
             <td style="font-weight: bold; color: #e74c3c;">${support.toLocaleString()} trix</td>
-            <td><span class="badge badge-warning">지급대기</span></td>
+            <td>${isPaid ? '<span class="badge badge-success">지급완료</span>' : '<span class="badge badge-warning">지급대기</span>'}</td>
             <td>${escapeHtml(date)}</td>
         </tr>
         `;
     }).join('');
     
-    // 지급 완료 버튼 표시
-    showPaymentCompleteButton(totalAmount, pendingResults.length);
+    renderDailyPaymentPagination(pendingResults.length);
+    if (pendingCount > 0) {
+        showPaymentCompleteButton(pendingAmount, pendingCount);
+    } else {
+        hidePaymentCompleteButton();
+    }
+}
+
+function renderDailyPaymentPagination(totalCount) {
+    const paginationEl = document.getElementById('confirmPagination');
+    if (!paginationEl) return;
+    const totalPages = Math.max(1, Math.ceil(totalCount / CONFIRM_PAGE_SIZE));
+    if (totalCount === 0) {
+        paginationEl.style.display = 'none';
+        return;
+    }
+    paginationEl.style.display = 'flex';
+    var html = '<button class="page-btn" ' + (dailyPaymentCurrentPage <= 1 ? 'disabled' : '') + ' onclick="changeDailyPaymentPage(' + (dailyPaymentCurrentPage - 1) + ')"><i class="fas fa-chevron-left"></i></button>';
+    for (var i = 1; i <= totalPages; i++) {
+        html += '<button class="page-num ' + (i === dailyPaymentCurrentPage ? 'active' : '') + '" onclick="changeDailyPaymentPage(' + i + ')">' + i + '</button>';
+    }
+    html += '<button class="page-btn" ' + (dailyPaymentCurrentPage >= totalPages ? 'disabled' : '') + ' onclick="changeDailyPaymentPage(' + (dailyPaymentCurrentPage + 1) + ')"><i class="fas fa-chevron-right"></i></button>';
+    paginationEl.innerHTML = html;
+}
+
+function changeDailyPaymentPage(page) {
+    if (!isShowingDailyPayment || dailyPaymentResults.length === 0) return;
+    const totalPages = Math.max(1, Math.ceil(dailyPaymentResults.length / CONFIRM_PAGE_SIZE));
+    if (page < 1 || page > totalPages) return;
+    dailyPaymentCurrentPage = page;
+    renderDailyPaymentResults(dailyPaymentResults);
 }
 
 // 지급 완료 버튼 표시
@@ -3968,7 +4152,7 @@ function showPaymentCompleteButton(totalAmount, count) {
         completeBtn.id = 'paymentCompleteBtn';
         completeBtn.className = 'btn btn-success btn-sm';
         completeBtn.style.marginLeft = '10px';
-        completeBtn.innerHTML = `<i class="fas fa-check-circle"></i> 지급 완료 (${count}명, ${totalAmount.toLocaleString()}원)`;
+        completeBtn.innerHTML = `<i class="fas fa-check-circle"></i> 지급 완료 (${count}명, ${totalAmount.toLocaleString()} trix)`;
         completeBtn.onclick = completeDailyPayment;
         tableHeader.appendChild(completeBtn);
     }
@@ -4945,6 +5129,7 @@ async function initAdminPage() {
         }
         
         await renderProductTable(PRODUCT_DATA);
+        if (typeof loadLotteryConfirmedFromFirebase === 'function') await loadLotteryConfirmedFromFirebase();
         renderLotteryStatus();
         updateConfirmPage();
     } catch (error) {

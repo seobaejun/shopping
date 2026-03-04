@@ -150,6 +150,14 @@ const collections = {
     tokenWithdrawals: () => {
         if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
         return db.collection('tokenWithdrawals');
+    },
+    lotteryConfirmedResults: () => {
+        if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+        return db.collection('lotteryConfirmedResults');
+    },
+    lotteryMeta: () => {
+        if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+        return db.collection('lotteryMeta');
     }
 };
 
@@ -780,6 +788,110 @@ const tokenService = {
             status: 'cancelled',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+    },
+    /** 지원금 지급 완료 시 회원 보유 토큰에 반영 (userId로 회원 조회 후 tokenBalance += amount) */
+    async addSupportToMemberBalance(userId, amount) {
+        if (!userId || amount == null || Number(amount) <= 0) return;
+        try {
+            if (!db) await initFirebase();
+            if (!db) return;
+            var numAmount = Number(amount) || 0;
+            if (numAmount <= 0) return;
+            var snap = await collections.members().where('userId', '==', userId).limit(1).get();
+            if (snap.empty) return;
+            var memberDoc = snap.docs[0];
+            var data = memberDoc.data();
+            var current = (data.tokenBalance != null) ? Number(data.tokenBalance) : 0;
+            await memberDoc.ref.update({
+                tokenBalance: current + numAmount,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) {
+            console.error('지원금 토큰 반영 오류:', e);
+        }
+    }
+};
+
+// 추첨 확정 결과 저장/로드 (데이터베이스 영속화)
+const lotteryConfirmedService = {
+    async getConfirmedResults() {
+        try {
+            if (!db) await initFirebase();
+            if (!db) return [];
+            const snap = await collections.lotteryConfirmedResults().get();
+            var list = snap.docs.map(function (doc) {
+                var d = doc.data();
+                return { id: doc.id, orderId: d.orderId, round: d.round, productId: d.productId, productName: d.productName, name: d.name, phone: d.phone, amount: d.amount, result: d.result, support: d.support, paymentStatus: d.paymentStatus || 'pending', date: d.date };
+            });
+            list.sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+            return list;
+        } catch (e) {
+            console.error('추첨 확정 결과 로드 오류:', e);
+            return [];
+        }
+    },
+    async addConfirmedResults(items) {
+        try {
+            if (!db) await initFirebase();
+            if (!db || !items || items.length === 0) return [];
+            var col = collections.lotteryConfirmedResults();
+            var ids = [];
+            for (var i = 0; i < items.length; i++) {
+                var r = items[i];
+                var ref = await col.add({ orderId: r.orderId, round: r.round, productId: r.productId, productName: r.productName, name: r.name, phone: r.phone, amount: r.amount, result: r.result, support: r.support, paymentStatus: r.paymentStatus || 'pending', date: r.date });
+                ids.push(ref.id);
+            }
+            return ids;
+        } catch (e) {
+            console.error('추첨 확정 결과 저장 오류:', e);
+            throw e;
+        }
+    },
+    async updatePaymentStatus(docId, paymentStatus) {
+        try {
+            if (!db) await initFirebase();
+            if (!db) return;
+            await collections.lotteryConfirmedResults().doc(docId).update({ paymentStatus: paymentStatus });
+        } catch (e) {
+            console.error('추첨 확정 지급상태 업데이트 오류:', e);
+            throw e;
+        }
+    },
+    async getLotteryMeta() {
+        try {
+            if (!db) await initFirebase();
+            if (!db) return { currentRound: 1 };
+            var doc = await collections.lotteryMeta().doc('current').get();
+            if (doc.exists) return doc.data();
+            return { currentRound: 1 };
+        } catch (e) {
+            console.error('추첨 메타 로드 오류:', e);
+            return { currentRound: 1 };
+        }
+    },
+    async saveLotteryMeta(data) {
+        try {
+            if (!db) await initFirebase();
+            if (!db) return;
+            await collections.lotteryMeta().doc('current').set(data, { merge: true });
+        } catch (e) {
+            console.error('추첨 메타 저장 오류:', e);
+            throw e;
+        }
+    },
+    async clearAllConfirmed() {
+        try {
+            if (!db) await initFirebase();
+            if (!db) return;
+            var snap = await collections.lotteryConfirmedResults().get();
+            var batch = db.batch();
+            snap.docs.forEach(function (doc) { batch.delete(doc.ref); });
+            if (!snap.empty) await batch.commit();
+            await collections.lotteryMeta().doc('current').set({ currentRound: 1 }, { merge: true });
+        } catch (e) {
+            console.error('추첨 확정 전체 삭제 오류:', e);
+            throw e;
+        }
     }
 };
 
@@ -790,10 +902,12 @@ window.firebaseAdmin = {
     getInitPromise,
     getDb,
     get db() { return db; },
+    collections,
     memberService,
     productService,
     orderService,
     lotteryService,
+    lotteryConfirmedService,
     settingsService,
     adminService,
     visitorStatsService,

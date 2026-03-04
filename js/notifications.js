@@ -146,23 +146,30 @@
 
         try {
             var query = db.collection('notifications')
-                .where('userId', '==', userId)
-                .orderBy('createdAt', 'desc');
-            
+                .where('userId', '==', userId);
             if (limit) {
                 query = query.limit(limit);
             }
-
             var snapshot = await query.get();
             var notifications = [];
             snapshot.forEach(function(doc) {
                 var data = doc.data();
                 notifications.push({
                     id: doc.id,
-                    ...data
+                    createdAt: data.createdAt,
+                    read: data.read,
+                    type: data.type,
+                    title: data.title,
+                    message: data.message,
+                    link: data.link,
+                    userId: data.userId
                 });
             });
-
+            notifications.sort(function(a, b) {
+                var at = (a.createdAt && a.createdAt.seconds != null) ? a.createdAt.seconds : 0;
+                var bt = (b.createdAt && b.createdAt.seconds != null) ? b.createdAt.seconds : 0;
+                return bt - at;
+            });
             return notifications;
         } catch (error) {
             console.error('❌ 알림 목록 조회 오류:', error);
