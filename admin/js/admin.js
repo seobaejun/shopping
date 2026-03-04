@@ -3,6 +3,22 @@
 // DOM 요소 (나중에 초기화됨)
 let menuToggle, adminSidebar, navLinks, contentPages;
 
+// 구매 요청·승인대기 목록 페이징 (15개씩, 1페이지에서도 버튼 표시)
+const PURCHASE_REQUEST_PAGE_SIZE = 15;
+var _purchaseRequestPendingPage = 1;
+var _purchaseRequestApprovedPage = 1;
+var _purchaseRequestCancelledPage = 1;
+
+// 조별추첨 전체구매자 대기 명단 페이징 (15명씩)
+const LOTTERY_WAITING_PAGE_SIZE = 15;
+var _lotteryWaitingPage = 1;
+
+// 개인별/회차별 정산·배송진행등록 페이징 (15개씩, 1페이지에서도 버튼 표시)
+const SETTLEMENT_PAGE_SIZE = 15;
+var _settlementPersonalPage = 1;
+var _settlementRoundPage = 1;
+var _deliveryRegisterPage = 1;
+
 // 알림 생성 헬퍼 함수
 async function createNotificationForUser(userId, type, title, message, link) {
     try {
@@ -632,7 +648,7 @@ function _orderGetCreatedTime(order) {
     return new Date(c).getTime();
 }
 
-// 승인대기 목록만 테이블에 그리기 (전체 목록 표시용, 검색 결과는 별도 검색 결과 영역에 표시)
+// 승인대기 목록만 테이블에 그리기 (15개씩 페이징, 1페이지에서도 페이징 버튼 표시)
 function renderPurchaseRequestTable(orders) {
     const tbody = document.getElementById('purchaseRequestTableBody');
     const infoText = document.getElementById('purchaseRequestInfoText');
@@ -640,9 +656,16 @@ function renderPurchaseRequestTable(orders) {
     if (infoText) infoText.textContent = '총 ' + (orders ? orders.length : 0) + '개의 구매 요청이 있습니다.';
     if (!orders || orders.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="empty-message">승인 대기 중인 구매 요청이 없습니다.</td></tr>';
+        renderPurchaseRequestPagination('pending', 0);
         return;
     }
-    const rows = orders.map((order, index) => {
+    const totalPages = Math.max(1, Math.ceil(orders.length / PURCHASE_REQUEST_PAGE_SIZE));
+    const page = Math.min(Math.max(1, _purchaseRequestPendingPage), totalPages);
+    _purchaseRequestPendingPage = page;
+    const start = (page - 1) * PURCHASE_REQUEST_PAGE_SIZE;
+    const slice = orders.slice(start, start + PURCHASE_REQUEST_PAGE_SIZE);
+    const rows = slice.map((order, index) => {
+        const globalIndex = start + index + 1;
         const name = _orderEscapeHtml(order.userName || order.name || '-');
         const accountNumber = _orderEscapeHtml(order.accountNumber || '-');
         const price = (order.productPrice || 0).toLocaleString();
@@ -650,7 +673,7 @@ function renderPurchaseRequestTable(orders) {
         const date = _orderFormatDate(order.createdAt);
         const orderId = _orderEscapeHtml(order.id);
         return `<tr data-order-id="${orderId}">
-            <td>${index + 1}</td>
+            <td>${globalIndex}</td>
             <td>${name}</td>
             <td>${accountNumber}</td>
             <td>${_orderEscapeHtml(order.productName || '-')}</td>
@@ -665,9 +688,10 @@ function renderPurchaseRequestTable(orders) {
         </tr>`;
     }).join('');
     tbody.innerHTML = rows;
+    renderPurchaseRequestPagination('pending', orders.length);
 }
 
-// 승인 목록 테이블 그리기 (status === 'approved') — 상태 변경 가능
+// 승인 목록 테이블 그리기 (15개씩 페이징, 1페이지에서도 페이징 버튼 표시)
 function renderPurchaseRequestApprovedTable(orders) {
     const tbody = document.getElementById('purchaseRequestApprovedTableBody');
     const infoText = document.getElementById('purchaseRequestApprovedInfoText');
@@ -675,9 +699,16 @@ function renderPurchaseRequestApprovedTable(orders) {
     if (infoText) infoText.textContent = '총 ' + (orders ? orders.length : 0) + '건의 승인 내역이 있습니다.';
     if (!orders || orders.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="empty-message">승인된 내역이 없습니다.</td></tr>';
+        renderPurchaseRequestPagination('approved', 0);
         return;
     }
-    const rows = orders.map((order, index) => {
+    const totalPages = Math.max(1, Math.ceil(orders.length / PURCHASE_REQUEST_PAGE_SIZE));
+    const page = Math.min(Math.max(1, _purchaseRequestApprovedPage), totalPages);
+    _purchaseRequestApprovedPage = page;
+    const start = (page - 1) * PURCHASE_REQUEST_PAGE_SIZE;
+    const slice = orders.slice(start, start + PURCHASE_REQUEST_PAGE_SIZE);
+    const rows = slice.map((order, index) => {
+        const globalIndex = start + index + 1;
         const name = _orderEscapeHtml(order.userName || order.name || '-');
         const accountNumber = _orderEscapeHtml(order.accountNumber || '-');
         const price = (order.productPrice || 0).toLocaleString();
@@ -688,14 +719,15 @@ function renderPurchaseRequestApprovedTable(orders) {
             '<option value="pending">승인대기</option>' +
             '<option value="approved" selected>승인</option>' +
             '<option value="cancelled">취소</option></select>';
-        return '<tr data-order-id="' + orderId + '"><td>' + (index + 1) + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
+        return '<tr data-order-id="' + orderId + '"><td>' + globalIndex + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
             _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + ' trix</td><td>' + date +
             '</td><td><span class="badge badge-success">승인</span></td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
     }).join('');
     tbody.innerHTML = rows;
+    renderPurchaseRequestPagination('approved', orders.length);
 }
 
-// 구매취소 목록 테이블 그리기 (status === 'cancelled') — 상태 변경 가능
+// 구매취소 목록 테이블 그리기 (15개씩 페이징, 1페이지에서도 페이징 버튼 표시)
 function renderPurchaseRequestCancelledTable(orders) {
     const tbody = document.getElementById('purchaseRequestCancelledTableBody');
     const infoText = document.getElementById('purchaseRequestCancelledInfoText');
@@ -703,9 +735,16 @@ function renderPurchaseRequestCancelledTable(orders) {
     if (infoText) infoText.textContent = '총 ' + (orders ? orders.length : 0) + '건의 취소 내역이 있습니다.';
     if (!orders || orders.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="empty-message">취소된 내역이 없습니다.</td></tr>';
+        renderPurchaseRequestPagination('cancelled', 0);
         return;
     }
-    const rows = orders.map((order, index) => {
+    const totalPages = Math.max(1, Math.ceil(orders.length / PURCHASE_REQUEST_PAGE_SIZE));
+    const page = Math.min(Math.max(1, _purchaseRequestCancelledPage), totalPages);
+    _purchaseRequestCancelledPage = page;
+    const start = (page - 1) * PURCHASE_REQUEST_PAGE_SIZE;
+    const slice = orders.slice(start, start + PURCHASE_REQUEST_PAGE_SIZE);
+    const rows = slice.map((order, index) => {
+        const globalIndex = start + index + 1;
         const name = _orderEscapeHtml(order.userName || order.name || '-');
         const accountNumber = _orderEscapeHtml(order.accountNumber || '-');
         const price = (order.productPrice || 0).toLocaleString();
@@ -716,11 +755,53 @@ function renderPurchaseRequestCancelledTable(orders) {
             '<option value="pending">승인대기</option>' +
             '<option value="approved">승인</option>' +
             '<option value="cancelled" selected>취소</option></select>';
-        return '<tr data-order-id="' + orderId + '"><td>' + (index + 1) + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
+        return '<tr data-order-id="' + orderId + '"><td>' + globalIndex + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
             _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + ' trix</td><td>' + date +
             '</td><td><span class="badge badge-secondary">취소</span></td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
     }).join('');
     tbody.innerHTML = rows;
+    renderPurchaseRequestPagination('cancelled', orders.length);
+}
+
+// 구매 요청·승인·취소 목록 페이징 버튼 (항상 표시, 1페이지에서도)
+function renderPurchaseRequestPagination(section, totalCount) {
+    var paginationElId = section === 'pending' ? 'purchaseRequestPagination' : (section === 'approved' ? 'purchaseRequestApprovedPagination' : 'purchaseRequestCancelledPagination');
+    var paginationEl = document.getElementById(paginationElId);
+    if (!paginationEl) return;
+    var totalPages = Math.max(1, Math.ceil(totalCount / PURCHASE_REQUEST_PAGE_SIZE));
+    var currentPage = section === 'pending' ? _purchaseRequestPendingPage : (section === 'approved' ? _purchaseRequestApprovedPage : _purchaseRequestCancelledPage);
+    currentPage = Math.min(Math.max(1, currentPage), totalPages);
+    var html = '<button class="page-btn" ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="changePurchaseRequestPage(\'' + section + '\', ' + (currentPage - 1) + ')"><i class="fas fa-chevron-left"></i></button>';
+    for (var i = 1; i <= totalPages; i++) {
+        html += '<button class="page-num ' + (i === currentPage ? 'active' : '') + '" onclick="changePurchaseRequestPage(\'' + section + '\', ' + i + ')">' + i + '</button>';
+    }
+    html += '<button class="page-btn" ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="changePurchaseRequestPage(\'' + section + '\', ' + (currentPage + 1) + ')"><i class="fas fa-chevron-right"></i></button>';
+    paginationEl.innerHTML = html;
+    paginationEl.style.display = 'flex';
+}
+
+function changePurchaseRequestPage(section, page) {
+    var totalCount = 0;
+    var list = [];
+    if (section === 'pending') {
+        list = window._purchaseRequestPendingOrders || [];
+        totalCount = list.length;
+        if (page < 1 || page > Math.max(1, Math.ceil(totalCount / PURCHASE_REQUEST_PAGE_SIZE))) return;
+        _purchaseRequestPendingPage = page;
+        renderPurchaseRequestTable(list);
+    } else if (section === 'approved') {
+        list = window._purchaseRequestApprovedOrders || [];
+        totalCount = list.length;
+        if (page < 1 || page > Math.max(1, Math.ceil(totalCount / PURCHASE_REQUEST_PAGE_SIZE))) return;
+        _purchaseRequestApprovedPage = page;
+        renderPurchaseRequestApprovedTable(list);
+    } else {
+        list = window._purchaseRequestCancelledOrders || [];
+        totalCount = list.length;
+        if (page < 1 || page > Math.max(1, Math.ceil(totalCount / PURCHASE_REQUEST_PAGE_SIZE))) return;
+        _purchaseRequestCancelledPage = page;
+        renderPurchaseRequestCancelledTable(list);
+    }
 }
 
 // 구매 요청 목록 로드 (승인대기 + 승인 목록 + 구매취소 목록)
@@ -748,6 +829,11 @@ async function loadPurchaseRequests() {
         const approvedOrders = allOrders.filter(function (o) { return o.status === 'approved'; });
         const cancelledOrders = allOrders.filter(function (o) { return o.status === 'cancelled'; });
         window._purchaseRequestPendingOrders = pendingOrders;
+        window._purchaseRequestApprovedOrders = approvedOrders;
+        window._purchaseRequestCancelledOrders = cancelledOrders;
+        _purchaseRequestPendingPage = 1;
+        _purchaseRequestApprovedPage = 1;
+        _purchaseRequestCancelledPage = 1;
         renderPurchaseRequestTable(pendingOrders);
         renderPurchaseRequestApprovedTable(approvedOrders);
         renderPurchaseRequestCancelledTable(cancelledOrders);
@@ -772,7 +858,7 @@ async function loadPurchaseRequests() {
     }
 }
 
-// 개인별 정산관리: 총 정산 + 전체 목록만 표시 (검색 결과는 별도 컨테이너에만 표시)
+// 개인별 정산관리: 총 정산 + 전체 목록 15개씩 페이징 (1페이지에서도 페이징 버튼 표시)
 async function loadSettlementPersonal() {
     var tbody = document.getElementById('settlementPersonalTableBody');
     var infoText = document.getElementById('settlementPersonalInfoText');
@@ -803,22 +889,62 @@ async function loadSettlementPersonal() {
         var fullTotalSupport = fullList.reduce(function (sum, o) { return sum + (o.supportAmount || 0); }, 0);
         if (totalEl) totalEl.textContent = fullTotalSupport.toLocaleString();
         if (infoText) infoText.textContent = '총 ' + fullList.length + '개의 구매상품이 있습니다.';
-        if (!fullList || fullList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">정산 내역이 없습니다.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = fullList.map(function (order, i) {
-            var dateStr = _orderFormatDate(order.createdAt);
-            var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
-            var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
-        }).join('');
+        _settlementPersonalPage = 1;
+        renderSettlementPersonalTable();
     } catch (e) {
         console.error('개인별 정산 로드 오류:', e);
         tbody.innerHTML = '<tr><td colspan="10" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
         if (infoText) infoText.textContent = '총 0개의 구매상품이 있습니다.';
         if (totalEl) totalEl.textContent = '0';
+        renderSettlementPersonalPagination(0);
     }
+}
+
+function renderSettlementPersonalTable() {
+    var tbody = document.getElementById('settlementPersonalTableBody');
+    if (!tbody) return;
+    var fullList = window._settlementPersonalFullList || [];
+    var memberMap = window._settlementMemberMap || {};
+    if (!fullList || fullList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-message">정산 내역이 없습니다.</td></tr>';
+        renderSettlementPersonalPagination(0);
+        return;
+    }
+    var totalPages = Math.max(1, Math.ceil(fullList.length / SETTLEMENT_PAGE_SIZE));
+    var page = Math.min(Math.max(1, _settlementPersonalPage), totalPages);
+    _settlementPersonalPage = page;
+    var start = (page - 1) * SETTLEMENT_PAGE_SIZE;
+    var slice = fullList.slice(start, start + SETTLEMENT_PAGE_SIZE);
+    tbody.innerHTML = slice.map(function (order, i) {
+        var globalIndex = start + i + 1;
+        var dateStr = _orderFormatDate(order.createdAt);
+        var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
+        var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
+        return '<tr><td>' + globalIndex + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
+    }).join('');
+    renderSettlementPersonalPagination(fullList.length);
+}
+
+function renderSettlementPersonalPagination(totalCount) {
+    var paginationEl = document.getElementById('settlementPersonalPagination');
+    if (!paginationEl) return;
+    var totalPages = Math.max(1, Math.ceil(totalCount / SETTLEMENT_PAGE_SIZE));
+    var currentPage = Math.min(Math.max(1, _settlementPersonalPage), totalPages);
+    var html = '<button class="page-btn" ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="changeSettlementPersonalPage(' + (currentPage - 1) + ')"><i class="fas fa-chevron-left"></i></button>';
+    for (var i = 1; i <= totalPages; i++) {
+        html += '<button class="page-num ' + (i === currentPage ? 'active' : '') + '" onclick="changeSettlementPersonalPage(' + i + ')">' + i + '</button>';
+    }
+    html += '<button class="page-btn" ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="changeSettlementPersonalPage(' + (currentPage + 1) + ')"><i class="fas fa-chevron-right"></i></button>';
+    paginationEl.innerHTML = html;
+    paginationEl.style.display = 'flex';
+}
+
+function changeSettlementPersonalPage(page) {
+    var fullList = window._settlementPersonalFullList || [];
+    var totalPages = Math.max(1, Math.ceil(fullList.length / SETTLEMENT_PAGE_SIZE));
+    if (page < 1 || page > totalPages) return;
+    _settlementPersonalPage = page;
+    renderSettlementPersonalTable();
 }
 
 // 개인별 정산 검색: 필터 결과만 검색 결과 컨테이너에 표시 (총 정산·전체 목록은 건드리지 않음, 구매요청과 동일)
@@ -862,7 +988,7 @@ function applySettlementPersonalSearch() {
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// 회차별 정산관리: 총 정산 + 전체 목록만 표시 (검색 결과는 별도 컨테이너에만 표시)
+// 회차별 정산관리: 총 정산 + 전체 목록 15개씩 페이징 (1페이지에서도 페이징 버튼 표시)
 async function loadSettlementRound() {
     var tbody = document.getElementById('settlementRoundTableBody');
     var infoText = document.getElementById('settlementRoundInfoText');
@@ -894,26 +1020,66 @@ async function loadSettlementRound() {
         var fullTotalSupport = fullList.reduce(function (sum, o) { return sum + (o.supportAmount || 0); }, 0);
         if (totalEl) totalEl.textContent = fullTotalSupport.toLocaleString();
         if (infoText) infoText.textContent = '총 ' + (fullList ? fullList.length : 0) + '건의 정산 내역이 있습니다.';
-        if (!fullList || fullList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="11" class="empty-message">정산 내역이 없습니다.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = fullList.map(function (order, i) {
-            var t = _orderGetCreatedTime(order);
-            var d = new Date(t);
-            var dateOnly = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-            var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
-            var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
-            var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
-        }).join('');
+        _settlementRoundPage = 1;
+        renderSettlementRoundTable();
     } catch (e) {
         console.error('회차별 정산 로드 오류:', e);
         tbody.innerHTML = '<tr><td colspan="11" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
         if (infoText) infoText.textContent = '총 0건의 정산 내역이 있습니다.';
         var totalElErr = document.getElementById('settlementRoundTotalSupport');
         if (totalElErr) totalElErr.textContent = '0';
+        renderSettlementRoundPagination(0);
     }
+}
+
+function renderSettlementRoundTable() {
+    var tbody = document.getElementById('settlementRoundTableBody');
+    if (!tbody) return;
+    var fullList = window._settlementRoundFullList || [];
+    var memberMap = window._settlementMemberMap || {};
+    if (!fullList || fullList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">정산 내역이 없습니다.</td></tr>';
+        renderSettlementRoundPagination(0);
+        return;
+    }
+    var totalPages = Math.max(1, Math.ceil(fullList.length / SETTLEMENT_PAGE_SIZE));
+    var page = Math.min(Math.max(1, _settlementRoundPage), totalPages);
+    _settlementRoundPage = page;
+    var start = (page - 1) * SETTLEMENT_PAGE_SIZE;
+    var slice = fullList.slice(start, start + SETTLEMENT_PAGE_SIZE);
+    tbody.innerHTML = slice.map(function (order, i) {
+        var globalIndex = start + i + 1;
+        var t = _orderGetCreatedTime(order);
+        var d = new Date(t);
+        var dateOnly = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
+        var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
+        var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
+        return '<tr><td>' + globalIndex + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
+    }).join('');
+    renderSettlementRoundPagination(fullList.length);
+}
+
+function renderSettlementRoundPagination(totalCount) {
+    var paginationEl = document.getElementById('settlementRoundPagination');
+    if (!paginationEl) return;
+    var totalPages = Math.max(1, Math.ceil(totalCount / SETTLEMENT_PAGE_SIZE));
+    var currentPage = Math.min(Math.max(1, _settlementRoundPage), totalPages);
+    var html = '<button class="page-btn" ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="changeSettlementRoundPage(' + (currentPage - 1) + ')"><i class="fas fa-chevron-left"></i></button>';
+    for (var i = 1; i <= totalPages; i++) {
+        html += '<button class="page-num ' + (i === currentPage ? 'active' : '') + '" onclick="changeSettlementRoundPage(' + i + ')">' + i + '</button>';
+    }
+    html += '<button class="page-btn" ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="changeSettlementRoundPage(' + (currentPage + 1) + ')"><i class="fas fa-chevron-right"></i></button>';
+    paginationEl.innerHTML = html;
+    paginationEl.style.display = 'flex';
+}
+
+function changeSettlementRoundPage(page) {
+    var fullList = window._settlementRoundFullList || [];
+    var totalPages = Math.max(1, Math.ceil(fullList.length / SETTLEMENT_PAGE_SIZE));
+    if (page < 1 || page > totalPages) return;
+    _settlementRoundPage = page;
+    renderSettlementRoundTable();
 }
 
 // 회차별 정산 검색: 필터 결과만 검색 결과 컨테이너에 표시 (총 정산·전체 목록은 건드리지 않음, 구매요청과 동일)
@@ -982,7 +1148,7 @@ function _orderAddress(order) {
     return '-';
 }
 
-// 배송 진행 등록: 추첨 확정 주문만 전체 목록 로드 (검색 필터 없음)
+// 배송 진행 등록: 추첨 확정 주문만 전체 목록 로드, 15개씩 페이징 (1페이지에서도 페이징 버튼 표시)
 async function loadDeliveryRegister() {
     var tbody = document.getElementById('deliveryRegisterTableBody');
     var infoText = document.getElementById('deliveryRegisterInfoText');
@@ -1013,21 +1179,61 @@ async function loadDeliveryRegister() {
         }
         window._deliveryMemberMap = memberMap;
         if (infoText) infoText.textContent = '총 ' + (fullList ? fullList.length : 0) + '건의 배송 상품이 있습니다.';
-        if (!fullList || fullList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="11" class="empty-message">추첨 확정된 배송 내역이 없습니다.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = _deliveryRegisterBuildRows(fullList, memberMap);
+        _deliveryRegisterPage = 1;
+        renderDeliveryRegisterTable();
     } catch (e) {
         console.error('배송 진행 등록 로드 오류:', e);
         tbody.innerHTML = '<tr><td colspan="11" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
         if (infoText) infoText.textContent = '총 0건의 배송 상품이 있습니다.';
+        renderDeliveryRegisterPagination(0);
     }
 }
 
-// 배송 목록 한 행 HTML 생성 (공통) — 전화번호·주소 전체 표시, 회원 정보로 보완
-function _deliveryRegisterBuildRows(list, memberMap) {
+function renderDeliveryRegisterTable() {
+    var tbody = document.getElementById('deliveryRegisterTableBody');
+    if (!tbody) return;
+    var fullList = window._deliveryRegisterFullList || [];
+    var memberMap = window._deliveryMemberMap || {};
+    if (!fullList || fullList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">추첨 확정된 배송 내역이 없습니다.</td></tr>';
+        renderDeliveryRegisterPagination(0);
+        return;
+    }
+    var totalPages = Math.max(1, Math.ceil(fullList.length / SETTLEMENT_PAGE_SIZE));
+    var page = Math.min(Math.max(1, _deliveryRegisterPage), totalPages);
+    _deliveryRegisterPage = page;
+    var start = (page - 1) * SETTLEMENT_PAGE_SIZE;
+    var slice = fullList.slice(start, start + SETTLEMENT_PAGE_SIZE);
+    tbody.innerHTML = _deliveryRegisterBuildRows(slice, memberMap, start);
+    renderDeliveryRegisterPagination(fullList.length);
+}
+
+function renderDeliveryRegisterPagination(totalCount) {
+    var paginationEl = document.getElementById('deliveryRegisterPagination');
+    if (!paginationEl) return;
+    var totalPages = Math.max(1, Math.ceil(totalCount / SETTLEMENT_PAGE_SIZE));
+    var currentPage = Math.min(Math.max(1, _deliveryRegisterPage), totalPages);
+    var html = '<button class="page-btn" ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="changeDeliveryRegisterPage(' + (currentPage - 1) + ')"><i class="fas fa-chevron-left"></i></button>';
+    for (var i = 1; i <= totalPages; i++) {
+        html += '<button class="page-num ' + (i === currentPage ? 'active' : '') + '" onclick="changeDeliveryRegisterPage(' + i + ')">' + i + '</button>';
+    }
+    html += '<button class="page-btn" ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="changeDeliveryRegisterPage(' + (currentPage + 1) + ')"><i class="fas fa-chevron-right"></i></button>';
+    paginationEl.innerHTML = html;
+    paginationEl.style.display = 'flex';
+}
+
+function changeDeliveryRegisterPage(page) {
+    var fullList = window._deliveryRegisterFullList || [];
+    var totalPages = Math.max(1, Math.ceil(fullList.length / SETTLEMENT_PAGE_SIZE));
+    if (page < 1 || page > totalPages) return;
+    _deliveryRegisterPage = page;
+    renderDeliveryRegisterTable();
+}
+
+// 배송 목록 한 행 HTML 생성 (공통) — 전화번호·주소 전체 표시, 회원 정보로 보완. rowStart: 페이징 시 번호 시작값(0이면 1부터)
+function _deliveryRegisterBuildRows(list, memberMap, rowStart) {
     memberMap = memberMap || window._deliveryMemberMap || {};
+    var start = (rowStart != null && !isNaN(rowStart)) ? rowStart : 0;
     return list.map(function (order, i) {
         var orderId = order.id;
         var ds = order.deliveryStatus || 'ready';
@@ -1044,7 +1250,7 @@ function _deliveryRegisterBuildRows(list, memberMap) {
         var recipient = order.deliveryRecipientName ? String(order.deliveryRecipientName).trim() : '';
         var buyerDisplay = recipient && recipient !== buyer ? _orderEscapeHtml(buyer) + ' (' + _orderEscapeHtml(recipient) + ')' : _orderEscapeHtml(buyer);
         return '<tr data-order-id="' + _orderEscapeHtml(orderId) + '">' +
-            '<td>' + (i + 1) + '</td>' +
+            '<td>' + (start + i + 1) + '</td>' +
             '<td>' + buyerDisplay + '</td>' +
             '<td>' + _orderEscapeHtml(order.productName || '-') + '</td>' +
             '<td>1</td>' +
@@ -3230,6 +3436,7 @@ async function loadLotteryWaitingData(confirmedList) {
         LOTTERY_WAITING_DATA = {};
         LOTTERY_WAITING_DATA[LOTTERY_GLOBAL_KEY] = list;
         selectedProductId = LOTTERY_GLOBAL_KEY;
+        _lotteryWaitingPage = 1;
         if (typeof renderLotteryStatus === 'function') renderLotteryStatus();
         if (typeof renderWaitingList === 'function') renderWaitingList(LOTTERY_GLOBAL_KEY);
         var groupSize = parseInt(document.getElementById('groupSize')?.value || 10, 10);
@@ -3280,7 +3487,7 @@ function selectProduct(productId) {
     if (btn) btn.disabled = !canDraw;
 }
 
-// 대기자 목록 렌더링 (전체 구매자 선착순)
+// 대기자 목록 렌더링 (전체 구매자 선착순, 15명씩 페이징, 1페이지에서도 페이징 버튼 표시)
 function renderWaitingList(productId) {
     var tbody = document.getElementById('lotteryWaitingList');
     var productNameEl = document.getElementById('selectedProductName');
@@ -3295,25 +3502,30 @@ function renderWaitingList(productId) {
         tbody.innerHTML = '<tr><td colspan="8" class="empty-message">대기 중인 참가자가 없습니다. 구매 요청에서 승인하면 선착순으로 올라옵니다.</td></tr>';
         if (productNameEl) productNameEl.textContent = '전체 구매자';
         if (countEl) countEl.textContent = '0명';
+        renderLotteryWaitingPagination(0);
         return;
     }
 
     if (productNameEl) productNameEl.textContent = '전체 구매자';
     if (countEl) countEl.textContent = waitingData.length + '명 대기';
 
-    // 대기 목록에서 계산된 지원금 표시
+    var totalPages = Math.max(1, Math.ceil(waitingData.length / LOTTERY_WAITING_PAGE_SIZE));
+    var page = Math.min(Math.max(1, _lotteryWaitingPage), totalPages);
+    _lotteryWaitingPage = page;
+    var start = (page - 1) * LOTTERY_WAITING_PAGE_SIZE;
+    var slice = waitingData.slice(start, start + LOTTERY_WAITING_PAGE_SIZE);
+
+    // 대기 목록에서 계산된 지원금 표시 (participants는 전체 대기열 기준 첫 조)
     const groupSize = parseInt(document.getElementById('groupSize')?.value || 10);
     const winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2);
-    
-    console.log('🔍 대기자 데이터 확인:', waitingData[0]);
-    
     var participants = waitingData.slice(0, groupSize);
     var totalGroupPurchasePreview = participants.reduce(function (sum, p) { return sum + (Number(p.amount) || 0); }, 0);
     var supportPoolPreview = participants.slice(0, winnerCount).reduce(function (sum, p) { return sum + (p.productSupport || 0); }, 0);
     var hasCurrentResult = (currentLotteryWinners && currentLotteryWinners.length > 0) || (currentLotteryLosers && currentLotteryLosers.length > 0);
     if (selectedProductId !== pid && pid !== LOTTERY_GLOBAL_KEY) hasCurrentResult = false;
 
-    var htmlContent = waitingData.map(function (person, index) {
+    var htmlContent = slice.map(function (person, index) {
+        var globalIndex = start + index + 1;
         var displaySupport = 0;
         if (hasCurrentResult) {
             var inWinners = currentLotteryWinners && currentLotteryWinners.find(function (w) { return (w.id === person.id) || (w.name === person.name && w.phone === person.phone); });
@@ -3327,17 +3539,41 @@ function renderWaitingList(productId) {
             });
             if (confirmedResult && confirmedResult.support != null && !isNaN(confirmedResult.support)) displaySupport = confirmedResult.support;
         }
-        if (displaySupport === 0 && index < participants.length && totalGroupPurchasePreview > 0) {
+        var personIndexInFull = waitingData.indexOf(person);
+        if (displaySupport === 0 && personIndexInFull < participants.length && totalGroupPurchasePreview > 0) {
             var myAmount = Number(person.amount) || 0;
             displaySupport = (supportPoolPreview / totalGroupPurchasePreview) * myAmount;
             displaySupport = Math.floor(displaySupport / 10) * 10;
         }
-        return '<tr><td><input type="checkbox" class="person-select" data-id="' + (person.id || '') + '"></td><td>' + (index + 1) + '</td><td>' + (person.name || '') + '</td><td>' + (person.phone || '') + '</td><td>' + (person.amount || 0).toLocaleString() + '원</td><td>' + displaySupport.toLocaleString() + ' trix</td><td><span class="badge badge-success">확인완료</span></td><td>' + (person.date || '') + '</td></tr>';
+        return '<tr><td><input type="checkbox" class="person-select" data-id="' + (person.id || '') + '"></td><td>' + globalIndex + '</td><td>' + (person.name || '') + '</td><td>' + (person.phone || '') + '</td><td>' + (person.amount || 0).toLocaleString() + '원</td><td>' + displaySupport.toLocaleString() + ' trix</td><td><span class="badge badge-success">확인완료</span></td><td>' + (person.date || '') + '</td></tr>';
     }).join('');
-    
-    console.log('🔍 생성된 HTML (첫 번째 행):', htmlContent.substring(0, 300));
+
     tbody.innerHTML = htmlContent;
-    console.log('🔍 실제 렌더링된 HTML:', tbody.innerHTML.substring(0, 300));
+    renderLotteryWaitingPagination(waitingData.length);
+}
+
+// 조별추첨 대기 명단 페이징 버튼 (항상 표시, 1페이지에서도)
+function renderLotteryWaitingPagination(totalCount) {
+    var paginationEl = document.getElementById('lotteryWaitingPagination');
+    if (!paginationEl) return;
+    var totalPages = Math.max(1, Math.ceil(totalCount / LOTTERY_WAITING_PAGE_SIZE));
+    var currentPage = Math.min(Math.max(1, _lotteryWaitingPage), totalPages);
+    _lotteryWaitingPage = currentPage;
+    var html = '<button class="page-btn" ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="changeLotteryPage(' + (currentPage - 1) + ')"><i class="fas fa-chevron-left"></i></button>';
+    for (var i = 1; i <= totalPages; i++) {
+        html += '<button class="page-num ' + (i === currentPage ? 'active' : '') + '" onclick="changeLotteryPage(' + i + ')">' + i + '</button>';
+    }
+    html += '<button class="page-btn" ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="changeLotteryPage(' + (currentPage + 1) + ')"><i class="fas fa-chevron-right"></i></button>';
+    paginationEl.innerHTML = html;
+    paginationEl.style.display = 'flex';
+}
+
+function changeLotteryPage(page) {
+    var waitingData = LOTTERY_WAITING_DATA[selectedProductId || LOTTERY_GLOBAL_KEY] || [];
+    var totalPages = Math.max(1, Math.ceil(waitingData.length / LOTTERY_WAITING_PAGE_SIZE));
+    if (page < 1 || page > totalPages) return;
+    _lotteryWaitingPage = page;
+    renderWaitingList(selectedProductId || LOTTERY_GLOBAL_KEY);
 }
 
 // 전체 선택 토글
@@ -4737,7 +4973,7 @@ async function loadProductSales() {
             var prod = productMap[pid] || { name: pid, categoryId: '' };
             if (categoryFilter && prod.categoryId !== categoryFilter) return;
             var categoryName = categoryMap[prod.categoryId] || prod.categoryId || '-';
-            var netProfit = agg.totalSales - agg.supportTotal;
+            var netProfit = Math.round(agg.totalSales * 0.30) - agg.supportTotal;
             rows.push({
                 productId: pid,
                 productName: prod.name,
