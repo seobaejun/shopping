@@ -451,7 +451,7 @@ async function loadProducts() {
                             id: product.id,
                             title: product.name,
                             option: product.shortDesc || '',
-                            support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : `${(product.price * (product.supportRate || 5) / 100).toLocaleString()} trix`,
+                            support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : '0 trix',
                             rating: 0,
                             image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
                             description: product.description || product.shortDesc || ''
@@ -465,7 +465,7 @@ async function loadProducts() {
                             id: product.id,
                             title: product.name,
                             option: product.shortDesc || '',
-                            support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : `${(product.price * (product.supportRate || 5) / 100).toLocaleString()} trix`,
+                            support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : '0 trix',
                             rating: 0,
                             image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
                             description: product.description || product.shortDesc || ''

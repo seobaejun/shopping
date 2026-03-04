@@ -770,7 +770,7 @@ async function loadProductsFromFirestore() {
                 title: product.name,
                 option: product.shortDesc || '',
                 price: product.price || 0,
-                support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : (((product.price || 0) * ((product.supportRate || 5) / 100)).toLocaleString() + ' trix'),
+                support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : '0 trix',
                 badge: Array.isArray(product.displayCategory) ? product.displayCategory : [],
                 image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image'
             });

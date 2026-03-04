@@ -1990,6 +1990,32 @@
                     </div>
                 </div>
 
+                <!-- 일괄 등록 (검색 영역 밑) -->
+                <div class="search-panel" style="margin-top: 12px; background: #f8f9fa; border: 1px solid #dee2e6;">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>택배사 일괄</label>
+                            <input type="text" class="form-control" id="deliveryBulkCompany" placeholder="택배사명 입력" style="min-width: 140px;">
+                        </div>
+                        <div class="form-group" style="margin-top: 28px;">
+                            <button type="button" class="btn btn-primary" id="deliveryBulkCompanyAllBtn">전체 택배사 일괄 등록</button>
+                            <button type="button" class="btn btn-outline-primary" id="deliveryBulkCompanyPageBtn">이 페이지 택배사 일괄 등록</button>
+                        </div>
+                        <div class="form-group">
+                            <label>배송상태 일괄</label>
+                            <select class="form-control" id="deliveryBulkStatus" style="min-width: 120px;">
+                                <option value="ready">배송준비</option>
+                                <option value="shipping">배송중</option>
+                                <option value="complete">배송완료</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-top: 28px;">
+                            <button type="button" class="btn btn-primary" id="deliveryBulkStatusAllBtn">전체 배송상태 일괄 등록</button>
+                            <button type="button" class="btn btn-outline-primary" id="deliveryBulkStatusPageBtn">이 페이지 배송상태 일괄 등록</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 검색 결과 영역 (검색 버튼 클릭 시에만 표시, 구매요청·정산과 동일) -->
                 <div id="deliveryRegisterSearchResultsContainer" class="table-container" style="display: none; margin-top: 20px; margin-bottom: 20px;">
                     <p class="info-text">검색 결과: <strong id="deliveryRegisterSearchResultCount">0</strong>건</p>

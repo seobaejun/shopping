@@ -29,7 +29,7 @@ function _parseProductDoc(doc) {
         brand: product.brand || '',
         stock: product.stock != null ? Number(product.stock) : 0,
         supportAmount: product.supportAmount != null ? Number(product.supportAmount) : null,
-        supportRate: product.supportRate != null ? Number(product.supportRate) : 5,
+        supportRate: product.supportRate != null ? Number(product.supportRate) : 0,
         options: options
     };
 }
@@ -107,7 +107,7 @@ async function getProductFromUrl() {
         brand: '',
         stock: 0,
         supportAmount: null,
-        supportRate: 5
+        supportRate: 0
     };
 }
 
@@ -476,7 +476,7 @@ function submitBuyNowOrder(delivery) {
     var totalPrice = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.price || 0) * (opt.quantity || 1); }, 0);
     var supportAmount = (PRODUCT_INFO.supportAmount != null && PRODUCT_INFO.supportAmount > 0)
         ? (PRODUCT_INFO.supportAmount * totalQuantity)
-        : Math.round(totalPrice * ((PRODUCT_INFO.supportRate != null ? PRODUCT_INFO.supportRate : 5) / 100));
+        : 0;
     var orderData = {
         status: 'pending',
         userId: loginUser.userId,
@@ -894,12 +894,10 @@ function updatePageInfo() {
     // 카테고리 태그는 ID→이름 변환 후 아래에서 설정
     const categoryTag = productDetailElements.categoryTag;
     
-    // 쇼핑지원금 업데이트 (supportAmount 우선, 없으면 비율로 계산)
+    // 쇼핑지원금: 관리자가 입력한 값만 표시
     const supportAmountEl = productDetailElements.supportAmount;
     if (supportAmountEl) {
-        const support = (PRODUCT_INFO.supportAmount != null && PRODUCT_INFO.supportAmount > 0)
-            ? PRODUCT_INFO.supportAmount
-            : Math.floor(PRODUCT_INFO.price * ((PRODUCT_INFO.supportRate || 5) / 100));
+        const support = (PRODUCT_INFO.supportAmount != null && PRODUCT_INFO.supportAmount > 0) ? PRODUCT_INFO.supportAmount : 0;
         supportAmountEl.textContent = support.toLocaleString() + ' trix';
         console.log('✅ 지원금 업데이트:', support);
     }
@@ -1083,7 +1081,7 @@ async function loadRelatedProducts() {
                     price: product.price,
                     image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
                     supportAmount: product.supportAmount,
-                    supportRate: product.supportRate || 5
+                    supportRate: product.supportRate != null ? product.supportRate : 0
                 });
             }
         });
@@ -1109,9 +1107,7 @@ async function loadRelatedProducts() {
                 `;
             } else {
                 const html = relatedProducts.map(product => {
-                    const support = (product.supportAmount != null && product.supportAmount > 0)
-                        ? product.supportAmount
-                        : Math.floor(product.price * ((product.supportRate || 5) / 100));
+                    const support = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : 0;
                     return `
                         <div class="product-card">
                             <a href="product-detail.html?id=${product.id}" class="product-link">

@@ -237,7 +237,7 @@ function renderSearchResultsTable(products) {
     for (let i = 0; i < products.length; i++) {
         const product = products[i];
         const categoryName = getCategoryName(product.category);
-        const supportAmount = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : Math.round((product.price || 0) * ((product.supportRate || 5) / 100));
+        const supportAmount = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : 0;
 
         rows.push(`
             <tr>
@@ -290,7 +290,7 @@ if (products.length === 0) {
     for (let i = 0; i < products.length; i++) {
         const product = products[i];
         const categoryName = getCategoryName(product.category);
-        const supportAmount = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : Math.round((product.price || 0) * ((product.supportRate || 5) / 100));
+        const supportAmount = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : 0;
 
         const isChecked = selectedProductIds.has(product.id);
         rows.push(`
@@ -593,7 +593,7 @@ async function openEditProductModal(productId) {
         document.getElementById('editProductOriginalPrice').value = product.originalPrice || product.price || 0;
         document.getElementById('editProductPrice').value = product.price || 0;
         document.getElementById('editProductDiscountRate').value = product.discountRate || 0;
-        document.getElementById('editProductSupportAmount').value = product.supportAmount != null ? product.supportAmount : (product.supportRate != null ? Math.round((product.price || 0) * (product.supportRate || 5) / 100) : 0);
+        document.getElementById('editProductSupportAmount').value = product.supportAmount != null ? product.supportAmount : 0;
 
         // 재고 및 옵션
         document.getElementById('editProductStock').value = (product.stock != null && product.stock !== '') ? product.stock : 9999;

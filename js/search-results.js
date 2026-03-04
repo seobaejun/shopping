@@ -35,7 +35,7 @@ async function searchProductsFromFirestore(keyword) {
                 productDesc.includes(lowerKeyword) || 
                 productCategory.includes(lowerKeyword)) {
                 
-                const support = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : Math.floor(product.price * (product.supportRate || 5) / 100);
+                const support = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : 0;
                 results.push({
                     id: doc.id,
                     title: product.name,

@@ -858,21 +858,25 @@ async function loadPurchaseRequests() {
     }
 }
 
-// 개인별 정산관리: 총 정산 + 전체 목록 15개씩 페이징 (1페이지에서도 페이징 버튼 표시)
+// 개인별 정산관리: 지급완료(paid)된 추첨 확정 결과만 표시
 async function loadSettlementPersonal() {
     var tbody = document.getElementById('settlementPersonalTableBody');
     var infoText = document.getElementById('settlementPersonalInfoText');
     var totalEl = document.getElementById('settlementPersonalTotalSupport');
     if (!tbody) return;
     try {
-        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
+        if (!window.firebaseAdmin || !window.firebaseAdmin.lotteryConfirmedService) {
             tbody.innerHTML = '<tr><td colspan="10" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
             if (infoText) infoText.textContent = '총 0개의 구매상품이 있습니다.';
             return;
         }
-        var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
-        var fullList = allOrders.filter(function (o) { return o.status === 'approved'; });
-        window._settlementPersonalFullList = fullList;
+        var confirmedList = await window.firebaseAdmin.lotteryConfirmedService.getConfirmedResults() || [];
+        var paidList = confirmedList.filter(function (r) { return r.paymentStatus === 'paid'; });
+        var orderMap = {};
+        if (window.firebaseAdmin.orderService) {
+            var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
+            allOrders.forEach(function (o) { orderMap[o.id] = o; });
+        }
         var memberMap = {};
         if (window.firebaseAdmin.memberService) {
             try {
@@ -886,9 +890,27 @@ async function loadSettlementPersonal() {
             } catch (e) { /* ignore */ }
         }
         window._settlementMemberMap = memberMap;
+        var fullList = paidList.map(function (r) {
+            var order = r.orderId != null ? orderMap[r.orderId] : null;
+            var dateMs = r.date ? new Date(r.date).getTime() : 0;
+            return {
+                id: r.id,
+                createdAt: { seconds: Math.floor(dateMs / 1000) },
+                userName: r.name,
+                name: r.name,
+                phone: r.phone,
+                accountNumber: order ? (order.accountNumber || '-') : '-',
+                userId: order ? order.userId : null,
+                productName: r.productName || '-',
+                supportAmount: r.support != null ? Number(r.support) : 0,
+                round: r.round
+            };
+        });
+        fullList.sort(function (a, b) { return (b.createdAt && b.createdAt.seconds || 0) - (a.createdAt && a.createdAt.seconds || 0); });
+        window._settlementPersonalFullList = fullList;
         var fullTotalSupport = fullList.reduce(function (sum, o) { return sum + (o.supportAmount || 0); }, 0);
         if (totalEl) totalEl.textContent = fullTotalSupport.toLocaleString();
-        if (infoText) infoText.textContent = '총 ' + fullList.length + '개의 구매상품이 있습니다.';
+        if (infoText) infoText.textContent = '총 ' + fullList.length + '개의 구매상품이 있습니다. (지급완료 건만)';
         _settlementPersonalPage = 1;
         renderSettlementPersonalTable();
     } catch (e) {
@@ -988,22 +1010,26 @@ function applySettlementPersonalSearch() {
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// 회차별 정산관리: 총 정산 + 전체 목록 15개씩 페이징 (1페이지에서도 페이징 버튼 표시)
+// 회차별 정산관리: 지급완료(paid)된 추첨 확정 결과만 표시
 async function loadSettlementRound() {
     var tbody = document.getElementById('settlementRoundTableBody');
     var infoText = document.getElementById('settlementRoundInfoText');
     var totalEl = document.getElementById('settlementRoundTotalSupport');
     if (!tbody) return;
     try {
-        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
+        if (!window.firebaseAdmin || !window.firebaseAdmin.lotteryConfirmedService) {
             tbody.innerHTML = '<tr><td colspan="11" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
             if (infoText) infoText.textContent = '총 0건의 정산 내역이 있습니다.';
             if (totalEl) totalEl.textContent = '0';
             return;
         }
-        var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
-        var fullList = allOrders.filter(function (o) { return o.status === 'approved'; });
-        window._settlementRoundFullList = fullList;
+        var confirmedList = await window.firebaseAdmin.lotteryConfirmedService.getConfirmedResults() || [];
+        var paidList = confirmedList.filter(function (r) { return r.paymentStatus === 'paid'; });
+        var orderMap = {};
+        if (window.firebaseAdmin.orderService) {
+            var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
+            allOrders.forEach(function (o) { orderMap[o.id] = o; });
+        }
         var memberMap = {};
         if (window.firebaseAdmin.memberService) {
             try {
@@ -1017,9 +1043,28 @@ async function loadSettlementRound() {
             } catch (e) { /* ignore */ }
         }
         window._settlementMemberMap = memberMap;
+        var fullList = paidList.map(function (r) {
+            var order = r.orderId != null ? orderMap[r.orderId] : null;
+            var dateMs = r.date ? new Date(r.date).getTime() : 0;
+            return {
+                id: r.id,
+                createdAt: { seconds: Math.floor(dateMs / 1000) },
+                userName: r.name,
+                name: r.name,
+                phone: r.phone,
+                accountNumber: order ? (order.accountNumber || '-') : '-',
+                userId: order ? order.userId : null,
+                productName: r.productName || '-',
+                supportAmount: r.support != null ? Number(r.support) : 0,
+                round: r.round,
+                settlementRound: r.round
+            };
+        });
+        fullList.sort(function (a, b) { return (b.createdAt && b.createdAt.seconds || 0) - (a.createdAt && a.createdAt.seconds || 0); });
+        window._settlementRoundFullList = fullList;
         var fullTotalSupport = fullList.reduce(function (sum, o) { return sum + (o.supportAmount || 0); }, 0);
         if (totalEl) totalEl.textContent = fullTotalSupport.toLocaleString();
-        if (infoText) infoText.textContent = '총 ' + (fullList ? fullList.length : 0) + '건의 정산 내역이 있습니다.';
+        if (infoText) infoText.textContent = '총 ' + (fullList ? fullList.length : 0) + '건의 정산 내역이 있습니다. (지급완료 건만)';
         _settlementRoundPage = 1;
         renderSettlementRoundTable();
     } catch (e) {
@@ -1148,7 +1193,7 @@ function _orderAddress(order) {
     return '-';
 }
 
-// 배송 진행 등록: 추첨 확정 주문만 전체 목록 로드, 15개씩 페이징 (1페이지에서도 페이징 버튼 표시)
+// 배송 진행 등록: 정산 완료(지급완료)된 추첨 확정 주문만 표시. Firestore에서 추첨 확정 결과 로드 후 paid 건만 사용
 async function loadDeliveryRegister() {
     var tbody = document.getElementById('deliveryRegisterTableBody');
     var infoText = document.getElementById('deliveryRegisterInfoText');
@@ -1159,10 +1204,16 @@ async function loadDeliveryRegister() {
             if (infoText) infoText.textContent = '총 0건의 배송 상품이 있습니다.';
             return;
         }
+        var confirmedList = [];
+        if (window.firebaseAdmin.lotteryConfirmedService) {
+            confirmedList = await window.firebaseAdmin.lotteryConfirmedService.getConfirmedResults() || [];
+        } else {
+            confirmedList = window.LOTTERY_CONFIRMED_RESULTS || [];
+        }
+        var paidOrderIds = new Set(confirmedList.filter(function (r) { return r.paymentStatus === 'paid' && r.result === 'winner'; }).map(function (r) { return r.orderId; }).filter(Boolean));
         var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
-        var confirmedOrderIds = new Set((window.LOTTERY_CONFIRMED_RESULTS || []).map(function (r) { return r.orderId; }).filter(Boolean));
         var fullList = allOrders.filter(function (o) {
-            return o.status === 'approved' && confirmedOrderIds.has(o.id);
+            return o.status === 'approved' && paidOrderIds.has(o.id);
         });
         window._deliveryRegisterFullList = fullList;
         var memberMap = {};
@@ -1228,6 +1279,86 @@ function changeDeliveryRegisterPage(page) {
     if (page < 1 || page > totalPages) return;
     _deliveryRegisterPage = page;
     renderDeliveryRegisterTable();
+}
+
+// 택배사/배송상태 일괄 등록 — mode: 'company' | 'status', isAll: true=전체, false=이 페이지
+async function bulkDeliveryUpdate(mode, isAll) {
+    var fullList = window._deliveryRegisterFullList || [];
+    if (!fullList || fullList.length === 0) {
+        alert('배송 대상이 없습니다.');
+        return;
+    }
+    var list = fullList;
+    if (!isAll) {
+        var totalPages = Math.max(1, Math.ceil(fullList.length / SETTLEMENT_PAGE_SIZE));
+        var page = Math.min(Math.max(1, _deliveryRegisterPage), totalPages);
+        var start = (page - 1) * SETTLEMENT_PAGE_SIZE;
+        list = fullList.slice(start, start + SETTLEMENT_PAGE_SIZE);
+        if (list.length === 0) {
+            alert('이 페이지에 배송 대상이 없습니다.');
+            return;
+        }
+    }
+    var scopeText = isAll ? ('전체 ' + fullList.length + '건') : ('이 페이지 ' + list.length + '건');
+    if (mode === 'company') {
+        var companyInput = document.getElementById('deliveryBulkCompany');
+        var company = (companyInput && companyInput.value) ? companyInput.value.trim() : '';
+        if (!company) {
+            alert('택배사명을 입력해주세요.');
+            return;
+        }
+        if (!confirm(scopeText + '에 택배사를 "' + company + '"로 일괄 등록하시겠습니까?')) return;
+    } else {
+        var statusSelect = document.getElementById('deliveryBulkStatus');
+        var status = (statusSelect && statusSelect.value) ? statusSelect.value : 'ready';
+        var statusLabel = status === 'ready' ? '배송준비' : (status === 'shipping' ? '배송중' : '배송완료');
+        if (!confirm(scopeText + '의 배송상태를 "' + statusLabel + '"로 일괄 등록하시겠습니까?')) return;
+    }
+    try {
+        if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
+            alert('Firebase를 사용할 수 없습니다.');
+            return;
+        }
+        var companyVal = (mode === 'company' && document.getElementById('deliveryBulkCompany')) ? document.getElementById('deliveryBulkCompany').value.trim() : '';
+        var statusVal = (mode === 'status' && document.getElementById('deliveryBulkStatus')) ? document.getElementById('deliveryBulkStatus').value : 'ready';
+        var updated = 0;
+        for (var i = 0; i < list.length; i++) {
+            var order = list[i];
+            var orderId = order.id;
+            if (!orderId) continue;
+            try {
+                if (mode === 'company') {
+                    await window.firebaseAdmin.orderService.updateOrder(orderId, { deliveryCompany: companyVal });
+                } else {
+                    await window.firebaseAdmin.orderService.updateOrder(orderId, { deliveryStatus: statusVal });
+                    if (statusVal === 'shipping' || statusVal === 'complete') {
+                        var userId = order.userId;
+                        if (userId) {
+                            var notifType = statusVal === 'complete' ? 'order_delivered' : 'order_shipped';
+                            var notifTitle = statusVal === 'complete' ? '배송이 완료되었습니다' : '배송이 시작되었습니다';
+                            var notifMsg = statusVal === 'complete' ? '주문하신 상품의 배송이 완료되었습니다.' : '주문하신 상품의 배송이 시작되었습니다.';
+                            var co = order.deliveryCompany || '';
+                            var tr = order.trackingNumber || '';
+                            if (co || tr) notifMsg += '\n배송사: ' + co + (tr ? ', 운송장번호: ' + tr : '');
+                            createNotificationForUser(userId, notifType, notifTitle, notifMsg, 'mypage.html?section=orders').catch(function (e) { console.warn('알림 전송 실패:', e); });
+                        }
+                    }
+                }
+                updated++;
+            } catch (err) {
+                console.warn('주문 ' + orderId + ' 업데이트 실패:', err);
+            }
+        }
+        alert(updated + '건 일괄 등록되었습니다.');
+        if (typeof loadDeliveryRegister === 'function') loadDeliveryRegister();
+        var searchContainer = document.getElementById('deliveryRegisterSearchResultsContainer');
+        if (searchContainer && searchContainer.style.display !== 'none' && typeof applyDeliveryRegisterSearch === 'function') {
+            applyDeliveryRegisterSearch();
+        }
+    } catch (err) {
+        console.error('일괄 등록 오류:', err);
+        alert('일괄 등록 중 오류가 발생했습니다.');
+    }
 }
 
 // 배송 목록 한 행 HTML 생성 (공통) — 전화번호·주소 전체 표시, 회원 정보로 보완. rowStart: 페이징 시 번호 시작값(0이면 1부터)
@@ -1558,6 +1689,22 @@ document.addEventListener('click', (e) => {
                 alert('배송 정보 저장에 실패했습니다.');
             }
         })();
+        return;
+    }
+    if (e.target.closest('#deliveryBulkCompanyAllBtn')) {
+        bulkDeliveryUpdate('company', true);
+        return;
+    }
+    if (e.target.closest('#deliveryBulkCompanyPageBtn')) {
+        bulkDeliveryUpdate('company', false);
+        return;
+    }
+    if (e.target.closest('#deliveryBulkStatusAllBtn')) {
+        bulkDeliveryUpdate('status', true);
+        return;
+    }
+    if (e.target.closest('#deliveryBulkStatusPageBtn')) {
+        bulkDeliveryUpdate('status', false);
         return;
     }
     if (e.target.closest('.btn-approve-order')) {
