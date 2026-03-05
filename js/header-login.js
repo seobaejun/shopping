@@ -50,6 +50,18 @@ function updateHeaderToLoggedIn(user) {
             '<a href="mypage.html"><i class="fas fa-user-circle"></i> ' + (user.name || '') + '님</a>' +
             '<a href="#" onclick="handleLogout(); return false;"><i class="fas fa-sign-out-alt"></i> 로그아웃</a>';
     }
+    var bottomNavLinks = document.querySelectorAll('.bottom-nav .nav-item');
+    if (bottomNavLinks && bottomNavLinks.length) {
+        bottomNavLinks.forEach(function (a) {
+            var span = a.querySelector('span');
+            if (span && span.textContent && span.textContent.trim() === '로그인') {
+                a.href = 'mypage.html';
+                var icon = a.querySelector('i');
+                if (icon) icon.className = 'fas fa-user-circle';
+                span.textContent = '마이페이지';
+            }
+        });
+    }
 }
 
 function handleLogout() {

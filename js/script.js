@@ -532,13 +532,16 @@ function initHeroTitle() {
     const endIndex = startIndex + targetText.length;
     
     heroTitle.innerHTML = chars.map((char, index) => {
+        if (char === '\n' || char === '\r') {
+            return '<br class="hero-br">';
+        }
         const isColorChange = index >= startIndex && index < endIndex;
         const charClass = isColorChange ? 'char char-color-change' : 'char';
-        
+        const lineBreak = (index === startIndex && startIndex >= 0) ? '<br class="hero-br">' : '';
         if (char === ' ') {
-            return '<span class="char-space"> </span>';
+            return lineBreak + '<span class="char-space"> </span>';
         }
-        return `<span class="${charClass}" data-char="${char}" style="animation-delay: ${index * 0.1}s">${char}</span>`;
+        return lineBreak + `<span class="${charClass}" data-char="${char}" style="animation-delay: ${index * 0.1}s">${char}</span>`;
     }).join('');
 }
 
@@ -1074,14 +1077,18 @@ function updateHeaderToLoggedIn(user) {
         `;
     }
     
-    // 하단 모바일 네비게이션
-    const bottomNavLogin = document.querySelector('.bottom-nav a[href*="로그인"]');
-    if (bottomNavLogin) {
-        bottomNavLogin.href = 'mypage.html';
-        bottomNavLogin.innerHTML = `
-            <i class="fas fa-user-circle"></i>
-            <span>마이페이지</span>
-        `;
+    // 하단 모바일 네비게이션 (span 텍스트가 '로그인'인 링크 찾기)
+    const bottomNavLinks = document.querySelectorAll('.bottom-nav .nav-item');
+    if (bottomNavLinks && bottomNavLinks.length) {
+        bottomNavLinks.forEach((a) => {
+            const span = a.querySelector('span');
+            if (span && span.textContent && span.textContent.trim() === '로그인') {
+                a.href = 'mypage.html';
+                const icon = a.querySelector('i');
+                if (icon) icon.className = 'fas fa-user-circle';
+                span.textContent = '마이페이지';
+            }
+        });
     }
 }
 
