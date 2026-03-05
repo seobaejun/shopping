@@ -177,11 +177,25 @@ function initMypageOnLoad() {
     bindTokenModals();
     runMypageInit();
 }
+function closeMobileSlotIfDesktop() {
+    if (window.innerWidth > MOBILE_BREAKPOINT) {
+        var slot = document.getElementById('mypage-mobile-slot');
+        var mypageContent = document.querySelector('.mypage-content');
+        if (slot && slot.firstChild && mypageContent) {
+            mypageContent.appendChild(slot.firstChild);
+            slot.classList.remove('open');
+            slot.setAttribute('aria-hidden', 'true');
+            document.querySelectorAll('.mypage-nav li.mobile-panel-open').forEach(function (el) { el.classList.remove('mobile-panel-open'); });
+        }
+    }
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initMypageOnLoad);
 } else {
     initMypageOnLoad();
 }
+window.addEventListener('resize', closeMobileSlotIfDesktop);
 
 // 사용자 정보 표시 — 보유 토큰 = 쇼핑지원금(승인된 주문 지원금 합계)와 동일하게 표시
 function displayUserInfo(user, member, orders) {
@@ -385,34 +399,31 @@ function renderNoticeList() {
     var tbody = document.getElementById('mypageNoticeListBody');
     if (!tbody) return;
     if (!window.mypageApi || typeof window.mypageApi.getBoardPosts !== 'function') {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
         return;
     }
     window.mypageApi.getBoardPosts('notice').then(function (list) {
         if (!list || !list.length) {
-            tbody.innerHTML = '<tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
             return;
         }
         window._mypageNoticePosts = list;
         function formatDate(createdAt) {
             if (!createdAt || createdAt.seconds == null) return '-';
             var d = new Date(createdAt.seconds * 1000);
-            // YY-MM-DD 형식으로 변경 (연도 뒤 2자리)
             var year = String(d.getFullYear()).slice(-2);
             return year + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
         var html = list.map(function (p) {
             var title = (p.title || '-').replace(/</g, '&lt;');
-            var author = (p.authorName || '-').replace(/</g, '&lt;');
-            var viewCount = (p.viewCount != null ? p.viewCount : 0);
             var date = formatDate(p.createdAt);
             var content = (p.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-            return '<tr class="notice-title-row" style="border-bottom: 1px solid #eee;"><td style="padding: 10px;"><a href="#" class="notice-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td><td style="padding: 10px; text-align: center;">' + author + '</td><td style="padding: 10px; text-align: center;">' + viewCount + '</td><td class="col-date" style="padding: 10px; text-align: right;">' + date + '</td></tr>' +
-                '<tr class="notice-detail-row" id="notice-detail-' + (p.id || '') + '" style="display: none;"><td colspan="4" class="notice-detail-cell">' + content + '</td></tr>';
+            return '<tr class="notice-title-row" style="border-bottom: 1px solid #eee;"><td class="cell-title" style="padding: 10px;"><a href="#" class="notice-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td><td class="col-date" style="padding: 10px; text-align: right;">' + date + '</td></tr>' +
+                '<tr class="notice-detail-row" id="notice-detail-' + (p.id || '') + '" style="display: none;"><td colspan="2" class="notice-detail-cell">' + content + '</td></tr>';
         }).join('');
         tbody.innerHTML = html;
     }).catch(function () {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
     });
 }
 
@@ -474,19 +485,24 @@ function renderLotteryList() {
     }
 }
 
-// 주문 목록 테이블
+// 주문 목록 아코디언 (상품명만 보이고 펼치면 날짜·금액·지원금·상태)
 function renderOrderList(orders) {
-    const tbody = document.getElementById('mypageOrderListBody');
-    if (!tbody) return;
+    const listEl = document.getElementById('mypageOrderListBody');
+    const emptyEl = document.getElementById('mypageOrderListEmpty');
+    if (!listEl) return;
     if (!orders || !orders.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="padding: 20px; text-align: center;">주문 내역이 없습니다.</td></tr>';
+        listEl.innerHTML = '<li class="order-accordion-empty empty-message" id="mypageOrderListEmpty">주문 내역이 없습니다.</li>';
         return;
     }
     function formatDate(createdAt) {
         if (!createdAt) return '-';
-        const ts = createdAt.seconds != null ? createdAt.seconds * 1000 : (createdAt.getTime ? createdAt.getTime() : 0);
-        if (!ts) return '-';
-        const d = new Date(ts);
+        var ts = 0;
+        if (createdAt.seconds != null) ts = createdAt.seconds * 1000;
+        else if (typeof createdAt.getTime === 'function') ts = createdAt.getTime();
+        else if (typeof createdAt === 'number') ts = createdAt;
+        else if (typeof createdAt === 'string') ts = new Date(createdAt).getTime();
+        if (!ts || isNaN(ts)) return '-';
+        var d = new Date(ts);
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
     function statusLabel(o) {
@@ -497,16 +513,45 @@ function renderOrderList(orders) {
         if (o.status === 'approved') return '입금확인';
         return '주문';
     }
-    let html = '';
+    var html = '';
     orders.forEach(function (o) {
-        const date = formatDate(o.createdAt);
-        const name = (o.productName || '-').replace(/</g, '&lt;');
-        const price = (o.price != null ? o.price : 0).toLocaleString();
-        const support = (o.supportAmount != null ? o.supportAmount : 0).toLocaleString();
-        const status = statusLabel(o);
-        html += '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + date + '</td><td style="padding: 10px;">' + name + '</td><td style="padding: 10px; text-align: right;">' + price + '원</td><td style="padding: 10px; text-align: right;">' + support + ' trix</td><td style="padding: 10px; text-align: center;">' + status + '</td></tr>';
+        var date = formatDate(o.createdAt || o.orderDate);
+        var name = (o.productName || o.productTitle || o.title || '-').replace(/</g, '&lt;');
+        var priceNum = o.price != null ? o.price : (o.amount != null ? o.amount : 0);
+        var price = (typeof priceNum === 'number' ? priceNum : Number(priceNum) || 0).toLocaleString();
+        var supportNum = o.supportAmount != null ? o.supportAmount : (o.support != null ? o.support : 0);
+        var support = (typeof supportNum === 'number' ? supportNum : Number(supportNum) || 0).toLocaleString();
+        var status = statusLabel(o);
+        html += '<li class="order-accordion-item">' +
+            '<button type="button" class="order-accordion-header" aria-expanded="false">' +
+            '<span class="order-accordion-title">' + name + '</span>' +
+            '<i class="fas fa-chevron-down order-accordion-icon" aria-hidden="true"></i>' +
+            '</button>' +
+            '<div class="order-accordion-body">' +
+            '<div class="order-detail-row"><span class="order-detail-label">주문일</span><span class="order-detail-value">' + (date || '-') + '</span></div>' +
+            '<div class="order-detail-row"><span class="order-detail-label">금액</span><span class="order-detail-value">' + price + '원</span></div>' +
+            '<div class="order-detail-row"><span class="order-detail-label">지원금</span><span class="order-detail-value">' + support + ' trix</span></div>' +
+            '<div class="order-detail-row"><span class="order-detail-label">상태</span><span class="order-detail-value order-detail-status">' + (status || '-') + '</span></div>' +
+            '</div>' +
+            '</li>';
     });
-    tbody.innerHTML = html;
+    listEl.innerHTML = html;
+    listEl.querySelectorAll('.order-accordion-header').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var item = this.closest('.order-accordion-item');
+            var body = item && item.querySelector('.order-accordion-body');
+            var isOpen = item && item.classList.contains('open');
+            listEl.querySelectorAll('.order-accordion-item').forEach(function (el) {
+                el.classList.remove('open');
+                var b = el.querySelector('.order-accordion-header');
+                if (b) b.setAttribute('aria-expanded', 'false');
+            });
+            if (!isOpen && item && body) {
+                item.classList.add('open');
+                if (btn) btn.setAttribute('aria-expanded', 'true');
+            }
+        });
+    });
 }
 
 // 마케팅 수신동의 폼 채우기
@@ -982,11 +1027,44 @@ function bindSectionNav() {
     });
 }
 
-// 섹션 전환: 주문/배송조회는 항상 맨 위 표시, 왼쪽 메뉴 선택 시 해당 섹션만 그 아래 표시
+var MOBILE_BREAKPOINT = 768;
+
+// 섹션 전환: 주문/배송조회는 항상 맨 위 표시, 왼쪽 메뉴 선택 시 해당 섹션만 그 아래 표시. 모바일에서는 메뉴 바로 밑 토글.
 function showSection(sectionName, clickedLink) {
     if (!clickedLink) {
         clickedLink = document.querySelector('.mypage-nav a[data-section="' + sectionName + '"]');
     }
+    var isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+    var slot = document.getElementById('mypage-mobile-slot');
+    var mypageContent = document.querySelector('.mypage-content');
+    var sectionEl = document.querySelector('.mypage-section[data-section="' + sectionName + '"]');
+
+    if (isMobile && slot && sectionEl) {
+        var linkLi = clickedLink ? clickedLink.closest('li') : null;
+        var isAlreadyOpen = slot.contains(sectionEl);
+
+        if (isAlreadyOpen && linkLi && slot.previousElementSibling === linkLi) {
+            slot.classList.remove('open');
+            slot.setAttribute('aria-hidden', 'true');
+            if (mypageContent) mypageContent.appendChild(sectionEl);
+            document.querySelectorAll('.mypage-nav li.mobile-panel-open').forEach(function (el) { el.classList.remove('mobile-panel-open'); });
+            if (clickedLink) clickedLink.classList.remove('active');
+            return;
+        }
+        if (slot.firstChild) {
+            var prev = slot.firstChild;
+            if (mypageContent) mypageContent.appendChild(prev);
+        }
+        document.querySelectorAll('.mypage-nav li.mobile-panel-open').forEach(function (el) { el.classList.remove('mobile-panel-open'); });
+        if (linkLi) {
+            linkLi.parentNode.insertBefore(slot, linkLi.nextSibling);
+            linkLi.classList.add('mobile-panel-open');
+        }
+        slot.appendChild(sectionEl);
+        slot.classList.add('open');
+        slot.setAttribute('aria-hidden', 'false');
+    }
+
     const sections = document.querySelectorAll('.mypage-section');
     sections.forEach(function (sec) {
         const dataSection = sec.getAttribute('data-section');
@@ -1057,7 +1135,7 @@ function renderWishlistCartSection() {
     bindWishlistCartTabs();
 }
 
-// 관심상품 목록 렌더링 (Firestore/로컬 통합)
+// 관심상품 목록 렌더링 - 아코디언 (상품명만 보이고 펼치면 상세)
 function renderWishlistList() {
     var listEl = document.getElementById('wishlistList');
     var emptyEl = document.getElementById('wishlistEmpty');
@@ -1072,22 +1150,39 @@ function renderWishlistList() {
             return;
         }
         emptyEl.style.display = 'none';
-        listEl.innerHTML = wishlist.map(function (item) {
+        var html = wishlist.map(function (item) {
             var safeId = (item.id || '').toString().replace(/'/g, "\\'");
-            return '<div class="wishlist-item" style="display: flex; align-items: center; padding: 20px; border-bottom: 1px solid #e0e0e0;">' +
-                '<div style="width: 100px; height: 100px; margin-right: 20px; background: #f5f5f5; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden;">' +
-                (item.image ? '<img src="' + item.image + '" style="width: 100%; height: 100%; object-fit: cover;">' : '<i class="fas fa-image" style="font-size: 32px; color: #ddd;"></i>') +
-                '</div>' +
-                '<div style="flex: 1;">' +
-                '<h4 style="margin: 0 0 8px 0; font-size: 16px; color: #333;">' + (item.name || '상품명 없음') + '</h4>' +
-                '<p style="margin: 0; color: #666; font-size: 14px;">' + (item.price ? item.price.toLocaleString() + '원' : '가격 정보 없음') + '</p>' +
-                '</div>' +
-                '<div style="display: flex; gap: 10px;">' +
-                '<button type="button" class="btn btn-secondary" onclick="removeFromWishlist(\'' + safeId + '\')" style="padding: 8px 16px; font-size: 14px;">삭제</button>' +
-                '<a href="product-detail.html?id=' + (item.id || '') + '" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; display: inline-block;">상세보기</a>' +
-                '</div>' +
-                '</div>';
+            var name = (item.name || '상품명 없음').replace(/</g, '&lt;');
+            var priceStr = item.price != null ? Number(item.price).toLocaleString() + '원' : '가격 정보 없음';
+            var imgHtml = item.image ? '<img src="' + item.image.replace(/"/g, '&quot;') + '" alt="" class="wishlist-accordion-thumb">' : '<i class="fas fa-image wishlist-accordion-noimg"></i>';
+            return '<div class="wishlist-accordion-item">' +
+                '<button type="button" class="wishlist-accordion-header" aria-expanded="false">' +
+                '<span class="wishlist-accordion-title">' + name + '</span>' +
+                '<i class="fas fa-chevron-down wishlist-accordion-icon" aria-hidden="true"></i>' +
+                '</button>' +
+                '<div class="wishlist-accordion-body">' +
+                '<div class="wishlist-accordion-detail">' +
+                '<div class="wishlist-accordion-img">' + imgHtml + '</div>' +
+                '<div class="wishlist-accordion-info">' +
+                '<div class="wishlist-detail-row"><span class="wishlist-detail-label">가격</span><span class="wishlist-detail-value">' + priceStr + '</span></div>' +
+                '<div class="wishlist-accordion-actions">' +
+                '<button type="button" class="btn btn-secondary" onclick="removeFromWishlist(\'' + safeId + '\')">삭제</button>' +
+                '<a href="product-detail.html?id=' + (item.id || '').toString().replace(/"/g, '') + '" class="btn btn-primary">상세보기</a>' +
+                '</div></div></div></div></div>';
         }).join('');
+        listEl.innerHTML = html;
+        listEl.querySelectorAll('.wishlist-accordion-header').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var item = this.closest('.wishlist-accordion-item');
+                var isOpen = item && item.classList.contains('open');
+                listEl.querySelectorAll('.wishlist-accordion-item').forEach(function (el) { el.classList.remove('open'); });
+                listEl.querySelectorAll('.wishlist-accordion-header').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+                if (!isOpen && item) {
+                    item.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            });
+        });
     }).catch(function (e) {
         console.error('관심상품 목록 렌더링 오류:', e);
         listEl.innerHTML = '';
@@ -1095,7 +1190,7 @@ function renderWishlistList() {
     });
 }
 
-// 장바구니 목록 렌더링 (Firestore/로컬 통합)
+// 장바구니 목록 렌더링 - 아코디언 (상품명만 보이고 펼치면 상세)
 function renderCartList() {
     var listEl = document.getElementById('cartList');
     var emptyEl = document.getElementById('cartEmpty');
@@ -1110,22 +1205,42 @@ function renderCartList() {
             return;
         }
         emptyEl.style.display = 'none';
-        listEl.innerHTML = cart.map(function (item, index) {
-            return '<div class="cart-item" style="display: flex; align-items: center; padding: 20px; border-bottom: 1px solid #e0e0e0;">' +
-                '<div style="width: 100px; height: 100px; margin-right: 20px; background: #f5f5f5; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden;">' +
-                (item.image ? '<img src="' + item.image + '" style="width: 100%; height: 100%; object-fit: cover;">' : '<i class="fas fa-image" style="font-size: 32px; color: #ddd;"></i>') +
-                '</div>' +
-                '<div style="flex: 1;">' +
-                '<h4 style="margin: 0 0 8px 0; font-size: 16px; color: #333;">' + (item.productName || '상품명 없음') + '</h4>' +
-                '<p style="margin: 0 0 4px 0; color: #666; font-size: 14px;">옵션: ' + (item.optionName || '기본') + '</p>' +
-                '<p style="margin: 0; color: #666; font-size: 14px;">수량: ' + (item.quantity || 1) + '개 | ' + (item.price ? item.price.toLocaleString() + '원' : '가격 정보 없음') + '</p>' +
-                '</div>' +
-                '<div style="display: flex; gap: 10px;">' +
-                '<button type="button" class="btn btn-secondary" onclick="removeFromCart(' + index + ')" style="padding: 8px 16px; font-size: 14px;">삭제</button>' +
-                '<a href="product-detail.html?id=' + (item.productId || '') + '" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; display: inline-block;">상세보기</a>' +
-                '</div>' +
-                '</div>';
+        var html = cart.map(function (item, index) {
+            var name = (item.productName || item.name || '상품명 없음').replace(/</g, '&lt;');
+            var optionStr = (item.optionName || '기본');
+            var qty = item.quantity != null ? item.quantity : 1;
+            var priceStr = item.price != null ? Number(item.price).toLocaleString() + '원' : '가격 정보 없음';
+            var imgHtml = item.image ? '<img src="' + item.image.replace(/"/g, '&quot;') + '" alt="" class="cart-accordion-thumb">' : '<i class="fas fa-image cart-accordion-noimg"></i>';
+            return '<div class="cart-accordion-item">' +
+                '<button type="button" class="cart-accordion-header" aria-expanded="false">' +
+                '<span class="cart-accordion-title">' + name + '</span>' +
+                '<i class="fas fa-chevron-down cart-accordion-icon" aria-hidden="true"></i>' +
+                '</button>' +
+                '<div class="cart-accordion-body">' +
+                '<div class="cart-accordion-detail">' +
+                '<div class="cart-accordion-img">' + imgHtml + '</div>' +
+                '<div class="cart-accordion-info">' +
+                '<div class="cart-detail-row"><span class="cart-detail-label">옵션</span><span class="cart-detail-value">' + optionStr + '</span></div>' +
+                '<div class="cart-detail-row"><span class="cart-detail-label">수량</span><span class="cart-detail-value">' + qty + '개</span></div>' +
+                '<div class="cart-detail-row"><span class="cart-detail-label">금액</span><span class="cart-detail-value">' + priceStr + '</span></div>' +
+                '<div class="cart-accordion-actions">' +
+                '<button type="button" class="btn btn-secondary" onclick="removeFromCart(' + index + ')">삭제</button>' +
+                '<a href="product-detail.html?id=' + (item.productId || item.id || '').toString().replace(/"/g, '') + '" class="btn btn-primary">상세보기</a>' +
+                '</div></div></div></div></div>';
         }).join('');
+        listEl.innerHTML = html;
+        listEl.querySelectorAll('.cart-accordion-header').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var item = this.closest('.cart-accordion-item');
+                var isOpen = item && item.classList.contains('open');
+                listEl.querySelectorAll('.cart-accordion-item').forEach(function (el) { el.classList.remove('open'); });
+                listEl.querySelectorAll('.cart-accordion-header').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+                if (!isOpen && item) {
+                    item.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            });
+        });
     }).catch(function (e) {
         console.error('장바구니 목록 렌더링 오류:', e);
         listEl.innerHTML = '';

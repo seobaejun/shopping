@@ -60,7 +60,7 @@
         if (!tbody) return;
 
         if (!_noticeListCache || _noticeListCache.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
             return;
         }
 
@@ -70,25 +70,20 @@
         });
 
         if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>';
             return;
         }
 
         var html = list.map(function (p) {
             var title = (p.title || '-').replace(/</g, '&lt;');
-            var author = (p.authorName || '-').replace(/</g, '&lt;');
-            var viewCount = (p.viewCount != null ? p.viewCount : 0);
             var date = formatDate(p.createdAt);
             var content = (p.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-            
             return '<tr class="notice-title-row" style="border-bottom: 1px solid #eee; cursor: pointer;" data-notice-id="' + (p.id || '') + '">' +
-                '<td style="padding: 10px;"><a href="#" class="notice-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td>' +
-                '<td style="padding: 10px; text-align: center;">' + author + '</td>' +
-                '<td style="padding: 10px; text-align: center;">' + viewCount + '</td>' +
-                '<td style="padding: 10px; text-align: right;">' + date + '</td>' +
+                '<td class="cell-title" style="padding: 10px;"><a href="#" class="notice-title-link" data-id="' + (p.id || '') + '">' + title + '</a></td>' +
+                '<td class="col-date" style="padding: 10px; text-align: right;">' + date + '</td>' +
                 '</tr>' +
                 '<tr class="notice-detail-row" id="notice-detail-' + (p.id || '') + '" style="display: none;">' +
-                '<td colspan="4" class="notice-detail-cell">' + content + '</td>' +
+                '<td colspan="2" class="notice-detail-cell">' + content + '</td>' +
                 '</tr>';
         }).join('');
 

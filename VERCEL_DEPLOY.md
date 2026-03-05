@@ -1,6 +1,24 @@
 # Vercel 배포 가이드
 
-저장소: **https://github.com/seobaejun/shopping**
+저장소: **https://github.com/seobaejun/shopping**  
+Vercel용 원격: **https://github.com/seobaejun/10shopping** (`vercel` remote)
+
+---
+
+## 항상 GitHub + Vercel 같이 푸시하기
+
+커밋 후 **한 번에 두 원격(origin, vercel)** 으로 푸시하려면:
+
+```bash
+# 방법 A: 스크립트 사용 (권장)
+.\push-both.ps1
+
+# 방법 B: 직접 명령
+git push origin main && git push vercel main
+```
+
+- `origin` → seobaejun/shopping (메인 GitHub)
+- `vercel` → seobaejun/10shopping (Vercel이 배포하는 저장소)
 
 ## 방법 1: Vercel 대시보드로 배포 (권장)
 

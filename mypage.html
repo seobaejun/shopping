@@ -106,7 +106,7 @@
                         <div class="nav-group">
                             <h4>나의 쇼핑 정보</h4>
                             <ul>
-                                <li><a href="#" onclick="showSection('orders'); return false;">주문/배송조회 내역 <span class="nav-badge implemented">운영</span></a></li>
+                                <li><a href="#" data-section="orders" onclick="showSection('orders', this); return false;">주문/배송조회 내역 <span class="nav-badge implemented">운영</span></a></li>
                                 <li><a href="#" data-section="wishlist-cart" onclick="showSection('wishlist-cart', this); return false;">관심상품/장바구니 내역 <span class="nav-badge implemented">운영</span></a></li>
                             </ul>
                         </div>
@@ -144,6 +144,7 @@
                                 <li><a href="#" data-section="notifications" onclick="showSection('notifications', this); return false;">알림 <span class="nav-badge implemented">운영</span></a></li>
                             </ul>
                         </div>
+                        <div id="mypage-mobile-slot" class="mypage-mobile-content-slot" aria-hidden="true"></div>
                     </nav>
                 </aside>
 
@@ -182,20 +183,9 @@
                             </div>
                         </div>
                         <div class="mypage-order-list-wrap" style="margin-top: 20px;">
-                            <table class="mypage-table" style="width:100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="border-bottom: 2px solid #eee;">
-                                        <th style="padding: 10px; text-align: left;">주문일</th>
-                                        <th style="padding: 10px; text-align: left;">상품명</th>
-                                        <th style="padding: 10px; text-align: right;">금액</th>
-                                        <th style="padding: 10px; text-align: right;">지원금 (trix)</th>
-                                        <th style="padding: 10px; text-align: center;">상태</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="mypageOrderListBody">
-                                    <tr><td colspan="5" class="empty-message" style="padding: 20px; text-align: center;">주문 내역이 없습니다.</td></tr>
-                                </tbody>
-                            </table>
+                            <ul class="order-accordion-list" id="mypageOrderListBody" aria-label="주문 목록">
+                                <li class="order-accordion-empty empty-message" id="mypageOrderListEmpty">주문 내역이 없습니다.</li>
+                            </ul>
                         </div>
                     </div>
 
@@ -463,17 +453,15 @@
                             <a href="#" class="link-more">전체보기</a>
                         </div>
                         <div class="notice-list-wrap">
-                            <table class="mypage-table" style="width:100%; border-collapse: collapse;">
+                            <table class="mypage-table notice-table-title-date" style="width:100%; border-collapse: collapse;">
                                 <thead>
                                     <tr style="border-bottom: 2px solid #eee;">
-                                        <th style="padding: 10px; text-align: left;">제목</th>
-                                        <th style="padding: 10px; text-align: center; width: 100px;">글쓴이</th>
-                                        <th style="padding: 10px; text-align: center; width: 80px;">조회</th>
-                                        <th style="padding: 10px; text-align: right; width: 100px;">작성일</th>
+                                        <th class="col-title" style="padding: 10px; text-align: left;">제목</th>
+                                        <th class="col-date" style="padding: 10px; text-align: right;">작성일</th>
                                     </tr>
                                 </thead>
                                 <tbody id="mypageNoticeListBody">
-                                    <tr><td colspan="4" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>
+                                    <tr><td colspan="2" class="empty-message" style="padding: 20px; text-align: center;">등록된 공지사항이 없습니다.</td></tr>
                                 </tbody>
                             </table>
                         </div>

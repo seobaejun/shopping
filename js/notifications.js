@@ -316,33 +316,29 @@
             updateNotificationBadge(count);
         });
 
-        // 실시간 리스너 설정
+        // 실시간 리스너 (userId만 조건 → 복합 인덱스 불필요, read/createdAt은 콜백에서 처리)
         notificationListener = db.collection('notifications')
             .where('userId', '==', userId)
-            .where('read', '==', false)
-            .orderBy('createdAt', 'desc')
-            .limit(1)
             .onSnapshot(function(snapshot) {
                 snapshot.docChanges().forEach(function(change) {
-                    if (change.type === 'added') {
-                        var notification = change.doc.data();
-                        var notificationId = change.doc.id;
+                    if (change.type !== 'added') return;
+                    var notification = change.doc.data();
+                    if (notification.read === true) return;
 
-                        // 읽지 않은 알림 개수 업데이트
-                        getUnreadCount(userId).then(function(count) {
-                            updateNotificationBadge(count);
-                        });
+                    // 읽지 않은 알림 개수 업데이트
+                    getUnreadCount(userId).then(function(count) {
+                        updateNotificationBadge(count);
+                    });
 
-                        // 브라우저 알림 표시
-                        requestNotificationPermission().then(function(hasPermission) {
-                            if (hasPermission) {
-                                showBrowserNotification(notification.title, {
-                                    body: notification.message || '',
-                                    link: notification.link || ''
-                                });
-                            }
-                        });
-                    }
+                    // 브라우저 알림 표시
+                    requestNotificationPermission().then(function(hasPermission) {
+                        if (hasPermission) {
+                            showBrowserNotification(notification.title || '알림', {
+                                body: notification.message || '',
+                                link: notification.link || ''
+                            });
+                        }
+                    });
                 });
             }, function(error) {
                 console.error('❌ 알림 리스너 오류:', error);

@@ -1,5 +1,13 @@
 /* 마이페이지 스타일 */
 
+/* 마이페이지 전체: 제목 등으로 오른쪽 삐져나감 방지 */
+.mypage-container,
+.mypage-container .container {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
 .mypage-container {
     padding: 30px 0 60px;
     background: #fff;
@@ -151,11 +159,13 @@
     margin-bottom: 30px;
 }
 
-/* 레이아웃 */
+/* 레이아웃 - 콘텐츠 열이 제목 등으로 넓어지지 않도록 minmax(0,1fr) */
 .mypage-wrapper {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 280px minmax(0, 1fr);
     gap: 30px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* ========== 사이드바 ========== */
@@ -470,6 +480,15 @@
     color: var(--primary-color);
 }
 
+/* 모바일: 메뉴 바로 밑 토글용 슬롯 (PC에서는 미사용) */
+.mypage-mobile-content-slot {
+    display: none;
+}
+
+.mypage-mobile-content-slot.open .content-section {
+    margin: 0;
+}
+
 /* 메뉴 항목 구현 여부 뱃지 */
 .nav-badge {
     display: inline-block;
@@ -494,6 +513,8 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-width: 0;
+    overflow-x: hidden;
 }
 
 /* 컨텐츠 섹션 */
@@ -502,9 +523,12 @@
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     padding: 25px;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
-/* 섹션 타이틀 */
+/* 섹션 타이틀 - 길어도 말줄임 */
 .section-title {
     display: flex;
     justify-content: space-between;
@@ -512,6 +536,8 @@
     margin-bottom: 20px;
     padding-bottom: 15px;
     border-bottom: 2px solid #333;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .section-title h3 {
@@ -519,6 +545,10 @@
     font-weight: 700;
     color: #333;
     margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .link-more {
@@ -574,9 +604,16 @@
 }
 
 /* 공지/이벤트 테이블 스타일 */
+.notice-list-wrap {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
 .notice-list-wrap .mypage-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .notice-list-wrap .mypage-table thead th {
@@ -616,10 +653,47 @@
     width: 100px;
 }
 
+/* 공지사항 제목+작성일 테이블: 제목 항상 가로, 칸 모자라면 ... */
+.notice-list-wrap .notice-table-title-date {
+    table-layout: fixed;
+}
+
+.notice-list-wrap .notice-table-title-date .col-title {
+    width: 85%;
+    min-width: 120px;
+    text-align: left;
+    padding-left: 8px;
+}
+
+.notice-list-wrap .notice-table-title-date .col-date {
+    width: 15%;
+    min-width: 90px;
+}
+
+.notice-list-wrap .notice-table-title-date .cell-title {
+    overflow: hidden !important;
+    max-width: 100%;
+    min-width: 0;
+    white-space: nowrap;
+    text-align: left;
+    padding-left: 8px;
+}
+
+.notice-list-wrap .notice-table-title-date .cell-title .notice-title-link,
+.notice-list-wrap .notice-table-title-date .cell-title .event-title-link {
+    display: block;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    min-width: 0;
+    max-width: 100%;
+    text-align: left;
+}
+
 /* 공지/이벤트 테이블: 작성일 한 줄 표시, 오른쪽 정렬 */
 .notice-list-wrap .mypage-table .col-date {
     white-space: nowrap;
-    min-width: 110px;
+    min-width: 90px;
     text-align: right !important;
 }
 
@@ -1062,6 +1136,8 @@
     padding: 16px 12px;
     cursor: pointer;
     transition: background 0.2s;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .faq-accordion-q:hover {
@@ -1084,8 +1160,12 @@
 
 .faq-q-text {
     flex: 1;
+    min-width: 0;
     font-size: 15px;
     color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .faq-accordion-toggle {
@@ -1158,19 +1238,440 @@
     border-bottom-color: #333;
 }
 
-/* 관심상품/장바구니 아이템 */
+/* 주문/배송조회 아코디언 - 한 주문당 하나의 칸(카드), 상품명만 보이고 펼치면 상세 */
+.content-section[data-section="orders"] {
+    overflow-x: hidden;
+    min-width: 0;
+}
+
+.mypage-order-list-wrap {
+    font-size: 14px;
+    overflow-x: hidden;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.order-accordion-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.order-accordion-list > li {
+    display: block;
+}
+
+.order-accordion-empty {
+    display: block;
+    padding: 24px 16px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.order-accordion-item {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.order-accordion-item:last-child {
+    margin-bottom: 0;
+}
+
+.order-accordion-header {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: none;
+    background: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.order-accordion-header:hover {
+    background: #f5f7fa;
+}
+
+.order-accordion-header .order-accordion-title,
+.order-accordion-title {
+    width: 0;
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: block;
+    word-break: normal;
+}
+
+.order-accordion-icon {
+    flex-shrink: 0;
+    margin-left: 12px;
+    color: #888;
+    transition: transform 0.2s;
+}
+
+.order-accordion-item.open .order-accordion-icon {
+    transform: rotate(180deg);
+}
+
+.order-accordion-body {
+    display: none !important;
+    padding: 14px 16px 16px;
+    background: #f8f9fa;
+    border-top: 1px solid #e8e8e8;
+    box-sizing: border-box;
+}
+
+.order-accordion-item.open .order-accordion-body {
+    display: block !important;
+}
+
+.order-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 14px;
+    line-height: 1.5;
+    gap: 12px;
+}
+
+.order-detail-row .order-detail-value:empty::after {
+    content: '-';
+    color: #999;
+}
+
+.order-detail-row:first-child {
+    padding-top: 0;
+}
+
+.order-detail-row:last-child {
+    padding-bottom: 0;
+}
+
+.order-detail-label {
+    color: #666;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-right: 12px;
+}
+
+.order-detail-value {
+    color: #333;
+    font-weight: 600;
+    text-align: right;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.order-detail-status {
+    color: #4A5FC1;
+}
+
+/* 관심상품/장바구니 아코디언 - 제목 말줄임, 펼침 시 한 줄씩 표시 */
+.content-section[data-section="wishlist-cart"],
+.wishlist-tab-content,
+.cart-tab-content {
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+.wishlist-list,
+.cart-list {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.wishlist-accordion-item,
+.cart-accordion-item {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.wishlist-accordion-item:last-child,
+.cart-accordion-item:last-child {
+    margin-bottom: 0;
+}
+
+.wishlist-accordion-header,
+.cart-accordion-header {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: none;
+    background: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.wishlist-accordion-header .wishlist-accordion-title,
+.cart-accordion-header .cart-accordion-title {
+    width: 0;
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: block;
+}
+
+.wishlist-accordion-header:hover,
+.cart-accordion-header:hover {
+    background: #f5f7fa;
+}
+
+.wishlist-accordion-title,
+.cart-accordion-title {
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: block;
+    word-break: normal;
+    writing-mode: horizontal-tb;
+}
+
+.wishlist-accordion-icon,
+.cart-accordion-icon {
+    flex-shrink: 0;
+    margin-left: 12px;
+    color: #888;
+    transition: transform 0.2s;
+}
+
+.wishlist-accordion-item.open .wishlist-accordion-icon,
+.cart-accordion-item.open .cart-accordion-icon {
+    transform: rotate(180deg);
+}
+
+.wishlist-accordion-body,
+.cart-accordion-body {
+    display: none !important;
+    padding: 16px;
+    background: #f8f9fa;
+    border-top: 1px solid #e8e8e8;
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.wishlist-accordion-item.open .wishlist-accordion-body,
+.cart-accordion-item.open .cart-accordion-body {
+    display: block !important;
+}
+
+/* 펼쳤을 때: 이미지 왼쪽, 정보 오른쪽 한 줄 정렬 후 버튼은 아래 구분선 위에 */
+.wishlist-accordion-detail,
+.cart-accordion-detail {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    align-items: flex-start;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.wishlist-accordion-img,
+.cart-accordion-img {
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+    background: #eee;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wishlist-accordion-thumb,
+.cart-accordion-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.wishlist-accordion-noimg,
+.cart-accordion-noimg {
+    font-size: 28px;
+    color: #ccc;
+}
+
+.wishlist-accordion-info,
+.cart-accordion-info {
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* 펼침 영역: 가격/옵션/수량/금액 한 줄씩 정렬 */
+.wishlist-detail-row,
+.cart-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 1.4;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.wishlist-detail-row:first-child,
+.cart-detail-row:first-child {
+    padding-top: 0;
+}
+
+.wishlist-detail-label,
+.cart-detail-label {
+    color: #666;
+    flex-shrink: 0;
+    word-break: normal;
+    writing-mode: horizontal-tb;
+}
+
+.wishlist-detail-value,
+.cart-detail-value {
+    color: #333;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    text-align: right;
+    word-break: normal;
+    writing-mode: horizontal-tb;
+}
+
+.wishlist-accordion-actions,
+.cart-accordion-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #e8e8e8;
+    width: 100%;
+    max-width: 100%;
+}
+
+.wishlist-accordion-actions .btn,
+.cart-accordion-actions .btn {
+    min-height: 38px;
+    padding: 8px 18px;
+    font-size: 14px;
+    border-radius: 6px;
+    font-weight: 500;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.wishlist-accordion-actions .btn:hover,
+.cart-accordion-actions .btn:hover {
+    background: #f5f7fa;
+    border-color: #ced4da;
+}
+
+.wishlist-accordion-actions .btn-primary,
+.cart-accordion-actions .btn-primary {
+    background: #4A5FC1;
+    border-color: #4A5FC1;
+    color: #fff;
+}
+
+.wishlist-accordion-actions .btn-primary:hover,
+.cart-accordion-actions .btn-primary:hover {
+    background: #3d4fa8;
+    border-color: #3d4fa8;
+}
+
+/* 관심상품/장바구니 아이템 가독성 (기존 스타일 유지) */
 .wishlist-item,
 .cart-item {
     display: flex;
     align-items: center;
-    padding: 20px;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 20px 16px;
+    border-bottom: 1px solid #e8e8e8;
     transition: background 0.2s;
+    font-size: 14px;
+    line-height: 1.55;
+    color: #333;
 }
 
 .wishlist-item:hover,
 .cart-item:hover {
-    background: #f9f9f9;
+    background: #f5f7fa;
 }
 
 .wishlist-item img,
@@ -1178,7 +1679,25 @@
     width: 100px;
     height: 100px;
     object-fit: cover;
-    border-radius: 4px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.wishlist-item h4,
+.cart-item h4 {
+    margin: 0 0 8px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #222;
+    line-height: 1.4;
+}
+
+.wishlist-item p,
+.cart-item p {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.5;
 }
 
 .wishlist-empty,
@@ -1208,6 +1727,17 @@
     margin-bottom: 15px;
     background: #fff;
     transition: box-shadow 0.2s;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.inquiry-item h4,
+.inquiry-item .inquiry-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .inquiry-item:hover {
@@ -1539,23 +2069,146 @@
     }
 
     .mypage-sidebar {
-        order: 2;
-    }
-
-    .mypage-content {
         order: 1;
     }
 
+    .mypage-content {
+        order: 2;
+    }
+
+    /* 모바일: 메뉴 클릭 시 해당 메뉴 바로 밑에 토글로 열림 */
+    .mypage-mobile-content-slot {
+        display: none;
+        padding: 0 12px 16px;
+        margin: 0 8px 12px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        overflow-x: hidden;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .mypage-mobile-content-slot.open {
+        display: block;
+    }
+
+    .mypage-mobile-content-slot .content-section {
+        border: none;
+        box-shadow: none;
+        padding-top: 12px;
+        min-width: 0;
+        overflow-x: hidden;
+    }
+
+    .mypage-nav li.mobile-panel-open > a {
+        background: #f0f4ff;
+        color: var(--primary-color, #4A5FC1);
+    }
+
     .order-steps {
-        flex-wrap: wrap;
-        gap: 15px;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        align-items: center;
+        gap: 8px;
+        padding: 20px 0;
     }
 
     .step-item {
-        flex: 0 0 calc(20% - 15px);
+        min-width: 0;
+    }
+
+    .step-number {
+        width: 42px;
+        height: 42px;
+        font-size: 16px;
+        margin: 0 auto;
+    }
+
+    .step-name {
+        font-size: 12px;
     }
 
     .step-arrow {
         display: none;
     }
+}
+
+/* ========== 말줄임 고정 (다른 스타일/미디어에 의해 풀리지 않도록 파일 맨 끝에 유지) ========== */
+.mypage-container .order-accordion-title,
+.mypage-container .wishlist-accordion-title,
+.mypage-container .cart-accordion-title {
+    width: 0 !important;
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: block !important;
+}
+
+.mypage-container .order-accordion-header,
+.mypage-container .wishlist-accordion-header,
+.mypage-container .cart-accordion-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.mypage-container .wishlist-accordion-item,
+.mypage-container .cart-accordion-item,
+.mypage-container .order-accordion-item {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.mypage-container .wishlist-list,
+.mypage-container .cart-list {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+.mypage-container .section-title h3 {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    min-width: 0 !important;
+}
+
+.mypage-container .faq-q-text {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    min-width: 0 !important;
+}
+
+.mypage-container .notice-list-wrap .cell-title .notice-title-link,
+.mypage-container .notice-list-wrap .cell-title .event-title-link,
+.mypage-container .notice-list-wrap a.notice-title-link,
+.mypage-container .notice-list-wrap a.event-title-link {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 100% !important;
+}
+
+.mypage-container .wishlist-detail-value,
+.mypage-container .cart-detail-value,
+.mypage-container .order-detail-value {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+}
+
+.mypage-container .wishlist-detail-row,
+.mypage-container .cart-detail-row,
+.mypage-container .order-detail-row {
+    min-width: 0 !important;
+    overflow: hidden !important;
 }

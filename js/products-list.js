@@ -664,6 +664,14 @@ function showEmptyState() {
 const PAGINATION_VISIBLE = 9;
 const PAGINATION_SKIP = 10;
 
+function getPaginationVisible() {
+    var w = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    if (w <= 360) return 4;
+    if (w <= 480) return 5;
+    if (w <= 768) return 6;
+    return 9;
+}
+
 function getItemsPerPageForView() {
     const grid = listElements.productGrid;
     if (!grid) return ROWS_PER_PAGE * GRID_COLUMNS;
@@ -683,10 +691,11 @@ function updatePagination() {
     listElements.pagination.style.display = 'flex';
     
     const cur = currentPage;
-    const half = Math.floor(PAGINATION_VISIBLE / 2);
+    const visible = getPaginationVisible();
+    const half = Math.floor(visible / 2);
     let startPage = Math.max(1, cur - half);
-    let endPage = Math.min(totalPages, startPage + PAGINATION_VISIBLE - 1);
-    if (endPage - startPage + 1 < PAGINATION_VISIBLE) startPage = Math.max(1, endPage - PAGINATION_VISIBLE + 1);
+    let endPage = Math.min(totalPages, startPage + visible - 1);
+    if (endPage - startPage + 1 < visible) startPage = Math.max(1, endPage - visible + 1);
     
     let pageNumbersHtml = '';
     pageNumbersHtml += `<button type="button" class="page-btn skip-prev" title="10페이지 이전" ${cur <= PAGINATION_SKIP ? 'disabled' : ''}>&lt;&lt;</button>`;
@@ -755,6 +764,10 @@ function initEventListeners() {
             }
         });
     }
+
+    window.addEventListener('resize', function () {
+        updatePagination();
+    });
 }
 
 // 카테고리 메뉴 로드 (script.js의 함수 재사용)

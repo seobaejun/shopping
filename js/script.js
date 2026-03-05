@@ -331,6 +331,14 @@ let mainProductCurrentPage = 1;
 const MAIN_PAGINATION_VISIBLE = 9;
 const MAIN_PAGINATION_SKIP = 10;
 
+function getMainPaginationVisible() {
+    var w = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    if (w <= 360) return 4;
+    if (w <= 480) return 5;
+    if (w <= 768) return 6;
+    return 9;
+}
+
 function renderProducts() {
     const grid = document.getElementById('mainProductGrid');
     if (!grid) return;
@@ -357,10 +365,11 @@ function renderMainPagination(totalItems) {
     }
     wrap.style.display = 'block';
     var cur = mainProductCurrentPage;
-    var half = Math.floor(MAIN_PAGINATION_VISIBLE / 2);
+    var visible = getMainPaginationVisible();
+    var half = Math.floor(visible / 2);
     var start = Math.max(1, cur - half);
-    var end = Math.min(totalPages, start + MAIN_PAGINATION_VISIBLE - 1);
-    if (end - start + 1 < MAIN_PAGINATION_VISIBLE) start = Math.max(1, end - MAIN_PAGINATION_VISIBLE + 1);
+    var end = Math.min(totalPages, start + visible - 1);
+    if (end - start + 1 < visible) start = Math.max(1, end - visible + 1);
     var html = '';
     html += '<button type="button" class="main-pagination-btn main-pagination-skip-prev" ' + (cur <= MAIN_PAGINATION_SKIP ? 'disabled' : '') + ' title="10페이지 이전">&lt;&lt;</button>';
     html += '<button type="button" class="main-pagination-btn main-pagination-prev" ' + (cur <= 1 ? 'disabled' : '') + ' title="이전">&lt;</button>';

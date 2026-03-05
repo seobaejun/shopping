@@ -12,7 +12,7 @@
     <!-- 공지 배너 -->
     <div class="notice-banner" id="noticeBanner">
         <div class="container">
-            <p>판매자의 수익금을 구매자와 함께 나누는 '10쇼핑게임' 은 회원전용<br>쇼핑몰입니다.</p>
+            <p>판매자의 수익금을 구매자와 함께 나누는 '10쇼핑게임' 은 회원전용 쇼핑몰입니다.</p>
         </div>
         <div class="banner-close-area">
             <button class="close-banner" id="closeBanner" aria-label="배너 닫기">
@@ -320,23 +320,23 @@
 
     <!-- 하단 고정 네비게이션 (모바일) -->
     <div class="bottom-nav">
-        <a href="#" class="nav-item">
+        <a href="#" class="nav-item" data-nav="category" aria-label="전체메뉴">
             <i class="fas fa-th"></i>
             <span>전체메뉴</span>
         </a>
-        <a href="#" class="nav-item">
+        <a href="#" class="nav-item" data-nav="search" aria-label="검색">
             <i class="fas fa-search"></i>
             <span>검색</span>
         </a>
-        <a href="#" class="nav-item">
+        <a href="index.html" class="nav-item" data-nav="home" aria-label="홈">
             <i class="fas fa-home"></i>
             <span>홈</span>
         </a>
-        <a href="login.html" class="nav-item" data-nav="login">
+        <a href="login.html" class="nav-item" data-nav="login" aria-label="로그인">
             <i class="fas fa-user"></i>
             <span>로그인</span>
         </a>
-        <a href="#" class="nav-item">
+        <a href="mypage.html?section=wishlist-cart&amp;tab=wishlist" class="nav-item" data-nav="wishlist" aria-label="찜">
             <i class="fas fa-heart"></i>
             <span>찜</span>
         </a>
@@ -389,6 +389,7 @@
     
     <script src="js/admin-link-visibility.js"></script>
     <script src="js/nav-categories.js?v=1"></script>
+    <script src="js/bottom-nav.js?v=1"></script>
     <script src="js/today-viewed.js?v=1"></script>
     <script src="js/script.js?v=30"></script>
     
