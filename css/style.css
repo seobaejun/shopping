@@ -1779,6 +1779,35 @@ img {
         min-width: 260px;
         max-width: 260px;
     }
+    /* 후기 1개가 잘리지 않게 카드 크기 축소 - 슬라이더 내 카드에 직접 적용 */
+    .review-section .review-slider-track .main-review-item,
+    .review-slider-track .main-review-item {
+        padding: 10px 12px !important;
+    }
+    .review-section .main-review-header,
+    .main-review-header {
+        margin-bottom: 6px !important;
+    }
+    .review-section .main-review-title,
+    .main-review-title {
+        font-size: 14px !important;
+    }
+    .review-section .main-review-content-box,
+    .main-review-content-box {
+        min-height: 40px !important;
+        padding: 6px 10px !important;
+        margin: 0 0 6px 0 !important;
+    }
+    .review-section .main-review-content-inner,
+    .main-review-content-inner {
+        font-size: 13px !important;
+        -webkit-line-clamp: 3;
+        line-height: 1.45 !important;
+    }
+    .review-section .main-review-meta,
+    .main-review-meta {
+        font-size: 12px !important;
+    }
     .review-slider-arrow {
         width: 40px;
         height: 40px;
@@ -1786,6 +1815,17 @@ img {
     }
     .review-slider-viewport {
         margin: 0 44px;
+    }
+    /* 사용후기 작성 / 펼쳐보기 버튼 한 줄, 크기 축소 */
+    .review-section-footer {
+        flex-wrap: nowrap;
+        gap: 8px;
+        justify-content: center;
+    }
+    .review-section-footer .btn-more {
+        padding: 8px 14px;
+        font-size: 13px;
+        white-space: nowrap;
     }
 }
 
@@ -2349,6 +2389,7 @@ body.show-admin-link li .admin-link {
     .search-bar {
         order: 3;
         width: 100%;
+        margin-top: 10px;
     }
 
     .user-menu {
@@ -2373,6 +2414,7 @@ body.show-admin-link li .admin-link {
 
     .navbar {
         top: 110px;
+        margin-top: 10px;
     }
 
     .navbar .container {

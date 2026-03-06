@@ -139,6 +139,7 @@
 .mypage-header {
     text-align: center;
     margin-bottom: 20px;
+    padding-top: 24px;
 }
 
 .mypage-header h2 {
@@ -1207,6 +1208,83 @@
     text-align: center;
     color: #999;
     font-size: 14px;
+}
+
+/* 쇼핑지원금 내역 페이징 */
+.mypage-support-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.mypage-support-pagination .btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 14px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+}
+
+.mypage-support-pagination .btn:hover:not(:disabled) {
+    background: #f5f7fa;
+    border-color: #4A5FC1;
+    color: #4A5FC1;
+}
+
+.mypage-support-pagination .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.mypage-support-pagination .mypage-support-page-num.active {
+    background: #4A5FC1;
+    border-color: #4A5FC1;
+    color: #fff;
+}
+
+/* 주문/배송조회·관심상품 공통 페이징 */
+.mypage-list-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.mypage-list-pagination .btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 14px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+}
+
+.mypage-list-pagination .btn:hover:not(:disabled) {
+    background: #f5f7fa;
+    border-color: #4A5FC1;
+    color: #4A5FC1;
+}
+
+.mypage-list-pagination .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.mypage-list-pagination .mypage-page-num.active {
+    background: #4A5FC1;
+    border-color: #4A5FC1;
+    color: #fff;
 }
 
 /* 관심상품/장바구니 탭 */

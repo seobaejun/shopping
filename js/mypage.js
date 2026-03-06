@@ -366,18 +366,30 @@ function renderOrderSteps(orders) {
     if (el5) el5.textContent = complete.length;
 }
 
-// 쇼핑지원금 내역 테이블 (승인된 주문만)
+// 쇼핑지원금 내역 테이블 (승인된 주문만, 25건씩 페이징)
+var SUPPORT_PAGE_SIZE = 25;
+var _mypageSupportCurrentPage = 1;
+
 function renderSupportList() {
     var tbody = document.getElementById('mypageSupportListBody');
     var summaryEl = document.getElementById('supportSummaryText');
+    var paginationEl = document.getElementById('mypageSupportPagination');
     if (!tbody) return;
     var orders = window._mypageOrders || [];
     var list = orders.filter(function (o) { return o.status === 'approved'; });
-    if (summaryEl) summaryEl.textContent = '승인된 주문 기준 쇼핑지원금 내역입니다. (총 ' + list.length + '건, 합계 ' + (list.reduce(function (s, o) { return s + (o.supportAmount || 0); }, 0)).toLocaleString() + ' trix)';
+    var totalItems = list.length;
+    var totalPages = Math.max(1, Math.ceil(totalItems / SUPPORT_PAGE_SIZE));
+    if (totalItems > 0 && _mypageSupportCurrentPage > totalPages) _mypageSupportCurrentPage = totalPages;
+    var page = Math.min(Math.max(1, _mypageSupportCurrentPage), totalPages);
+
+    if (summaryEl) summaryEl.textContent = '승인된 주문 기준 쇼핑지원금 내역입니다. (총 ' + totalItems + '건, 합계 ' + (list.reduce(function (s, o) { return s + (o.supportAmount || 0); }, 0)).toLocaleString() + ' trix)';
+
     if (!list.length) {
         tbody.innerHTML = '<tr><td colspan="3" class="empty-message" style="padding: 20px; text-align: center;">내역이 없습니다.</td></tr>';
+        if (paginationEl) paginationEl.style.display = 'none';
         return;
     }
+
     function formatDate(createdAt) {
         if (!createdAt) return '-';
         var ts = createdAt.seconds != null ? createdAt.seconds * 1000 : (createdAt.getTime ? createdAt.getTime() : 0);
@@ -385,13 +397,47 @@ function renderSupportList() {
         var d = new Date(ts);
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
-    var html = list.map(function (o) {
+
+    var start = (page - 1) * SUPPORT_PAGE_SIZE;
+    var slice = list.slice(start, start + SUPPORT_PAGE_SIZE);
+    var html = slice.map(function (o) {
         var date = formatDate(o.createdAt);
         var name = (o.productName || '-').replace(/</g, '&lt;');
         var support = (o.supportAmount != null ? o.supportAmount : 0).toLocaleString();
         return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + date + '</td><td style="padding: 10px;">' + name + '</td><td style="padding: 10px; text-align: right;">' + support + ' trix</td></tr>';
     }).join('');
     tbody.innerHTML = html;
+
+    if (paginationEl) {
+        paginationEl.style.display = 'flex';
+        paginationEl.innerHTML = '';
+        var prevBtn = document.createElement('button');
+        prevBtn.type = 'button';
+        prevBtn.className = 'btn btn-secondary mypage-support-page-btn';
+        prevBtn.textContent = '이전';
+        prevBtn.disabled = page <= 1;
+        prevBtn.addEventListener('click', function () { if (page > 1) { _mypageSupportCurrentPage = page - 1; renderSupportList(); } });
+        paginationEl.appendChild(prevBtn);
+
+        for (var i = 1; i <= totalPages; i++) {
+            (function (p) {
+                var numBtn = document.createElement('button');
+                numBtn.type = 'button';
+                numBtn.className = 'btn mypage-support-page-num' + (p === page ? ' active' : '');
+                numBtn.textContent = p;
+                numBtn.addEventListener('click', function () { _mypageSupportCurrentPage = p; renderSupportList(); });
+                paginationEl.appendChild(numBtn);
+            })(i);
+        }
+
+        var nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.className = 'btn btn-secondary mypage-support-page-btn';
+        nextBtn.textContent = '다음';
+        nextBtn.disabled = page >= totalPages;
+        nextBtn.addEventListener('click', function () { if (page < totalPages) { _mypageSupportCurrentPage = page + 1; renderSupportList(); } });
+        paginationEl.appendChild(nextBtn);
+    }
 }
 
 // 공지사항 목록 (Firestore posts boardType 'notice')
@@ -474,7 +520,7 @@ function renderLotteryList() {
                 var product = (r.productName || '-').replace(/</g, '&lt;');
                 var result = r.result === 'winner' ? '당첨' : '미선정';
                 var support = (r.support != null ? r.support : 0).toLocaleString();
-                return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + round + '</td><td style="padding: 10px;">' + product + '</td><td style="padding: 10px; text-align: center;">' + result + '</td><td style="padding: 10px; text-align: right;">' + support + '원</td></tr>';
+                return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + round + '</td><td style="padding: 10px;">' + product + '</td><td style="padding: 10px; text-align: center;">' + result + '</td><td style="padding: 10px; text-align: right;">' + support + ' trix</td></tr>';
             }).join('');
             tbody.innerHTML = html;
         }).catch(function () {
@@ -485,15 +531,30 @@ function renderLotteryList() {
     }
 }
 
-// 주문 목록 아코디언 (상품명만 보이고 펼치면 날짜·금액·지원금·상태)
+var ORDER_PAGE_SIZE = 20;
+var _mypageOrderCurrentPage = 1;
+
+// 주문 목록 아코디언 (상품명만 보이고 펼치면 날짜·금액·지원금·상태) + 페이징(20건/페이지)
 function renderOrderList(orders) {
     const listEl = document.getElementById('mypageOrderListBody');
-    const emptyEl = document.getElementById('mypageOrderListEmpty');
+    const paginationEl = document.getElementById('mypageOrderPagination');
     if (!listEl) return;
-    if (!orders || !orders.length) {
+    if (orders && orders.length >= 0) {
+        window._mypageOrders = orders || [];
+        _mypageOrderCurrentPage = 1;
+    }
+    var allOrders = window._mypageOrders || [];
+    if (!allOrders.length) {
         listEl.innerHTML = '<li class="order-accordion-empty empty-message" id="mypageOrderListEmpty">주문 내역이 없습니다.</li>';
+        if (paginationEl) paginationEl.style.display = 'none';
         return;
     }
+    var totalPages = Math.max(1, Math.ceil(allOrders.length / ORDER_PAGE_SIZE));
+    var page = Math.min(Math.max(1, _mypageOrderCurrentPage), totalPages);
+    _mypageOrderCurrentPage = page;
+    var start = (page - 1) * ORDER_PAGE_SIZE;
+    var pageOrders = allOrders.slice(start, start + ORDER_PAGE_SIZE);
+
     function formatDate(createdAt) {
         if (!createdAt) return '-';
         var ts = 0;
@@ -514,7 +575,7 @@ function renderOrderList(orders) {
         return '주문';
     }
     var html = '';
-    orders.forEach(function (o) {
+    pageOrders.forEach(function (o) {
         var date = formatDate(o.createdAt || o.orderDate);
         var name = (o.productName || o.productTitle || o.title || '-').replace(/</g, '&lt;');
         var priceNum = o.price != null ? o.price : (o.amount != null ? o.amount : 0);
@@ -552,6 +613,46 @@ function renderOrderList(orders) {
             }
         });
     });
+
+    if (paginationEl) {
+        paginationEl.style.display = 'flex';
+        var prevBtn = document.createElement('button');
+        prevBtn.type = 'button';
+        prevBtn.className = 'btn';
+        prevBtn.textContent = '이전';
+        prevBtn.disabled = page <= 1;
+        prevBtn.addEventListener('click', function () {
+            if (page <= 1) return;
+            _mypageOrderCurrentPage = page - 1;
+            renderOrderList();
+        });
+        var nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.className = 'btn';
+        nextBtn.textContent = '다음';
+        nextBtn.disabled = page >= totalPages;
+        nextBtn.addEventListener('click', function () {
+            if (page >= totalPages) return;
+            _mypageOrderCurrentPage = page + 1;
+            renderOrderList();
+        });
+        paginationEl.innerHTML = '';
+        paginationEl.appendChild(prevBtn);
+        for (var i = 1; i <= totalPages; i++) {
+            var numBtn = document.createElement('button');
+            numBtn.type = 'button';
+            numBtn.className = 'btn mypage-page-num' + (i === page ? ' active' : '');
+            numBtn.textContent = i;
+            (function (p) {
+                numBtn.addEventListener('click', function () {
+                    _mypageOrderCurrentPage = p;
+                    renderOrderList();
+                });
+            })(i);
+            paginationEl.appendChild(numBtn);
+        }
+        paginationEl.appendChild(nextBtn);
+    }
 }
 
 // 마케팅 수신동의 폼 채우기
@@ -1135,22 +1236,32 @@ function renderWishlistCartSection() {
     bindWishlistCartTabs();
 }
 
-// 관심상품 목록 렌더링 - 아코디언 (상품명만 보이고 펼치면 상세)
-function renderWishlistList() {
+var WISHLIST_PAGE_SIZE = 20;
+var _mypageWishlistCurrentPage = 1;
+var _mypageWishlistFull = [];
+
+// 관심상품 목록 렌더링 - 아코디언 (상품명만 보이고 펼치면 상세) + 페이징(20건/페이지)
+// useCached: true면 재요청 없이 저장된 목록으로만 페이지 전환
+function renderWishlistList(useCached) {
     var listEl = document.getElementById('wishlistList');
     var emptyEl = document.getElementById('wishlistEmpty');
+    var paginationEl = document.getElementById('wishlistPagination');
     if (!listEl || !emptyEl) return;
-    var getWishlist = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getWishlist === 'function'
-        ? window.wishlistCartFirebase.getWishlist()
-        : Promise.resolve(JSON.parse(localStorage.getItem('wishlist') || '[]'));
-    getWishlist.then(function (wishlist) {
+    function renderFromList(wishlist) {
+        window._mypageWishlistFull = wishlist || [];
         if (!wishlist || wishlist.length === 0) {
             listEl.innerHTML = '';
             emptyEl.style.display = 'block';
+            if (paginationEl) paginationEl.style.display = 'none';
             return;
         }
         emptyEl.style.display = 'none';
-        var html = wishlist.map(function (item) {
+        var totalPages = Math.max(1, Math.ceil(wishlist.length / WISHLIST_PAGE_SIZE));
+        var page = Math.min(Math.max(1, _mypageWishlistCurrentPage), totalPages);
+        _mypageWishlistCurrentPage = page;
+        var start = (page - 1) * WISHLIST_PAGE_SIZE;
+        var pageList = wishlist.slice(start, start + WISHLIST_PAGE_SIZE);
+        var html = pageList.map(function (item) {
             var safeId = (item.id || '').toString().replace(/'/g, "\\'");
             var name = (item.name || '상품명 없음').replace(/</g, '&lt;');
             var priceStr = item.price != null ? Number(item.price).toLocaleString() + '원' : '가격 정보 없음';
@@ -1183,29 +1294,91 @@ function renderWishlistList() {
                 }
             });
         });
+        if (paginationEl) {
+            paginationEl.style.display = 'flex';
+            var prevBtn = document.createElement('button');
+            prevBtn.type = 'button';
+            prevBtn.className = 'btn';
+            prevBtn.textContent = '이전';
+            prevBtn.disabled = page <= 1;
+            prevBtn.addEventListener('click', function () {
+                if (page <= 1) return;
+                _mypageWishlistCurrentPage = page - 1;
+                renderWishlistList(true);
+            });
+            var nextBtn = document.createElement('button');
+            nextBtn.type = 'button';
+            nextBtn.className = 'btn';
+            nextBtn.textContent = '다음';
+            nextBtn.disabled = page >= totalPages;
+            nextBtn.addEventListener('click', function () {
+                if (page >= totalPages) return;
+                _mypageWishlistCurrentPage = page + 1;
+                renderWishlistList(true);
+            });
+            paginationEl.innerHTML = '';
+            paginationEl.appendChild(prevBtn);
+            for (var i = 1; i <= totalPages; i++) {
+                var numBtn = document.createElement('button');
+                numBtn.type = 'button';
+                numBtn.className = 'btn mypage-page-num' + (i === page ? ' active' : '');
+                numBtn.textContent = i;
+                (function (p) {
+                    numBtn.addEventListener('click', function () {
+                        _mypageWishlistCurrentPage = p;
+                        renderWishlistList(true);
+                    });
+                })(i);
+                paginationEl.appendChild(numBtn);
+            }
+            paginationEl.appendChild(nextBtn);
+        }
+    }
+    if (useCached && window._mypageWishlistFull && window._mypageWishlistFull.length > 0) {
+        renderFromList(window._mypageWishlistFull);
+        return;
+    }
+    var getWishlist = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getWishlist === 'function'
+        ? window.wishlistCartFirebase.getWishlist()
+        : Promise.resolve(JSON.parse(localStorage.getItem('wishlist') || '[]'));
+    getWishlist.then(function (wishlist) {
+        _mypageWishlistCurrentPage = 1;
+        renderFromList(wishlist);
     }).catch(function (e) {
         console.error('관심상품 목록 렌더링 오류:', e);
         listEl.innerHTML = '';
         emptyEl.style.display = 'block';
+        if (paginationEl) paginationEl.style.display = 'none';
     });
 }
 
-// 장바구니 목록 렌더링 - 아코디언 (상품명만 보이고 펼치면 상세)
-function renderCartList() {
+var CART_PAGE_SIZE = 20;
+var _mypageCartCurrentPage = 1;
+var _mypageCartFull = [];
+
+// 장바구니 목록 렌더링 - 아코디언 (상품명만 보이고 펼치면 상세) + 페이징(20건/페이지)
+// useCached: true면 재요청 없이 저장된 목록으로만 페이지 전환
+function renderCartList(useCached) {
     var listEl = document.getElementById('cartList');
     var emptyEl = document.getElementById('cartEmpty');
+    var paginationEl = document.getElementById('cartPagination');
     if (!listEl || !emptyEl) return;
-    var getCart = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getCart === 'function'
-        ? window.wishlistCartFirebase.getCart()
-        : Promise.resolve(JSON.parse(localStorage.getItem('cart') || '[]'));
-    getCart.then(function (cart) {
+    function renderFromList(cart) {
+        window._mypageCartFull = cart || [];
         if (!cart || cart.length === 0) {
             listEl.innerHTML = '';
             emptyEl.style.display = 'block';
+            if (paginationEl) paginationEl.style.display = 'none';
             return;
         }
         emptyEl.style.display = 'none';
-        var html = cart.map(function (item, index) {
+        var totalPages = Math.max(1, Math.ceil(cart.length / CART_PAGE_SIZE));
+        var page = Math.min(Math.max(1, _mypageCartCurrentPage), totalPages);
+        _mypageCartCurrentPage = page;
+        var start = (page - 1) * CART_PAGE_SIZE;
+        var pageList = cart.slice(start, start + CART_PAGE_SIZE);
+        var html = pageList.map(function (item, i) {
+            var realIndex = start + i;
             var name = (item.productName || item.name || '상품명 없음').replace(/</g, '&lt;');
             var optionStr = (item.optionName || '기본');
             var qty = item.quantity != null ? item.quantity : 1;
@@ -1224,7 +1397,7 @@ function renderCartList() {
                 '<div class="cart-detail-row"><span class="cart-detail-label">수량</span><span class="cart-detail-value">' + qty + '개</span></div>' +
                 '<div class="cart-detail-row"><span class="cart-detail-label">금액</span><span class="cart-detail-value">' + priceStr + '</span></div>' +
                 '<div class="cart-accordion-actions">' +
-                '<button type="button" class="btn btn-secondary" onclick="removeFromCart(' + index + ')">삭제</button>' +
+                '<button type="button" class="btn btn-secondary" onclick="removeFromCart(' + realIndex + ')">삭제</button>' +
                 '<a href="product-detail.html?id=' + (item.productId || item.id || '').toString().replace(/"/g, '') + '" class="btn btn-primary">상세보기</a>' +
                 '</div></div></div></div></div>';
         }).join('');
@@ -1241,10 +1414,61 @@ function renderCartList() {
                 }
             });
         });
+        if (paginationEl) {
+            paginationEl.style.display = 'flex';
+            var prevBtn = document.createElement('button');
+            prevBtn.type = 'button';
+            prevBtn.className = 'btn';
+            prevBtn.textContent = '이전';
+            prevBtn.disabled = page <= 1;
+            prevBtn.addEventListener('click', function () {
+                if (page <= 1) return;
+                _mypageCartCurrentPage = page - 1;
+                renderCartList(true);
+            });
+            var nextBtn = document.createElement('button');
+            nextBtn.type = 'button';
+            nextBtn.className = 'btn';
+            nextBtn.textContent = '다음';
+            nextBtn.disabled = page >= totalPages;
+            nextBtn.addEventListener('click', function () {
+                if (page >= totalPages) return;
+                _mypageCartCurrentPage = page + 1;
+                renderCartList(true);
+            });
+            paginationEl.innerHTML = '';
+            paginationEl.appendChild(prevBtn);
+            for (var i = 1; i <= totalPages; i++) {
+                var numBtn = document.createElement('button');
+                numBtn.type = 'button';
+                numBtn.className = 'btn mypage-page-num' + (i === page ? ' active' : '');
+                numBtn.textContent = i;
+                (function (p) {
+                    numBtn.addEventListener('click', function () {
+                        _mypageCartCurrentPage = p;
+                        renderCartList(true);
+                    });
+                })(i);
+                paginationEl.appendChild(numBtn);
+            }
+            paginationEl.appendChild(nextBtn);
+        }
+    }
+    if (useCached && window._mypageCartFull && window._mypageCartFull.length > 0) {
+        renderFromList(window._mypageCartFull);
+        return;
+    }
+    var getCart = window.wishlistCartFirebase && typeof window.wishlistCartFirebase.getCart === 'function'
+        ? window.wishlistCartFirebase.getCart()
+        : Promise.resolve(JSON.parse(localStorage.getItem('cart') || '[]'));
+    getCart.then(function (cart) {
+        _mypageCartCurrentPage = 1;
+        renderFromList(cart);
     }).catch(function (e) {
         console.error('장바구니 목록 렌더링 오류:', e);
         listEl.innerHTML = '';
         emptyEl.style.display = 'block';
+        if (paginationEl) paginationEl.style.display = 'none';
     });
 }
 
