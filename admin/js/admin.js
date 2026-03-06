@@ -3571,6 +3571,8 @@ async function loadLotteryWaitingData(confirmedList) {
             return {
                 id: order.id,
                 orderId: order.id,
+                userId: order.userId || null,
+                memberId: order.memberId || null,
                 name: order.userName || order.name || '-',
                 phone: _orderPhoneWithMember(order, memberMap),
                 amount: order.productPrice || order.amount || 0,
@@ -3899,16 +3901,18 @@ async function confirmLotteryResult() {
         return {
             id: Date.now() + index,
             orderId: w.id || w.orderId,
+            userId: w.userId || null,
+            memberId: w.memberId || null,
             round: currentRound,
             productId: selectedProductId,
             productName: getProductName(selectedProductId),
             name: w.name,
             phone: w.phone,
             amount: w.amount,
-result: 'winner',
-        support: winnerSupportVal(w),
-        paymentStatus: 'pending',
-        date: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0]
+            result: 'winner',
+            support: winnerSupportVal(w),
+            paymentStatus: 'pending',
+            date: new Date().toISOString().split('T')[0] + ' ' + new Date().toTimeString().split(' ')[0]
         };
     });
     var losers = currentLotteryLosers.map(function (l, index) {
@@ -3916,6 +3920,8 @@ result: 'winner',
         return {
             id: Date.now() + winners.length + index,
             orderId: l.id || l.orderId,
+            userId: l.userId || null,
+            memberId: l.memberId || null,
             round: currentRound,
             productId: selectedProductId,
             productName: getProductName(selectedProductId),

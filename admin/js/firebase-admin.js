@@ -821,7 +821,7 @@ const lotteryConfirmedService = {
             const snap = await collections.lotteryConfirmedResults().get();
             var list = snap.docs.map(function (doc) {
                 var d = doc.data();
-                return { id: doc.id, orderId: d.orderId, round: d.round, productId: d.productId, productName: d.productName, name: d.name, phone: d.phone, amount: d.amount, result: d.result, support: d.support, paymentStatus: d.paymentStatus || 'pending', date: d.date };
+                return { id: doc.id, orderId: d.orderId, userId: d.userId, memberId: d.memberId, round: d.round, productId: d.productId, productName: d.productName, name: d.name, phone: d.phone, amount: d.amount, result: d.result, support: d.support, paymentStatus: d.paymentStatus || 'pending', date: d.date };
             });
             list.sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
             return list;
@@ -838,7 +838,7 @@ const lotteryConfirmedService = {
             var ids = [];
             for (var i = 0; i < items.length; i++) {
                 var r = items[i];
-                var ref = await col.add({ orderId: r.orderId, round: r.round, productId: r.productId, productName: r.productName, name: r.name, phone: r.phone, amount: r.amount, result: r.result, support: r.support, paymentStatus: r.paymentStatus || 'pending', date: r.date });
+                var ref = await col.add({ orderId: r.orderId, userId: r.userId || null, memberId: r.memberId || null, round: r.round, productId: r.productId, productName: r.productName, name: r.name, phone: r.phone, amount: r.amount, result: r.result, support: r.support, paymentStatus: r.paymentStatus || 'pending', date: r.date });
                 ids.push(ref.id);
             }
             return ids;

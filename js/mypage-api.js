@@ -150,26 +150,27 @@
     }
 
     /**
-     * 내 주첨 결과 목록 (관리자가 추첨 확정 시 Firestore에 저장하는 경우 사용)
+     * 내 추첨결과 목록 (관리자 추첨 확정 시 저장되는 lotteryConfirmedResults에서 본인 것만 조회)
      * @returns {Promise<Array>} { round, productName, result: 'winner'|'loser', support }[]
      */
     function getMyLotteryResults() {
         return getCurrentMemberId().then(function (ids) {
-            if (!ids) return [];
+            if (!ids || !ids.userId) return [];
             return getMypageDb().then(function (database) {
                 if (!database) return [];
-                return database.collection('lottery_results').get()
+                return database.collection('lotteryConfirmedResults')
+                    .where('userId', '==', ids.userId)
+                    .get()
                     .then(function (snap) {
                         var list = [];
                         snap.docs.forEach(function (d) {
                             var data = d.data();
-                            var match = (data.memberId === ids.docId) || (data.userId === ids.userId);
-                            if (match) list.push({ id: d.id, ...data });
+                            list.push({ id: d.id, round: data.round, productName: data.productName, result: data.result, support: data.support, date: data.date });
                         });
                         list.sort(function (a, b) {
-                            var at = (a.date && a.date.seconds) ? a.date.seconds : 0;
-                            var bt = (b.date && b.date.seconds) ? b.date.seconds : 0;
-                            return bt - at;
+                            var at = (a.date && typeof a.date === 'string') ? a.date : '';
+                            var bt = (b.date && typeof b.date === 'string') ? b.date : '';
+                            return bt.localeCompare(at);
                         });
                         return list;
                     })
