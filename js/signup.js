@@ -10,17 +10,8 @@ const totalSteps = 4;
 // 회원가입 데이터 저장
 let signupData = {};
 
-// Firebase 초기화
+// Firebase 초기화 (설정은 firebase-config.js에서 로드)
 let db = null;
-const firebaseConfig = {
-    apiKey: "AIzaSyBGQdEiVOl_49oVfb8TPWkc47uaFxV55Xg",
-    authDomain: "shopping-31dce.firebaseapp.com",
-    projectId: "shopping-31dce",
-    storageBucket: "shopping-31dce.firebasestorage.app",
-    messagingSenderId: "344605730776",
-    appId: "1:344605730776:web:925f9d6206b1ff2e0374ad",
-    measurementId: "G-B7V6HK8Z7X"
-};
 
 // Firebase 초기화 함수
 async function initFirebase() {
@@ -35,9 +26,10 @@ async function initFirebase() {
             return null;
         }
         
-        // Firebase 앱 초기화
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        // Firebase 앱 초기화 (firebase-config.js에서 이미 초기화된 경우 스킵)
+        const config = typeof window.firebaseConfig !== 'undefined' ? window.firebaseConfig : null;
+        if (!firebase.apps.length && config) {
+            firebase.initializeApp(config);
             console.log('Firebase 앱 초기화 완료');
         }
         
@@ -88,40 +80,55 @@ function initSignup() {
 }
 
 // 약관 체크박스 설정
+// ① 전체동의 체크 시 → 서비스이용약관, 개인정보처리방침 자동 체크
+// ② 보기 클릭 시 → 약관/개인정보처리방침 모달 표시 (viewTerms)
+// ③ 필수 2개 체크 시 → 다음단계 버튼 활성화
 function setupTermsCheckboxes() {
     const agreeAll = document.getElementById('agreeAll');
     const agreeService = document.getElementById('agreeService');
     const agreePrivacy = document.getElementById('agreePrivacy');
     const nextBtn = document.getElementById('nextToStep2');
-    
-    // 전체 동의
-    agreeAll.addEventListener('change', (e) => {
-        const checked = e.target.checked;
-        agreeService.checked = checked;
-        agreePrivacy.checked = checked;
-        updateNextButton();
-    });
-    
-    // 개별 약관 체크
-    [agreeService, agreePrivacy].forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-            // 전체 동의 체크박스 상태 업데이트
+
+    if (!agreeAll || !agreeService || !agreePrivacy || !nextBtn) return;
+
+    const updateNextButton = () => {
+        const allChecked = agreeService.checked && agreePrivacy.checked;
+        nextBtn.disabled = !allChecked;
+        nextBtn.style.opacity = allChecked ? '1' : '0.5';
+    };
+
+    const labelAll = agreeAll.closest('label.terms-checkbox');
+    const labelService = agreeService.closest('label.terms-checkbox');
+    const labelPrivacy = agreePrivacy.closest('label.terms-checkbox');
+
+    // ① 전체동의: 클릭 시 아래 두 필수 항목도 함께 체크/해제
+    if (labelAll) {
+        labelAll.addEventListener('click', (e) => {
+            e.preventDefault();
+            agreeAll.checked = !agreeAll.checked;
+            agreeService.checked = agreeAll.checked;
+            agreePrivacy.checked = agreeAll.checked;
+            updateNextButton();
+        });
+    }
+    // 개별 필수 항목: 클릭 시 전체동의는 두 개 모두 체크일 때만 체크
+    if (labelService) {
+        labelService.addEventListener('click', (e) => {
+            e.preventDefault();
+            agreeService.checked = !agreeService.checked;
             agreeAll.checked = agreeService.checked && agreePrivacy.checked;
             updateNextButton();
         });
-    });
-    
-    // 다음 버튼 활성화/비활성화
-    function updateNextButton() {
-        if (agreeService.checked && agreePrivacy.checked) {
-            nextBtn.disabled = false;
-            nextBtn.style.opacity = '1';
-        } else {
-            nextBtn.disabled = true;
-            nextBtn.style.opacity = '0.5';
-        }
     }
-    
+    if (labelPrivacy) {
+        labelPrivacy.addEventListener('click', (e) => {
+            e.preventDefault();
+            agreePrivacy.checked = !agreePrivacy.checked;
+            agreeAll.checked = agreeService.checked && agreePrivacy.checked;
+            updateNextButton();
+        });
+    }
+
     updateNextButton();
 }
 
@@ -882,12 +889,13 @@ function setupTermsModal() {
     }
 }
 
-// 약관 보기
+// 약관 보기 (보기 버튼 클릭 시 약관/개인정보처리방침 모달 표시)
 function viewTerms(type) {
     const modal = document.getElementById('termsModal');
     const title = document.getElementById('termsModalTitle');
     const body = document.getElementById('termsModalBody');
-    
+    if (!modal || !title || !body) return;
+
     if (type === 'service') {
         title.textContent = '서비스이용약관';
         body.innerHTML = `
@@ -1038,8 +1046,10 @@ function viewTerms(type) {
                 <li>메일: ceo@shoppinggame.co.kr</li>
             </ul>
         `;
+    } else {
+        return;
     }
-    
+
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
