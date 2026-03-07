@@ -1,3 +1,13 @@
+// 소수점 8자리까지 표시, 9번째부터 버림
+function formatTrix(value) {
+    var num = Number(value) || 0;
+    if (num === 0) return '0';
+    var truncated = Math.floor(num * 1e8) / 1e8;
+    var str = truncated.toFixed(8);
+    str = str.replace(/0+$/, '').replace(/\.$/, '');
+    return str;
+}
+
 // 상품 상세 페이지 전용 JavaScript
 
 var PRODUCT_DETAIL_FIREBASE_READY = false;
@@ -898,7 +908,7 @@ function updatePageInfo() {
     const supportAmountEl = productDetailElements.supportAmount;
     if (supportAmountEl) {
         const support = (PRODUCT_INFO.supportAmount != null && PRODUCT_INFO.supportAmount > 0) ? PRODUCT_INFO.supportAmount : 0;
-        supportAmountEl.textContent = support.toLocaleString() + ' trix';
+        supportAmountEl.textContent = formatTrix(support) + ' trix';
         console.log('✅ 지원금 업데이트:', support);
     }
     
@@ -1116,7 +1126,7 @@ async function loadRelatedProducts() {
                                 </div>
                                 <div class="product-info">
                                     <h3 class="product-title">${product.name}</h3>
-                                    <div class="product-support">쇼핑지원금 ${support.toLocaleString()} trix</div>
+                                    <div class="product-support">쇼핑지원금 ${formatTrix(support)} trix</div>
                                 </div>
                             </a>
                         </div>

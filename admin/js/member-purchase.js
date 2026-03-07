@@ -1,3 +1,13 @@
+// 소수점 8자리까지 표시, 9번째부터 버림
+function formatTrix(value) {
+    var num = Number(value) || 0;
+    if (num === 0) return '0';
+    var truncated = Math.floor(num * 1e8) / 1e8;
+    var str = truncated.toFixed(8);
+    str = str.replace(/0+$/, '').replace(/\.$/, '');
+    return str;
+}
+
 // 개인별 구매 누적정보 페이지 관리
 console.log('🔵 member-purchase.js 로드됨');
 
@@ -190,7 +200,7 @@ function renderPurchaseDetailTable(purchases) {
                 <td>${purchaseDate}</td>
                 <td>${purchase.productName || '-'}</td>
                 <td>${(purchase.productPrice || 0).toLocaleString()}원</td>
-                <td>${(purchase.supportAmount || 0).toLocaleString()} trix</td>
+                <td>${formatTrix(purchase.supportAmount || 0)} trix</td>
                 <td><span class="badge ${statusClass}">${status}</span></td>
             </tr>
         `;

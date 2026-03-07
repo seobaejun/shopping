@@ -1,3 +1,13 @@
+// 소수점 8자리까지 표시, 9번째부터 버림
+function formatTrix(value) {
+    var num = Number(value) || 0;
+    if (num === 0) return '0';
+    var truncated = Math.floor(num * 1e8) / 1e8;
+    var str = truncated.toFixed(8);
+    str = str.replace(/0+$/, '').replace(/\.$/, '');
+    return str;
+}
+
 // URL에서 검색어 가져오기
 function getSearchKeyword() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -40,7 +50,7 @@ async function searchProductsFromFirestore(keyword) {
                     id: doc.id,
                     title: product.name,
                     option: product.shortDesc || '',
-                    support: support.toLocaleString() + ' trix',
+                    support: formatTrix(support) + ' trix',
                     image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
                     category: product.category || '',
                     price: product.price,

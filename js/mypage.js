@@ -1,3 +1,13 @@
+// 소수점 8자리까지 표시, 9번째부터 버림
+function formatTrix(value) {
+    var num = Number(value) || 0;
+    if (num === 0) return '0';
+    var truncated = Math.floor(num * 1e8) / 1e8;
+    var str = truncated.toFixed(8);
+    str = str.replace(/0+$/, '').replace(/\.$/, '');
+    return str;
+}
+
 // 마이페이지 JavaScript
 // 로그인 사용자 식별: mypageApi.getLoginUser(), getCurrentMemberId() 사용 (mypage-api.js)
 
@@ -213,7 +223,7 @@ function displayUserInfo(user, member, orders) {
         totalSupport = member.tokenBalance;
     }
     var currentSupportEl = document.getElementById('currentSupport');
-    var supportStr = totalSupport.toLocaleString() + ' trix';
+    var supportStr = formatTrix(totalSupport) + ' trix';
     if (currentSupportEl) currentSupportEl.textContent = supportStr;
     var withdrawBalanceEl = document.getElementById('tokenWithdrawBalance');
     if (withdrawBalanceEl) withdrawBalanceEl.textContent = supportStr;
@@ -282,7 +292,7 @@ function bindTokenModals() {
     if (btnWithdraw) {
         btnWithdraw.addEventListener('click', function () {
             var balance = getCurrentSupportBalance();
-            if (withdrawBalanceEl) withdrawBalanceEl.textContent = balance.toLocaleString() + ' trix';
+            if (withdrawBalanceEl) withdrawBalanceEl.textContent = formatTrix(balance) + ' trix';
             if (withdrawAddress) withdrawAddress.value = '';
             if (withdrawQty) withdrawQty.value = '';
             showSection('token-withdraw');
@@ -382,7 +392,7 @@ function renderSupportList() {
     if (totalItems > 0 && _mypageSupportCurrentPage > totalPages) _mypageSupportCurrentPage = totalPages;
     var page = Math.min(Math.max(1, _mypageSupportCurrentPage), totalPages);
 
-    if (summaryEl) summaryEl.textContent = '승인된 주문 기준 쇼핑지원금 내역입니다. (총 ' + totalItems + '건, 합계 ' + (list.reduce(function (s, o) { return s + (o.supportAmount || 0); }, 0)).toLocaleString() + ' trix)';
+    if (summaryEl) summaryEl.textContent = '승인된 주문 기준 쇼핑지원금 내역입니다. (총 ' + totalItems + '건, 합계 ' + formatTrix(list.reduce(function (s, o) { return s + (o.supportAmount || 0); }, 0)) + ' trix)';
 
     if (!list.length) {
         tbody.innerHTML = '<tr><td colspan="3" class="empty-message" style="padding: 20px; text-align: center;">내역이 없습니다.</td></tr>';

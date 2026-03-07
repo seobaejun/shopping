@@ -1,3 +1,13 @@
+// 소수점 8자리까지 표시, 9번째부터 버림
+function formatTrix(value) {
+    var num = Number(value) || 0;
+    if (num === 0) return '0';
+    var truncated = Math.floor(num * 1e8) / 1e8;
+    var str = truncated.toFixed(8);
+    str = str.replace(/0+$/, '').replace(/\.$/, '');
+    return str;
+}
+
 // 상수 정의
 
 // 상품 데이터
@@ -772,7 +782,7 @@ async function loadProductsFromFirestore() {
                 title: product.name,
                 option: product.shortDesc || '',
                 price: product.price || 0,
-                support: (product.supportAmount != null && product.supportAmount > 0) ? (product.supportAmount.toLocaleString() + ' trix') : '0 trix',
+                support: (product.supportAmount != null && product.supportAmount > 0) ? (formatTrix(product.supportAmount) + ' trix') : '0 trix',
                 badge: Array.isArray(product.displayCategory) ? product.displayCategory : [],
                 image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image'
             });

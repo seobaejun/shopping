@@ -969,7 +969,7 @@ function renderSettlementPersonalTable() {
         var dateStr = _orderFormatDate(order.createdAt);
         var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
         var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-        return '<tr><td>' + globalIndex + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
+        return '<tr><td>' + globalIndex + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + formatTrix(order.supportAmount || 0) + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
     }).join('');
     renderSettlementPersonalPagination(fullList.length);
 }
@@ -1031,7 +1031,7 @@ function applySettlementPersonalSearch() {
             var dateStr = _orderFormatDate(order.createdAt);
             var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
             var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
+            return '<tr><td>' + (i + 1) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + dateStr + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + formatTrix(order.supportAmount || 0) + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     }
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1127,7 +1127,7 @@ function renderSettlementRoundTable() {
         var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
         var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
         var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-        return '<tr><td>' + globalIndex + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
+        return '<tr><td>' + globalIndex + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + formatTrix(order.supportAmount || 0) + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
     }).join('');
     renderSettlementRoundPagination(fullList.length);
 }
@@ -1201,7 +1201,7 @@ function applySettlementRoundSearch() {
             var roundDisplay = (order.settlementRound != null || order.round != null) ? (order.settlementRound != null ? order.settlementRound : order.round) + '회차' : '미배정';
             var phoneStr = _orderEscapeHtml(_orderPhoneWithMember(order, memberMap));
             var addrStr = _orderEscapeHtml(_orderAddressWithMember(order, memberMap));
-            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + (order.supportAmount || 0).toLocaleString() + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
+            return '<tr><td>' + (i + 1) + '</td><td>' + dateOnly + '</td><td>' + _orderEscapeHtml(roundDisplay) + '</td><td>' + _orderEscapeHtml(order.userName || order.name || '-') + '</td><td>' + phoneStr + '</td><td>' + _orderEscapeHtml(order.accountNumber || '-') + '</td><td>' + addrStr + '</td><td>' + _orderEscapeHtml(order.productName || '-') + '</td><td>구매</td><td>' + formatTrix(order.supportAmount || 0) + ' trix</td><td><span class="badge badge-success">승인</span></td></tr>';
         }).join('');
     }
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2217,7 +2217,7 @@ function renderMemberInfoTable(data = null) {
                 <td>${escapeHtml(accountNumber)}</td>
                 <td>${escapeHtml(referralCode)}</td>
                 <td>${purchaseAmount.toLocaleString()}</td>
-                <td>${supportAmount.toLocaleString()} trix / ${accumulatedSupport.toLocaleString()} trix</td>
+                <td>${formatTrix(supportAmount)} trix / ${formatTrix(accumulatedSupport)} trix</td>
                 <td>${statusCell}</td>
                 <td>
                     <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
@@ -2465,7 +2465,7 @@ function renderPurchaseTable(data) {
             <tr>
                 <td>${data.length}</td>
                 <td>${totalPrice.toLocaleString()}원</td>
-                <td>${totalSupport.toLocaleString()} trix</td>
+                <td>${formatTrix(totalSupport)} trix</td>
             </tr>
         `;
     }
@@ -2488,7 +2488,7 @@ function renderPurchaseTable(data) {
             <td>${item.date}</td>
             <td>${item.product}</td>
             <td>${item.price.toLocaleString()}원</td>
-            <td>${item.support.toLocaleString()} trix</td>
+            <td>${formatTrix(item.support)} trix</td>
         </tr>
     `).join('');
 }
@@ -3531,6 +3531,16 @@ document.addEventListener('click', (e) => {
 // 추첨 시스템
 // ============================================
 
+// 소수점 8자리까지 표시, 9번째부터 버림
+function formatTrix(value) {
+    var num = Number(value) || 0;
+    if (num === 0) return '0';
+    var truncated = Math.floor(num * 1e8) / 1e8;
+    var str = truncated.toFixed(8);
+    str = str.replace(/0+$/, '').replace(/\.$/, '');
+    return str;
+}
+
 // 추첨 대기 데이터 — 승인(approved)된 주문 전체를 선착순 1개 대기열로 사용. 상품 구분 없음.
 var LOTTERY_GLOBAL_KEY = '_all';
 window.LOTTERY_GLOBAL_KEY = LOTTERY_GLOBAL_KEY;
@@ -3727,33 +3737,10 @@ function renderWaitingList(productId) {
     const groupSize = parseInt(document.getElementById('groupSize')?.value || 10);
     const winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2);
     var participants = waitingData.slice(0, groupSize);
-    var totalGroupPurchasePreview = participants.reduce(function (sum, p) { return sum + (Number(p.amount) || 0); }, 0);
-    var supportPoolPreview = participants.slice(0, winnerCount).reduce(function (sum, p) { return sum + (p.productSupport || 0); }, 0);
-    var hasCurrentResult = (currentLotteryWinners && currentLotteryWinners.length > 0) || (currentLotteryLosers && currentLotteryLosers.length > 0);
-    if (selectedProductId !== pid && pid !== LOTTERY_GLOBAL_KEY) hasCurrentResult = false;
-
     var htmlContent = slice.map(function (person, index) {
         var globalIndex = start + index + 1;
-        var displaySupport = 0;
-        if (hasCurrentResult) {
-            var inWinners = currentLotteryWinners && currentLotteryWinners.find(function (w) { return (w.id === person.id) || (w.name === person.name && w.phone === person.phone); });
-            var inLosers = currentLotteryLosers && currentLotteryLosers.find(function (l) { return (l.id === person.id) || (l.name === person.name && l.phone === person.phone); });
-            var who = inWinners || inLosers;
-            if (who && who.calculatedSupport != null && !isNaN(who.calculatedSupport)) displaySupport = who.calculatedSupport;
-        }
-        if (displaySupport === 0) {
-            var confirmedResult = LOTTERY_CONFIRMED_RESULTS.find(function (r) {
-                return (r.name === person.name && r.phone === person.phone) && (r.productId === pid || r.productId === LOTTERY_GLOBAL_KEY);
-            });
-            if (confirmedResult && confirmedResult.support != null && !isNaN(confirmedResult.support)) displaySupport = confirmedResult.support;
-        }
-        var personIndexInFull = waitingData.indexOf(person);
-        if (displaySupport === 0 && personIndexInFull < participants.length && totalGroupPurchasePreview > 0) {
-            var myAmount = Number(person.amount) || 0;
-            displaySupport = (supportPoolPreview / totalGroupPurchasePreview) * myAmount;
-            displaySupport = Math.floor(displaySupport / 10) * 10;
-        }
-        return '<tr><td><input type="checkbox" class="person-select" data-id="' + (person.id || '') + '"></td><td>' + globalIndex + '</td><td>' + (person.name || '') + '</td><td>' + (person.phone || '') + '</td><td>' + (person.amount || 0).toLocaleString() + '원</td><td>' + displaySupport.toLocaleString() + ' trix</td><td><span class="badge badge-success">확인완료</span></td><td>' + (person.date || '') + '</td></tr>';
+        var displaySupport = person.productSupport || 0;
+        return '<tr><td><input type="checkbox" class="person-select" data-id="' + (person.id || '') + '"></td><td>' + globalIndex + '</td><td>' + (person.name || '') + '</td><td>' + (person.phone || '') + '</td><td>' + (person.amount || 0).toLocaleString() + '원</td><td>' + formatTrix(displaySupport) + ' trix</td><td><span class="badge badge-success">확인완료</span></td><td>' + (person.date || '') + '</td></tr>';
     }).join('');
 
     tbody.innerHTML = htmlContent;
@@ -3830,7 +3817,7 @@ function executeLottery() {
         if (!totalGroupPurchase || totalGroupPurchase <= 0) return 0;
         var myAmount = Number(person.amount) || 0;
         var support = (totalSupportPool / totalGroupPurchase) * myAmount;
-        return Math.floor(support / 10) * 10;
+        return Math.floor(support * 1e8) / 1e8;
     }
     winners = winners.map(function (w) { return Object.assign({}, w, { calculatedSupport: calcSupport(w) }); });
     losers = losers.map(function (l) { return Object.assign({}, l, { calculatedSupport: calcSupport(l) }); });
@@ -3880,7 +3867,7 @@ function showLotteryResult(winners, losers, totalCount) {
             <div class="person-name">🎉 ${w.name}</div>
             <div class="person-phone">${w.phone}</div>
             <div class="person-amount">구매 확정: ${(w.amount || 0).toLocaleString()}원</div>
-            <div class="person-support">지원금: ${winnerSupport(w).toLocaleString()} trix</div>
+            <div class="person-support">지원금: ${formatTrix(winnerSupport(w))} trix</div>
         </div>
     `).join('');
 
@@ -3900,9 +3887,9 @@ function showLotteryResult(winners, losers, totalCount) {
         if (supportAmount === 0 && totalForRecalc > 0) {
             var myAmt = Number(l.amount) || 0;
             supportAmount = (poolForRecalc / totalForRecalc) * myAmt;
-            supportAmount = Math.floor(supportAmount / 10) * 10;
+            supportAmount = Math.floor(supportAmount * 1e8) / 1e8;
         }
-        return '<div class="result-person loser"><div class="person-name">💰 ' + (l.name || '') + '</div><div class="person-phone">' + (l.phone || '') + '</div><div class="person-amount">구매금: ' + (l.amount || 0).toLocaleString() + '원</div><div class="person-support">지원금: ' + supportAmount.toLocaleString() + ' trix</div></div>';
+        return '<div class="result-person loser"><div class="person-name">💰 ' + (l.name || '') + '</div><div class="person-phone">' + (l.phone || '') + '</div><div class="person-amount">구매금: ' + (l.amount || 0).toLocaleString() + '원</div><div class="person-support">지원금: ' + formatTrix(supportAmount) + ' trix</div></div>';
     }).join('');
 
     // 요약 정보 — 10명 전원 지원금 합계 (당첨자 + 미선정자)
@@ -3916,7 +3903,7 @@ function showLotteryResult(winners, losers, totalCount) {
     document.getElementById('resultRound').textContent = `${currentRound}회차`;
     document.getElementById('resultTotal').textContent = totalCount;
     document.getElementById('resultWinners').textContent = displayWinners.length;
-    document.getElementById('resultSupport').textContent = totalSupport.toLocaleString();
+    document.getElementById('resultSupport').textContent = formatTrix(totalSupport);
 
     modal.style.display = 'flex';
 }
@@ -4015,7 +4002,7 @@ async function confirmLotteryResult() {
     currentRound++;
     
     var totalSupportConfirmed = winners.reduce(function (s, w) { return s + (w.support || 0); }, 0) + losers.reduce(function (s, l) { return s + (l.support || 0); }, 0);
-    alert('추첨 결과가 확정되었습니다!\n\n회차: ' + (currentRound - 1) + '회\n당첨: ' + winners.length + '명\n미선정: ' + losers.length + '명\n총 지원금(10명 전원): ' + totalSupportConfirmed.toLocaleString() + ' trix\n\n※ 지원금은 당일 일괄 지급됩니다.');
+    alert('추첨 결과가 확정되었습니다!\n\n회차: ' + (currentRound - 1) + '회\n당첨: ' + winners.length + '명\n미선정: ' + losers.length + '명\n총 지원금(10명 전원): ' + formatTrix(totalSupportConfirmed) + ' trix\n\n※ 지원금은 당일 일괄 지급됩니다.');
     
     closeLotteryResult();
     renderLotteryStatus();
@@ -4096,7 +4083,7 @@ function updateConfirmSummary() {
     if (totalRoundsEl) totalRoundsEl.textContent = rounds + '회';
     if (totalWinnersEl) totalWinnersEl.textContent = winners + '명';
     if (totalLosersEl) totalLosersEl.textContent = losers + '명';
-    if (totalSupportEl) totalSupportEl.textContent = totalSupport.toLocaleString() + ' trix';
+    if (totalSupportEl) totalSupportEl.textContent = formatTrix(totalSupport) + ' trix';
 }
 
 // 회차 필터 업데이트
@@ -4208,7 +4195,7 @@ function renderConfirmResults() {
                     ? '<span class="badge badge-success">당첨</span>' 
                     : '<span class="badge badge-info">미선정</span>'}
             </td>
-            <td>${(result.support || 0).toLocaleString()} trix</td>
+            <td>${formatTrix(result.support || 0)} trix</td>
             <td>
                 <button class="btn btn-sm ${paymentStatus === 'paid' ? 'btn-success' : 'btn-secondary'}" 
                     data-id="${escapeHtml(String(result.id))}" 
@@ -4292,7 +4279,7 @@ async function togglePaymentStatus(resultId) {
             updateConfirmSummary();
         }
     } else {
-        if (confirm(result.name + '님에게 ' + result.support.toLocaleString() + ' trix를 지급하시겠습니까?')) {
+        if (confirm(result.name + '님에게 ' + formatTrix(result.support) + ' trix를 지급하시겠습니까?')) {
             result.paymentStatus = 'paid';
             if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
                 try { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(result.id, 'paid'); } catch (e) { console.error(e); }
@@ -4310,7 +4297,7 @@ async function togglePaymentStatus(resultId) {
                                     userId,
                                     'support_paid',
                                     '쇼핑지원금이 지급되었습니다',
-                                    result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.',
+                                    formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.',
                                     'mypage.html?section=support'
                                 );
                                 if (window.firebaseAdmin.tokenService && typeof window.firebaseAdmin.tokenService.addSupportToMemberBalance === 'function') {
@@ -4324,7 +4311,7 @@ async function togglePaymentStatus(resultId) {
                 })();
             }
             
-            alert(result.name + '님에게 ' + result.support.toLocaleString() + ' trix가 지급되었습니다.');
+            alert(result.name + '님에게 ' + formatTrix(result.support) + ' trix가 지급되었습니다.');
             renderConfirmResults();
             updateConfirmSummary();
         }
@@ -4406,7 +4393,7 @@ async function completeDailyPayment() {
     const totalAmount = dailyPaymentResults.reduce((sum, r) => sum + r.support, 0);
     const paymentCount = dailyPaymentResults.length;
     
-    if (confirm('총 ' + paymentCount + '명, ' + totalAmount.toLocaleString() + ' trix를 일괄 지급하시겠습니까?')) {
+    if (confirm('총 ' + paymentCount + '명, ' + formatTrix(totalAmount) + ' trix를 일괄 지급하시겠습니까?')) {
         dailyPaymentResults.forEach(function (result) {
             result.paymentStatus = 'paid';
         });
@@ -4434,7 +4421,7 @@ async function completeDailyPayment() {
                                         userId,
                                         'support_paid',
                                         '쇼핑지원금이 지급되었습니다',
-                                        result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.',
+                                        formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.',
                                         'mypage.html?section=support'
                                     ).catch(function() {});
                                     if (addSupport) await tokenService.addSupportToMemberBalance(userId, result.support);
@@ -4451,7 +4438,7 @@ async function completeDailyPayment() {
         // 화면 유지: 같은 목록을 지급완료 상태로 다시 표시
         renderDailyPaymentResults(dailyPaymentResults);
         hidePaymentCompleteButton();
-        alert('✅ 지급이 완료되었습니다!\n\n지급 인원: ' + paymentCount + '명\n지급 금액: ' + totalAmount.toLocaleString() + ' trix\n\n각 회원의 계좌로 현금이 입금되었습니다.');
+        alert('✅ 지급이 완료되었습니다!\n\n지급 인원: ' + paymentCount + '명\n지급 금액: ' + formatTrix(totalAmount) + ' trix\n\n각 회원의 계좌로 현금이 입금되었습니다.');
     }
 }
 
@@ -4466,7 +4453,7 @@ async function completePagePayment() {
             return;
         }
         var amount = toPay.reduce(function (s, r) { return s + r.support; }, 0);
-        if (!confirm('이 페이지 ' + toPay.length + '명, ' + amount.toLocaleString() + ' trix를 지급하시겠습니까?')) return;
+        if (!confirm('이 페이지 ' + toPay.length + '명, ' + formatTrix(amount) + ' trix를 지급하시겠습니까?')) return;
         toPay.forEach(function (result) { result.paymentStatus = 'paid'; });
         if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
             try { for (var i = 0; i < toPay.length; i++) { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(toPay[i].id, 'paid'); } } catch (e) {}
@@ -4483,7 +4470,7 @@ async function completePagePayment() {
                             if (orderDoc.exists) {
                                 var uid = orderDoc.data().userId;
                                 if (uid) {
-                                    await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
+                                    await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
                                     if (addSupport) await tokenService.addSupportToMemberBalance(uid, result.support);
                                 }
                             }
@@ -4507,7 +4494,7 @@ async function completePagePayment() {
         return;
     }
     var amount = toPay.reduce(function (s, r) { return s + r.support; }, 0);
-    if (!confirm('이 페이지 ' + toPay.length + '명, ' + amount.toLocaleString() + ' trix를 지급하시겠습니까?')) return;
+    if (!confirm('이 페이지 ' + toPay.length + '명, ' + formatTrix(amount) + ' trix를 지급하시겠습니까?')) return;
     toPay.forEach(function (result) { result.paymentStatus = 'paid'; });
     if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
         try { for (var i = 0; i < toPay.length; i++) { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(toPay[i].id, 'paid'); } } catch (e) {}
@@ -4524,7 +4511,7 @@ async function completePagePayment() {
                         if (orderDoc.exists) {
                             var uid = orderDoc.data().userId;
                             if (uid) {
-                                await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', result.support.toLocaleString() + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
+                                await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
                                 if (addSupport) await tokenService.addSupportToMemberBalance(uid, result.support);
                             }
                         }
@@ -4584,7 +4571,7 @@ function renderDailyPaymentResults(pendingResults) {
             <td>${escapeHtml(phone)}</td>
             <td>${amount.toLocaleString()}원</td>
             <td>${result.result === 'winner' ? '<span class="badge badge-success">당첨</span>' : '<span class="badge badge-info">미선정</span>'}</td>
-            <td style="font-weight: bold; color: #e74c3c;">${support.toLocaleString()} trix</td>
+            <td style="font-weight: bold; color: #e74c3c;">${formatTrix(support)} trix</td>
             <td>${isPaid ? '<span class="badge badge-success">지급완료</span>' : '<span class="badge badge-warning">지급대기</span>'}</td>
             <td>${escapeHtml(date)}</td>
         </tr>
@@ -4639,7 +4626,7 @@ function showPaymentCompleteButton(totalAmount, count) {
         completeBtn.id = 'paymentCompleteBtn';
         completeBtn.className = 'btn btn-success btn-sm';
         completeBtn.style.marginLeft = '10px';
-        completeBtn.innerHTML = `<i class="fas fa-check-circle"></i> 지급 완료 (${count}명, ${totalAmount.toLocaleString()} trix)`;
+        completeBtn.innerHTML = `<i class="fas fa-check-circle"></i> 지급 완료 (${count}명, ${formatTrix(totalAmount)} trix)`;
         completeBtn.onclick = completeDailyPayment;
         tableHeader.appendChild(completeBtn);
     }
@@ -5256,7 +5243,7 @@ async function loadProductSales() {
         } else {
             tbody.innerHTML = rows.map(function (r, i) {
                 var rankBadge = (i === 0) ? '<span class="rank-badge-small gold">1</span>' : (i === 1) ? '<span class="rank-badge-small silver">2</span>' : (i === 2) ? '<span class="rank-badge-small bronze">3</span>' : (i + 1);
-                return '<tr><td>' + rankBadge + '</td><td style="text-align:left;padding-left:15px;">' + escapeHtmlSales(r.productName) + '</td><td>' + escapeHtmlSales(r.categoryName) + '</td><td>' + r.count.toLocaleString() + '건</td><td>' + r.totalSales.toLocaleString() + '원</td><td>' + r.supportTotal.toLocaleString() + ' trix</td><td>' + r.netProfit.toLocaleString() + '원</td></tr>';
+                return '<tr><td>' + rankBadge + '</td><td style="text-align:left;padding-left:15px;">' + escapeHtmlSales(r.productName) + '</td><td>' + escapeHtmlSales(r.categoryName) + '</td><td>' + r.count.toLocaleString() + '건</td><td>' + r.totalSales.toLocaleString() + '원</td><td>' + formatTrix(r.supportTotal) + ' trix</td><td>' + r.netProfit.toLocaleString() + '원</td></tr>';
             }).join('');
         }
     } catch (err) {

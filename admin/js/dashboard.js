@@ -1,3 +1,13 @@
+// 소수점 8자리까지 표시, 9번째부터 버림
+function formatTrix(value) {
+    var num = Number(value) || 0;
+    if (num === 0) return '0';
+    var truncated = Math.floor(num * 1e8) / 1e8;
+    var str = truncated.toFixed(8);
+    str = str.replace(/0+$/, '').replace(/\.$/, '');
+    return str;
+}
+
 // 관리자 대시보드 데이터 로드
 
 // 대시보드 데이터 로드
@@ -174,11 +184,11 @@ function updateDashboardStats(stats) {
     }
     
     if (totalSupportEl) {
-        totalSupportEl.textContent = stats.totalSupport.toLocaleString() + ' trix';
+        totalSupportEl.textContent = formatTrix(stats.totalSupport) + ' trix';
     }
     if (supportChangeEl) {
         if (stats.monthSupport > 0) {
-            supportChangeEl.textContent = '+' + stats.monthSupport.toLocaleString() + ' trix (이번 달)';
+            supportChangeEl.textContent = '+' + formatTrix(stats.monthSupport) + ' trix (이번 달)';
             supportChangeEl.className = 'stat-change positive';
         } else {
             supportChangeEl.textContent = '변동 없음';
@@ -266,7 +276,7 @@ function updateWeekStats(stats) {
         weekTotalAmountEl.textContent = `${stats.weekTotalAmount.toLocaleString()}원`;
     }
     if (weekSupportEl) {
-        weekSupportEl.textContent = stats.weekSupport.toLocaleString() + ' trix';
+        weekSupportEl.textContent = formatTrix(stats.weekSupport) + ' trix';
     }
     if (weekLotteriesEl) {
         weekLotteriesEl.textContent = `${stats.weekLotteries}회`;
