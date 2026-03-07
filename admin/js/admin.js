@@ -1227,7 +1227,7 @@ async function loadDeliveryRegister() {
     if (!tbody) return;
     try {
         if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) {
-            tbody.innerHTML = '<tr><td colspan="11" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="empty-message">Firebase를 불러올 수 없습니다.</td></tr>';
             if (infoText) infoText.textContent = '총 0건의 배송 상품이 있습니다.';
             return;
         }
@@ -1261,7 +1261,7 @@ async function loadDeliveryRegister() {
         renderDeliveryRegisterTable();
     } catch (e) {
         console.error('배송 진행 등록 로드 오류:', e);
-        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
         if (infoText) infoText.textContent = '총 0건의 배송 상품이 있습니다.';
         renderDeliveryRegisterPagination(0);
     }
@@ -1273,7 +1273,7 @@ function renderDeliveryRegisterTable() {
     var fullList = window._deliveryRegisterFullList || [];
     var memberMap = window._deliveryMemberMap || {};
     if (!fullList || fullList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">추첨 확정된 배송 내역이 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-message">추첨 확정된 배송 내역이 없습니다.</td></tr>';
         renderDeliveryRegisterPagination(0);
         return;
     }
@@ -1407,11 +1407,18 @@ function _deliveryRegisterBuildRows(list, memberMap, rowStart) {
         var buyer = order.userName || order.name || '-';
         var recipient = order.deliveryRecipientName ? String(order.deliveryRecipientName).trim() : '';
         var buyerDisplay = recipient && recipient !== buyer ? _orderEscapeHtml(buyer) + ' (' + _orderEscapeHtml(recipient) + ')' : _orderEscapeHtml(buyer);
+        var optionsText = '-';
+        if (Array.isArray(order.selectedOptions) && order.selectedOptions.length > 0) {
+            optionsText = order.selectedOptions.map(function (o) {
+                return _orderEscapeHtml((o.value || o.label || '') + (o.quantity > 1 ? ' x' + o.quantity : ''));
+            }).join('<br>');
+        }
         return '<tr data-order-id="' + _orderEscapeHtml(orderId) + '">' +
             '<td>' + (start + i + 1) + '</td>' +
             '<td>' + buyerDisplay + '</td>' +
             '<td>' + _orderEscapeHtml(order.productName || '-') + '</td>' +
-            '<td>1</td>' +
+            '<td>' + optionsText + '</td>' +
+            '<td>' + (order.quantity || 1) + '</td>' +
             '<td>' + phoneStr + '</td>' +
             '<td>' + addressStr + '</td>' +
             '<td>' + dateStr + '</td>' +
@@ -1456,7 +1463,7 @@ function applyDeliveryRegisterSearch() {
     searchContainer.style.display = 'block';
     if (countEl) countEl.textContent = filtered.length;
     if (!filtered || filtered.length === 0) {
-        searchTbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 조건에 맞는 배송 내역이 없습니다.</td></tr>';
+        searchTbody.innerHTML = '<tr><td colspan="12" class="empty-message">검색 조건에 맞는 배송 내역이 없습니다.</td></tr>';
     } else {
         searchTbody.innerHTML = _deliveryRegisterBuildRows(filtered, window._deliveryMemberMap);
     }

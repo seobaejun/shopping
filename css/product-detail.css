@@ -1046,6 +1046,29 @@
     box-sizing: border-box;
 }
 
+.deposit-info-box {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.deposit-info-box .deposit-bank {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 6px 0;
+}
+
+.deposit-info-box .deposit-guide {
+    font-size: 13px;
+    color: #e65100;
+    font-weight: 600;
+    margin: 0;
+}
+
 .delivery-new-form {
     margin-top: 16px;
     padding-top: 16px;

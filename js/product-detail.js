@@ -487,6 +487,9 @@ function submitBuyNowOrder(delivery) {
     var supportAmount = (PRODUCT_INFO.supportAmount != null && PRODUCT_INFO.supportAmount > 0)
         ? (PRODUCT_INFO.supportAmount * totalQuantity)
         : 0;
+    var optionsForOrder = selectedOptionsData.map(function (opt) {
+        return { label: opt.label || '', value: opt.value || '', price: opt.price || 0, quantity: opt.quantity || 1 };
+    });
     var orderData = {
         status: 'pending',
         userId: loginUser.userId,
@@ -499,6 +502,7 @@ function submitBuyNowOrder(delivery) {
         productPrice: totalPrice,
         supportAmount: supportAmount,
         quantity: totalQuantity,
+        selectedOptions: optionsForOrder,
         deliveryRecipientName: delivery.recipientName || '',
         deliveryPhone: delivery.phone || '',
         deliveryPostcode: delivery.postcode || '',
