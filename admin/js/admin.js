@@ -831,6 +831,67 @@ function changePurchaseRequestPage(section, page) {
     }
 }
 
+// 이페이지승인: 현재 페이지에 보이는 승인대기 건만 일괄 승인
+async function approvePageOrders() {
+    var allPending = window._purchaseRequestPendingOrders || [];
+    if (allPending.length === 0) { alert('승인대기 건이 없습니다.'); return; }
+    var start = (_purchaseRequestPendingPage - 1) * PURCHASE_REQUEST_PAGE_SIZE;
+    var pageSlice = allPending.slice(start, start + PURCHASE_REQUEST_PAGE_SIZE);
+    if (pageSlice.length === 0) { alert('이 페이지에 승인대기 건이 없습니다.'); return; }
+    if (!confirm('이 페이지 ' + pageSlice.length + '건을 일괄 승인하시겠습니까?')) return;
+    try {
+        var count = 0;
+        for (var i = 0; i < pageSlice.length; i++) {
+            var order = pageSlice[i];
+            var orderId = order.id || order.orderId;
+            if (!orderId) continue;
+            await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'approved' });
+            try {
+                var orderDoc = await window.firebaseAdmin.collections.orders().doc(orderId).get();
+                if (orderDoc.exists) {
+                    var uid = orderDoc.data().userId;
+                    if (uid) await createNotificationForUser(uid, 'order_approved', '주문이 승인되었습니다', '구매 요청이 승인되었습니다. 입금 확인 후 배송이 시작됩니다.', 'mypage.html?section=orders');
+                }
+            } catch (e) {}
+            count++;
+        }
+        alert(count + '건이 승인되었습니다.');
+        await loadPurchaseRequests();
+    } catch (err) {
+        console.error(err);
+        alert('일괄 승인 중 오류가 발생했습니다.');
+    }
+}
+
+// 전체승인: 모든 승인대기 건 일괄 승인
+async function approveAllOrders() {
+    var allPending = window._purchaseRequestPendingOrders || [];
+    if (allPending.length === 0) { alert('승인대기 건이 없습니다.'); return; }
+    if (!confirm('전체 ' + allPending.length + '건을 일괄 승인하시겠습니까?')) return;
+    try {
+        var count = 0;
+        for (var i = 0; i < allPending.length; i++) {
+            var order = allPending[i];
+            var orderId = order.id || order.orderId;
+            if (!orderId) continue;
+            await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'approved' });
+            try {
+                var orderDoc = await window.firebaseAdmin.collections.orders().doc(orderId).get();
+                if (orderDoc.exists) {
+                    var uid = orderDoc.data().userId;
+                    if (uid) await createNotificationForUser(uid, 'order_approved', '주문이 승인되었습니다', '구매 요청이 승인되었습니다. 입금 확인 후 배송이 시작됩니다.', 'mypage.html?section=orders');
+                }
+            } catch (e) {}
+            count++;
+        }
+        alert(count + '건이 승인되었습니다.');
+        await loadPurchaseRequests();
+    } catch (err) {
+        console.error(err);
+        alert('일괄 승인 중 오류가 발생했습니다.');
+    }
+}
+
 // 구매 요청 목록 로드 (승인대기 + 승인 목록 + 구매취소 목록)
 async function loadPurchaseRequests() {
     const tbody = document.getElementById('purchaseRequestTableBody');
@@ -1795,6 +1856,7 @@ document.addEventListener('click', (e) => {
         return;
     }
     if (e.target.closest('.btn-change-order-status')) {
+
         const btn = e.target.closest('.btn-change-order-status');
         const orderId = btn.getAttribute('data-order-id');
         const row = btn.closest('tr');

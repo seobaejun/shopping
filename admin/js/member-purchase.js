@@ -82,7 +82,8 @@ window.searchMemberPurchase = async function() {
         // 구매 내역 가져오기 (Firestore에서)
         // TODO: purchases 컬렉션에서 데이터 가져오기
         // 현재는 더미 데이터 사용
-        const purchases = await getMemberPurchases(member.id || member.userId, startDate, endDate);
+        const searchId = member.userId || member.id;
+        const purchases = await getMemberPurchases(searchId, startDate, endDate);
         
         console.log('✅ 구매 내역:', purchases);
         
@@ -95,41 +96,51 @@ window.searchMemberPurchase = async function() {
     }
 };
 
-// 회원의 구매 내역 가져오기
+// 회원의 구매 내역 가져오기 (orders 컬렉션에서 조회)
 async function getMemberPurchases(memberId, startDate, endDate) {
     try {
         const firebaseAdmin = window.firebaseAdmin;
         
-        // Firestore에서 purchases 컬렉션 조회
-        let query = firebaseAdmin.db.collection('purchases')
-            .where('userId', '==', memberId);
+        const snapshot = await firebaseAdmin.db.collection('orders').get();
         
-        // 날짜 필터 적용
-        if (startDate) {
-            query = query.where('purchaseDate', '>=', new Date(startDate));
-        }
-        if (endDate) {
-            const endDateTime = new Date(endDate);
-            endDateTime.setHours(23, 59, 59, 999);
-            query = query.where('purchaseDate', '<=', endDateTime);
-        }
-        
-        const snapshot = await query.orderBy('purchaseDate', 'desc').get();
+        const startMs = startDate ? new Date(startDate + 'T00:00:00').getTime() : null;
+        const endMs = endDate ? new Date(endDate + 'T23:59:59.999').getTime() : null;
         
         const purchases = [];
-        snapshot.forEach(doc => {
+        snapshot.forEach(function (doc) {
+            var data = doc.data();
+            var uid = data.userId || data.memberId || '';
+            if (uid !== memberId && data.memberId !== memberId) return;
+            
+            var ts = null;
+            if (data.createdAt && data.createdAt.toDate) ts = data.createdAt.toDate().getTime();
+            else if (data.createdAt && data.createdAt.seconds) ts = data.createdAt.seconds * 1000;
+            
+            if (startMs && ts && ts < startMs) return;
+            if (endMs && ts && ts > endMs) return;
+            
             purchases.push({
                 id: doc.id,
-                ...doc.data()
+                purchaseDate: data.createdAt,
+                productName: data.productName || '-',
+                productPrice: data.productPrice || data.amount || 0,
+                supportAmount: data.supportAmount || 0,
+                status: data.status || '-',
+                ...data
             });
         });
         
-        console.log(`✅ ${memberId}의 구매 내역 ${purchases.length}건 조회`);
+        purchases.sort(function (a, b) {
+            var ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+            var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+            return tb - ta;
+        });
+        
+        console.log('✅ ' + memberId + '의 구매 내역 ' + purchases.length + '건 조회');
         return purchases;
         
     } catch (error) {
         console.error('❌ 구매 내역 조회 오류:', error);
-        // 데이터가 없거나 오류 발생 시 빈 배열 반환
         return [];
     }
 }
@@ -176,16 +187,15 @@ function renderPurchaseDetailTable(purchases) {
     }
     
     const tableHTML = purchases.map((purchase, index) => {
-        // 날짜 포맷팅
         let purchaseDate = '-';
-        if (purchase.purchaseDate) {
-            if (purchase.purchaseDate.seconds) {
-                const date = new Date(purchase.purchaseDate.seconds * 1000);
-                purchaseDate = date.toLocaleString('ko-KR');
-            } else if (purchase.purchaseDate.toDate) {
-                purchaseDate = purchase.purchaseDate.toDate().toLocaleString('ko-KR');
+        var dateSource = purchase.createdAt || purchase.purchaseDate;
+        if (dateSource) {
+            if (dateSource.toDate) {
+                purchaseDate = dateSource.toDate().toLocaleString('ko-KR');
+            } else if (dateSource.seconds) {
+                purchaseDate = new Date(dateSource.seconds * 1000).toLocaleString('ko-KR');
             } else {
-                purchaseDate = new Date(purchase.purchaseDate).toLocaleString('ko-KR');
+                purchaseDate = new Date(dateSource).toLocaleString('ko-KR');
             }
         }
         
@@ -284,4 +294,5 @@ window.initMemberPurchasePage = function() {
         console.log('✅ 구매 정보 페이지 초기화 완료');
     }
 })();
+
 
