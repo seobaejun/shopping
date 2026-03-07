@@ -323,8 +323,8 @@ function createProductCard(product, index, type) {
     `;
 }
 
-// 메인 상품 페이징: 15줄 = 1페이지 (1줄 = 그리드 열 개수만큼 상품)
-const MAIN_ROWS_PER_PAGE = 15;
+// 메인 상품 페이징: 10줄 = 1페이지 (1줄 = 그리드 열 개수만큼 상품, 읽기 절감)
+const MAIN_ROWS_PER_PAGE = 10;
 const MAIN_GRID_COLUMNS = 4;
 const MAIN_ITEMS_PER_PAGE = MAIN_ROWS_PER_PAGE * MAIN_GRID_COLUMNS;
 let mainProductCurrentPage = 1;
@@ -350,7 +350,7 @@ function renderProducts() {
     grid.innerHTML = slice.map(function (product, index) {
         return createProductCard(product, start + index, '');
     }).join('');
-    updateProductRatings();
+    updateProductRatings(slice);
     renderMainPagination(list.length);
 }
 
@@ -397,17 +397,18 @@ function renderMainPagination(totalItems) {
     };
 }
 
-// 상품 평점 업데이트 함수
-async function updateProductRatings() {
+// 상품 평점 업데이트 함수 (현재 페이지 상품만 조회해 읽기 절감)
+async function updateProductRatings(productsToUpdate) {
     if (typeof firebase === 'undefined' || !firebase.firestore) {
         return;
     }
 
     const db = firebase.firestore();
-    const allProducts = productsData.all || [];
+    const list = Array.isArray(productsToUpdate) && productsToUpdate.length
+        ? productsToUpdate
+        : (productsData.all || []);
 
-    // 각 상품의 평점을 가져와서 업데이트
-    for (const product of allProducts) {
+    for (const product of list) {
         if (!product.id) continue;
 
         try {
@@ -527,31 +528,20 @@ function initNoticeBanner() {
     }
 }
 
-// 초기화
+// 초기화 - 히어로 문구 고정: 첫 줄 "세상에 없던 쇼핑몰", 둘째 줄 "10쇼핑게임" (10 강조)
 function initHeroTitle() {
     const heroTitle = document.querySelector('.slide-content h1');
     if (!heroTitle) return;
     
-    const text = heroTitle.textContent;
-    const chars = text.split('');
-    
-    // "10" 부분만 찾기
-    const targetText = "10";
-    const startIndex = text.indexOf(targetText);
-    const endIndex = startIndex + targetText.length;
-    
-    heroTitle.innerHTML = chars.map((char, index) => {
-        if (char === '\n' || char === '\r') {
-            return '<br class="hero-br">';
-        }
-        const isColorChange = index >= startIndex && index < endIndex;
-        const charClass = isColorChange ? 'char char-color-change' : 'char';
-        const lineBreak = (index === startIndex && startIndex >= 0) ? '<br class="hero-br">' : '';
-        if (char === ' ') {
-            return lineBreak + '<span class="char-space"> </span>';
-        }
-        return lineBreak + `<span class="${charClass}" data-char="${char}" style="animation-delay: ${index * 0.1}s">${char}</span>`;
+    const toSpans = (str, offset) => str.split('').map((char, i) => {
+        if (char === ' ') return '<span class="char-space"> </span>';
+        return `<span class="char" data-char="${char}" style="animation-delay: ${(offset + i) * 0.1}s">${char}</span>`;
     }).join('');
+    
+    const line1 = '세상에 없던 쇼핑몰';
+    const line2After10 = ' 쇼핑게임';
+    
+    heroTitle.innerHTML = '<span class="hero-line1">' + toSpans(line1, 0) + '</span><br class="hero-br"><span class="hero-line2">' + '<span class="hero-number">10</span>' + toSpans(line2After10, 1) + '</span>';
 }
 
 function initScrollDown() {

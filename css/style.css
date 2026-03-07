@@ -842,8 +842,9 @@ img {
 /* 메인 슬라이더 */
 .main-slider {
     position: relative;
-    height: 560px;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    height: 720px;
+    background: linear-gradient(135deg, rgba(0,0,0,0.35), rgba(0,0,0,0.25)),
+                url('../image/business-shopping-situation-idea-concept-2026-01-09-09-18-13-utc.jpg') center / cover no-repeat;
     overflow: hidden;
 }
 
@@ -887,25 +888,67 @@ img {
 }
 
 .slide-content h1 br.hero-br {
-    display: none;
+    display: block;
+}
+
+.slide-content h1 .hero-line1 { font-size: 0.75em; }
+.slide-content h1 .hero-line2 { font-size: 1.15em; }
+
+.slide-content h1 .hero-number {
+    display: inline-block;
+    font-size: 1.2em;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: middle;
+    background: linear-gradient(90deg, #ffd1dc, #c9e4de, #e2d5f1, #fff0f5, #a8e6cf, #ffd3b6, #dcf0f8, #ffd1dc);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: heroNumberEmphasis 2s ease-in-out infinite, heroNumberRotate 3s ease-in-out infinite, heroGradientFlow 5s linear infinite;
+}
+
+@keyframes heroGradientFlow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+}
+
+@keyframes heroNumberEmphasis {
+    0%, 100% {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.4), 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+    50% {
+        text-shadow: 0 0 16px rgba(255, 255, 255, 0.6), 0 0 32px rgba(255, 255, 255, 0.35);
+    }
+}
+
+@keyframes heroNumberRotate {
+    0% { transform: rotate(0deg); }
+    18% { transform: rotate(360deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .slide-content h1 .char {
     display: inline-block;
     position: relative;
     color: #fff;
+    vertical-align: middle;
+    line-height: 1;
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.3),
                  0 0 10px rgba(255, 255, 255, 0.2);
     animation: neonCharFlow 2.5s ease-in-out infinite;
 }
 
 .slide-content h1 .char.char-color-change {
-    animation: neonCharFlow 2.5s ease-in-out infinite, colorChange 3s ease-in-out infinite;
+    animation: neonCharFlow 2.5s ease-in-out infinite;
 }
 
 .slide-content h1 .char-space {
     display: inline-block;
     width: 0.3em;
+    vertical-align: middle;
+    line-height: 1;
 }
 
 @keyframes neonCharFlow {
@@ -2511,7 +2554,7 @@ body.show-admin-link li .admin-link {
     }
 
     .main-slider {
-        height: 380px;
+        height: 460px;
     }
 
     .slide-content {
@@ -3165,7 +3208,7 @@ body.show-admin-link li .admin-link {
 /* 노트북/작은 데스크톱: 히어로(메인 슬라이더) 텍스트 + 플로팅 이미지 축소 (모바일 제외) */
 @media (min-width: 769px) and (max-width: 1680px) {
     .main-slider {
-        height: 480px;
+        height: 600px;
     }
     .slide-content h1 {
         font-size: 52px;
