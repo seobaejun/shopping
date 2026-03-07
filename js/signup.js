@@ -57,7 +57,10 @@ function initSignup() {
     // 다음 단계 버튼 이벤트
     setupNextButtons();
     
-    // 아이디 중복확인
+    // 이메일 중복확인 (닉네임보다 먼저 확인하도록 먼저 설정)
+    setupEmailCheck();
+    
+    // 닉네임 중복확인
     setupUserIdCheck();
     
     // 비밀번호 일치 확인
@@ -199,6 +202,14 @@ function validateStep2() {
         return false;
     }
     
+    // 이메일 중복확인 체크 (먼저 확인)
+    const userEmailInput = document.getElementById('userEmail');
+    if (userEmailInput.dataset.verified !== 'true') {
+        alert('이메일 중복확인을 해주세요.');
+        userEmailInput.focus();
+        return false;
+    }
+    
     if (!userId) {
         alert('닉네임을 입력해주세요.');
         document.getElementById('userId').focus();
@@ -209,6 +220,7 @@ function validateStep2() {
     const userIdInput = document.getElementById('userId');
     if (userIdInput.dataset.verified !== 'true') {
         alert('닉네임 중복확인을 해주세요.');
+        document.getElementById('userId').focus();
         return false;
     }
     
@@ -302,6 +314,92 @@ function saveStep2Data() {
         mobile: document.getElementById('mobile').value.trim(),
         verifyCode: document.getElementById('verifyCode').value.trim()
     };
+}
+
+// 이메일 중복확인 (닉네임보다 먼저 확인하도록 사용)
+function setupEmailCheck() {
+    const checkBtn = document.getElementById('checkUserEmail');
+    const userEmailInput = document.getElementById('userEmail');
+    if (!checkBtn || !userEmailInput) return;
+
+    checkBtn.addEventListener('click', async () => {
+        const email = userEmailInput.value.trim();
+
+        if (!email) {
+            alert('이메일을 입력해주세요.');
+            userEmailInput.focus();
+            return;
+        }
+
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email)) {
+            alert('올바른 이메일 형식을 입력해주세요.');
+            userEmailInput.focus();
+            return;
+        }
+
+        checkBtn.disabled = true;
+        checkBtn.textContent = '확인중...';
+
+        try {
+            const db = await initFirebase();
+            if (!db) throw new Error('Firebase 초기화 실패');
+
+            // Firebase Auth에서 이메일 사용 여부 확인 (가입 시 사용하는 이메일)
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                const methods = await firebase.auth().fetchSignInMethodsForEmail(email);
+                if (methods && methods.length > 0) {
+                    alert('이미 사용 중인 이메일입니다.');
+                    userEmailInput.dataset.verified = 'false';
+                    checkBtn.disabled = false;
+                    checkBtn.textContent = '중복확인';
+                    checkBtn.style.background = '';
+                    return;
+                }
+            }
+
+            // Firestore members에서도 이메일 중복 확인 (탈퇴 회원 제외)
+            const snapshot = await db.collection('members')
+                .where('email', '==', email)
+                .get();
+
+            if (!snapshot.empty) {
+                const existing = snapshot.docs[0].data();
+                if (existing.status === 'withdrawn') {
+                    alert('탈퇴한 이메일입니다. 재가입하시면 같은 이메일로 다시 이용할 수 있습니다.');
+                    checkBtn.textContent = '확인완료';
+                    checkBtn.style.background = '#4caf50';
+                    userEmailInput.dataset.verified = 'true';
+                } else {
+                    alert('이미 사용 중인 이메일입니다.');
+                    userEmailInput.dataset.verified = 'false';
+                    checkBtn.textContent = '중복확인';
+                    checkBtn.style.background = '';
+                }
+                checkBtn.disabled = false;
+                return;
+            }
+
+            alert('사용 가능한 이메일입니다.');
+            checkBtn.textContent = '확인완료';
+            checkBtn.style.background = '#4caf50';
+            userEmailInput.dataset.verified = 'true';
+        } catch (error) {
+            console.error('이메일 중복확인 오류:', error);
+            alert('이메일 중복확인 중 오류가 발생했습니다.');
+            userEmailInput.dataset.verified = 'false';
+            checkBtn.textContent = '중복확인';
+            checkBtn.style.background = '';
+        }
+        checkBtn.disabled = false;
+    });
+
+    userEmailInput.addEventListener('input', () => {
+        checkBtn.disabled = false;
+        checkBtn.textContent = '중복확인';
+        checkBtn.style.background = '';
+        userEmailInput.dataset.verified = 'false';
+    });
 }
 
 // 닉네임 중복확인

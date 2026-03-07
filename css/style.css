@@ -1074,7 +1074,7 @@ img {
 
 /* 히어로 바로 아래 안내 카드 (쇼핑지원금 / 참여방법) */
 .promo-cards-section {
-    padding: 48px 0;
+    padding: 24px 0;
     background: var(--bg-white);
 }
 
@@ -1089,12 +1089,12 @@ img {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 48px 28px;
+    padding: 24px 28px;
     border-radius: 16px;
     text-decoration: none;
     color: var(--text-dark);
     transition: var(--transition);
-    min-height: 200px;
+    min-height: 100px;
 }
 
 .promo-card:hover {
@@ -1116,28 +1116,28 @@ img {
 }
 
 .promo-card__top {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 400;
     color: var(--text-dark);
-    margin-bottom: 12px;
+    margin-bottom: 6px;
 }
 
 .promo-card__main {
-    font-size: 40px;
+    font-size: 28px;
     font-weight: 700;
     color: var(--text-dark);
-    line-height: 1.3;
+    line-height: 1.25;
 }
 
 .promo-card__btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 12px 40px;
+    padding: 8px 28px;
     background: #333;
     color: #fff;
     border-radius: 10px;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 600;
     white-space: nowrap;
     margin-left: 16px;
@@ -1150,7 +1150,7 @@ img {
 
 @media (max-width: 768px) {
     .promo-cards-section {
-        padding: 28px 0;
+        padding: 14px 0;
     }
     .promo-cards {
         flex-direction: row;
@@ -1161,9 +1161,9 @@ img {
         flex-direction: column;
         align-items: flex-start;
         justify-content: space-between;
-        gap: 8px;
-        padding: 14px 12px;
-        min-height: 100px;
+        gap: 4px;
+        padding: 8px 12px;
+        min-height: 50px;
     }
     .promo-card__top {
         font-size: 12px;
@@ -1284,6 +1284,13 @@ img {
 .main-pagination-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* PC: 메인 상품 페이징 버튼 가운데 정렬 (모바일은 flex-start 유지) */
+@media (min-width: 769px) {
+    .main-pagination {
+        justify-content: center;
+    }
 }
 
 .product-card {
@@ -2020,6 +2027,32 @@ body.show-admin-link li .admin-link {
     opacity: 0.7;
 }
 
+.footer-company-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 48px;
+    flex-wrap: wrap;
+}
+
+.footer-company-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--text-color);
+    opacity: 0.85;
+}
+
+.footer-company-list li {
+    padding-left: 0;
+    margin-bottom: 2px;
+}
+
+.footer-company-right {
+    text-align: left;
+}
+
 .copyright {
     text-align: center;
     font-size: 13px;
@@ -2651,6 +2684,11 @@ body.show-admin-link li .admin-link {
         padding-right: 20px;
     }
 
+    .footer-company-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+
     .footer-content .footer-info:nth-child(3),
     .footer-content .footer-info:nth-child(4) {
         display: none !important;
@@ -2950,7 +2988,7 @@ body.show-admin-link li .admin-link {
     margin: 0 auto;
     overflow: hidden;
     border-radius: 20px;
-    height: 260px;
+    height: 130px;
 }
 
 .banner-slide {
@@ -2961,7 +2999,7 @@ body.show-admin-link li .admin-link {
     width: 100%;
     padding: 0;
     border-radius: 20px;
-    min-height: 260px;
+    min-height: 130px;
     align-items: center;
 }
 
@@ -2988,7 +3026,7 @@ body.show-admin-link li .admin-link {
     gap: 50px;
     width: 100%;
     padding: 0 50px;
-    min-height: 260px;
+    min-height: 130px;
 }
 
 .banner-left {
@@ -3163,12 +3201,12 @@ body.show-admin-link li .admin-link {
 /* 반응형 */
 @media (max-width: 768px) {
     .banner-slider-container {
-        height: 340px;
+        height: 170px;
     }
 
     .banner-slide {
-        padding: 20px 25px;
-        min-height: 340px;
+        padding: 10px 25px;
+        min-height: 170px;
         box-sizing: border-box;
         align-items: stretch;
     }
@@ -3179,10 +3217,10 @@ body.show-admin-link li .admin-link {
         display: flex;
         flex-direction: column;
         text-align: center;
-        gap: 12px;
+        gap: 6px;
         justify-content: flex-start;
-        padding-top: 16px;
-        padding-bottom: 28px;
+        padding-top: 8px;
+        padding-bottom: 14px;
         box-sizing: border-box;
     }
     
