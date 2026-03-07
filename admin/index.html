@@ -1923,9 +1923,14 @@
                     <div class="category-list-panel-full">
                         <div class="panel-header">
                             <h3><i class="fas fa-list"></i> 카테고리 목록</h3>
-                            <button class="btn btn-primary btn-sm" onclick="toggleAddCategoryForm(null, 1)">
-                                <i class="fas fa-plus"></i> 추가
-                            </button>
+                            <div class="panel-header-buttons">
+                                <button class="btn btn-outline btn-sm" id="toggleSortModeBtn" onclick="toggleCategorySortMode()">
+                                    <i class="fas fa-sort"></i> 순서변경
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="toggleAddCategoryForm(null, 1)">
+                                    <i class="fas fa-plus"></i> 추가
+                                </button>
+                            </div>
                         </div>
                         
                         <!-- 카테고리 추가 폼 (접혀있음) -->

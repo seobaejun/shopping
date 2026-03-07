@@ -539,6 +539,19 @@ async function loadPageData(pageId) {
             await loadPurchaseRequests();
             break;
         case 'draw-lottery': {
+            // 상품 데이터 먼저 로드 (추첨에서 상품명 표시용)
+            if (!window.LOTTERY_PRODUCTS || window.LOTTERY_PRODUCTS.length === 0) {
+                try {
+                    const products = await window.firebaseAdmin.productService.getProducts();
+                    if (products && Array.isArray(products)) {
+                        window.LOTTERY_PRODUCTS = products.filter(p => p && p.id && p.name);
+                        console.log('추첨용 LOTTERY_PRODUCTS 로드됨:', window.LOTTERY_PRODUCTS.length + '개 상품');
+                    }
+                } catch (error) {
+                    console.warn('추첨용 상품 데이터 로드 실패:', error);
+                }
+            }
+            
             var loadedConfirmed = [];
             if (typeof loadLotteryConfirmedFromFirebase === 'function') {
                 loadedConfirmed = await loadLotteryConfirmedFromFirebase();
@@ -596,9 +609,23 @@ async function loadPageData(pageId) {
 async function loadProducts() {
     try {
         const products = await window.firebaseAdmin.productService.getProducts();
+        
+        // 추첨용 상품 데이터도 함께 설정
+        if (products && Array.isArray(products)) {
+            window.LOTTERY_PRODUCTS = products.filter(p => p && p.id && p.name);
+            console.log('LOTTERY_PRODUCTS 설정됨:', window.LOTTERY_PRODUCTS.length + '개 상품');
+        }
+        
         await renderProductTable(products);
     } catch (error) {
         console.error('상품 목록 로드 오류:', error);
+        
+        // 폴백으로 PRODUCT_DATA 사용
+        if (PRODUCT_DATA && Array.isArray(PRODUCT_DATA)) {
+            window.LOTTERY_PRODUCTS = PRODUCT_DATA.filter(p => p && p.id && p.name);
+            console.log('LOTTERY_PRODUCTS 폴백 설정됨:', window.LOTTERY_PRODUCTS.length + '개 상품');
+        }
+        
         await renderProductTable(PRODUCT_DATA);
     }
 }
@@ -3523,8 +3550,39 @@ async function loadLotteryConfirmedFromFirebase() {
         if (!window.firebaseAdmin.lotteryConfirmedService) return (window.LOTTERY_CONFIRMED_RESULTS || []);
         var list = await window.firebaseAdmin.lotteryConfirmedService.getConfirmedResults();
         var meta = await window.firebaseAdmin.lotteryConfirmedService.getLotteryMeta();
+        
         if (Array.isArray(list)) LOTTERY_CONFIRMED_RESULTS = list;
         if (meta && typeof meta.currentRound === 'number') currentRound = meta.currentRound;
+        
+        // 상품명 보강: orderId로 주문을 조회하여 실제 상품명 채우기
+        // '전체 구매 추첨', '알 수 없는 상품' 등 기본값도 실제 상품명이 아니므로 덮어씀
+        var PLACEHOLDER_NAMES = ['전체 구매 추첨', '알 수 없는 상품', '알 수 없음', ''];
+        var needEnrich = list && list.some(function(r) {
+            return !r.productName || PLACEHOLDER_NAMES.indexOf(String(r.productName).trim()) !== -1;
+        });
+        
+        if (needEnrich && list.length > 0 && window.firebaseAdmin && window.firebaseAdmin.orderService) {
+            try {
+                var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
+                var orderMap = {};
+                allOrders.forEach(function(o) { if (o.id) orderMap[o.id] = o; });
+                
+                list.forEach(function(r) {
+                    var currentName = r.productName ? String(r.productName).trim() : '';
+                    var isPlaceholder = !currentName || PLACEHOLDER_NAMES.indexOf(currentName) !== -1;
+                    
+                    if (isPlaceholder && r.orderId) {
+                        var order = orderMap[r.orderId];
+                        if (order && (order.productName || order.product_name)) {
+                            r.productName = order.productName || order.product_name;
+                        }
+                    }
+                });
+            } catch (err) {
+                console.warn('추첨 확정 상품명 보강 오류:', err);
+            }
+        }
+        
         return list || [];
     } catch (e) {
         console.error('추첨 확정 데이터 로드 오류:', e);
@@ -3578,6 +3636,7 @@ async function loadLotteryWaitingData(confirmedList) {
                 amount: order.productPrice || order.amount || 0,
                 productSupport: order.supportAmount || 0,
                 productId: order.productId,
+                productName: order.productName || order.product_name || null,
                 confirmed: true,
                 date: _orderFormatDate(order.createdAt)
             };
@@ -3898,6 +3957,7 @@ async function confirmLotteryResult() {
         return (w.calculatedSupport != null && !isNaN(w.calculatedSupport)) ? w.calculatedSupport : 0;
     };
     var winners = currentLotteryWinners.map(function (w, index) {
+        var realProductName = w.productName || w.product_name || getProductName(selectedProductId);
         return {
             id: Date.now() + index,
             orderId: w.id || w.orderId,
@@ -3905,7 +3965,7 @@ async function confirmLotteryResult() {
             memberId: w.memberId || null,
             round: currentRound,
             productId: selectedProductId,
-            productName: getProductName(selectedProductId),
+            productName: realProductName,
             name: w.name,
             phone: w.phone,
             amount: w.amount,
@@ -3917,6 +3977,7 @@ async function confirmLotteryResult() {
     });
     var losers = currentLotteryLosers.map(function (l, index) {
         var supportAmount = (l.calculatedSupport != null && !isNaN(l.calculatedSupport)) ? l.calculatedSupport : 0;
+        var realProductName = l.productName || l.product_name || getProductName(selectedProductId);
         return {
             id: Date.now() + winners.length + index,
             orderId: l.id || l.orderId,
@@ -3924,7 +3985,7 @@ async function confirmLotteryResult() {
             memberId: l.memberId || null,
             round: currentRound,
             productId: selectedProductId,
-            productName: getProductName(selectedProductId),
+            productName: realProductName,
             name: l.name,
             phone: l.phone,
             amount: l.amount,
@@ -3964,13 +4025,26 @@ async function confirmLotteryResult() {
 
 // 상품명 가져오기 (전체 추첨은 상품 구분 없음)
 function getProductName(productId) {
-    if (productId === LOTTERY_GLOBAL_KEY || !productId) return '전체 구매 추첨';
+    if (productId === LOTTERY_GLOBAL_KEY || productId === '_all' || !productId || productId === '') {
+        return '전체 구매 추첨';
+    }
+    
     if (window.LOTTERY_PRODUCTS && window.LOTTERY_PRODUCTS.length > 0) {
         var p = window.LOTTERY_PRODUCTS.find(function (x) { return x.id === productId; });
         if (p && p.name) return p.name;
     }
-    return '알 수 없는 상품';
+    
+    if (window._purchaseRequestApprovedOrders && window._purchaseRequestApprovedOrders.length > 0) {
+        var order = window._purchaseRequestApprovedOrders.find(function (o) { 
+            return o.productId === productId || o.id === productId; 
+        });
+        if (order && order.productName) return order.productName;
+        if (order && order.product_name) return order.product_name;
+    }
+    
+    return productId;
 }
+
 
 // ============================================
 // 조별 추첨 확정 현황
@@ -3978,9 +4052,32 @@ function getProductName(productId) {
 
 // 확정 현황 페이지 업데이트
 function updateConfirmPage() {
+    // 기존 확정 결과에 상품명이 없는 경우 업데이트
+    updateProductNamesInConfirmedResults();
+    
     updateConfirmSummary();
     renderConfirmResults();
     updateRoundFilter();
+}
+
+// 기존 확정 결과에 상품명 업데이트
+function updateProductNamesInConfirmedResults() {
+    if (!LOTTERY_CONFIRMED_RESULTS || LOTTERY_CONFIRMED_RESULTS.length === 0) return;
+    
+    var updated = false;
+    LOTTERY_CONFIRMED_RESULTS.forEach(function(result) {
+        if (!result.productName || result.productName === '알 수 없음' || result.productName === '알 수 없는 상품') {
+            var newProductName = getProductName(result.productId);
+            if (newProductName && newProductName !== '알 수 없는 상품' && newProductName !== result.productName) {
+                result.productName = newProductName;
+                updated = true;
+            }
+        }
+    });
+    
+    if (updated) {
+        console.log('확정 결과의 상품명이 업데이트되었습니다.');
+    }
 }
 
 // 요약 정보 업데이트
@@ -4089,7 +4186,8 @@ function renderConfirmResults() {
     tbody.innerHTML = pageSlice.map((result, index) => {
         const rowNum = start + index + 1;
         const round = result.round || 0;
-        const productName = result.productName || '알 수 없음';
+        
+        const productNameText = (result.productName && String(result.productName).trim()) || (typeof getProductName === 'function' ? getProductName(result.productId) : '') || '-';
         const name = result.name || '이름 없음';
         const phone = result.phone || '-';
         const amount = result.amount || 0;
@@ -4101,7 +4199,7 @@ function renderConfirmResults() {
         <tr>
             <td>${rowNum}</td>
             <td><span class="badge badge-info">${round}회</span></td>
-            <td style="text-align: left; padding-left: 15px;">${escapeHtml(productName)}</td>
+            <td style="text-align: left; padding-left: 15px;">${escapeHtml(productNameText)}</td>
             <td>${escapeHtml(name)}</td>
             <td>${escapeHtml(phone)}</td>
             <td>${amount.toLocaleString()}원</td>
@@ -4469,7 +4567,7 @@ function renderDailyPaymentResults(pendingResults) {
     tbody.innerHTML = pageSlice.map((result, index) => {
         const rowNum = start + index + 1;
         const round = result.round || 0;
-        const productName = result.productName || '알 수 없음';
+        const productNameText = (result.productName && String(result.productName).trim()) || (typeof getProductName === 'function' ? getProductName(result.productId) : '') || '-';
         const name = result.name || '이름 없음';
         const phone = result.phone || '-';
         const amount = result.amount || 0;
@@ -4481,7 +4579,7 @@ function renderDailyPaymentResults(pendingResults) {
         <tr style="background-color: #fff9e6;">
             <td>${rowNum}</td>
             <td><span class="badge badge-info">${round}회</span></td>
-            <td style="text-align: left; padding-left: 15px;">${escapeHtml(productName)}</td>
+            <td style="text-align: left; padding-left: 15px;">${escapeHtml(productNameText)}</td>
             <td>${escapeHtml(name)}</td>
             <td>${escapeHtml(phone)}</td>
             <td>${amount.toLocaleString()}원</td>

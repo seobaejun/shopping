@@ -1841,6 +1841,86 @@ body {
     color: #999;
 }
 
+/* 카테고리 순서 변경 모드 */
+.panel-header-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-outline {
+    background: transparent;
+    color: #4A5FC1;
+    border: 1.5px solid #4A5FC1;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-outline:hover {
+    background: #4A5FC1;
+    color: #fff;
+}
+
+.btn-outline.active {
+    background: #4A5FC1;
+    color: #fff;
+}
+
+.category-item.sort-mode {
+    border: 1.5px dashed #4A5FC1;
+    background: #f0f3ff;
+}
+
+.category-item.sort-mode:hover {
+    background: #e4e9ff;
+}
+
+.sort-order-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #4A5FC1;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.btn-sort-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    border: 1.5px solid #4A5FC1;
+    background: #fff;
+    color: #4A5FC1;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+}
+
+.btn-sort-arrow:hover:not(:disabled) {
+    background: #4A5FC1;
+    color: #fff;
+}
+
+.btn-sort-arrow:disabled,
+.btn-sort-arrow.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    border-color: #ccc;
+    color: #ccc;
+}
+
 .btn-change {
     background-color: #17a2b8;
     color: white;

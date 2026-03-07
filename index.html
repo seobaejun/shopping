@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>10쇼핑게임 - 온라인 쇼핑몰</title>
-    <link rel="stylesheet" href="css/style.css?v=30">
+    <link rel="preload" as="image" href="image/hero-bg-1920.jpg" media="(min-width: 769px)">
+    <link rel="preload" as="image" href="image/hero-bg-1024.jpg" media="(max-width: 768px)">
+    <link rel="stylesheet" href="css/style.css?v=31">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -134,6 +136,17 @@
             <i class="fas fa-mouse"></i>
         </a>
     </section>
+    <script>
+    (function(){
+        var slider = document.querySelector('.main-slider');
+        if (!slider) return;
+        var w = window.innerWidth;
+        var src = w <= 480 ? 'image/hero-bg-640.jpg' : w <= 768 ? 'image/hero-bg-1024.jpg' : 'image/hero-bg-1920.jpg';
+        var img = new Image();
+        img.onload = function(){ slider.classList.add('bg-loaded'); };
+        img.src = src;
+    })();
+    </script>
 
     <!-- 쇼핑지원금 / 참여방법 안내 카드 -->
     <section class="promo-cards-section">

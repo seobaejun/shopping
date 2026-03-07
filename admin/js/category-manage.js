@@ -3,6 +3,7 @@ console.log('✅ category-manage.js 로드됨');
 
 // 카테고리 데이터 (Firestore에서 가져올 예정)
 let categoriesData = [];
+let isSortMode = false;
 
 // Firebase Admin 대기 함수
 async function waitForFirebaseAdmin() {
@@ -48,10 +49,11 @@ function renderCategoryTree() {
     const treeContainer = document.getElementById('categoryTree');
     if (!treeContainer) return;
     
-    // 1차 카테고리만 필터링
-    const level1Categories = categoriesData.filter(cat => cat.level === 1 && !cat.parentId);
+    // 1차 카테고리만 필터링 + sortOrder 정렬
+    const level1Categories = categoriesData
+        .filter(cat => cat.level === 1 && !cat.parentId)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     
-    // 데이터가 없으면 빈 상태
     if (level1Categories.length === 0) {
         treeContainer.innerHTML = '';
         return;
@@ -68,16 +70,38 @@ function renderCategoryTree() {
 // 카테고리 아이템 렌더링 (재귀적으로 하위 카테고리 포함)
 function renderCategoryItem(category) {
     const level = category.level || 1;
-    const children = categoriesData.filter(cat => cat.parentId === category.id);
+    const children = categoriesData
+        .filter(cat => cat.parentId === category.id)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     const isHidden = category.isHidden || false;
     
+    // 같은 레벨·같은 부모의 형제 카테고리 수 (순서 변경용)
+    const siblings = categoriesData
+        .filter(cat => cat.parentId === category.parentId && cat.level === level)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    const siblingIndex = siblings.findIndex(s => s.id === category.id);
+    const isFirst = siblingIndex === 0;
+    const isLast = siblingIndex === siblings.length - 1;
+    
     let html = `
-        <div class="category-item level-${level} ${isHidden ? 'hidden-category' : ''}" data-id="${category.id}">
+        <div class="category-item level-${level} ${isHidden ? 'hidden-category' : ''} ${isSortMode ? 'sort-mode' : ''}" data-id="${category.id}">
             <div class="category-info">
+                ${isSortMode ? `<span class="sort-order-badge">${category.sortOrder || '-'}</span>` : ''}
                 <span class="category-name">${category.name}</span>
                 ${isHidden ? '<span class="hidden-badge">숨김</span>' : ''}
             </div>
-            <div class="category-actions">
+            <div class="category-actions">`;
+    
+    if (isSortMode) {
+        html += `
+                <button class="btn-sort-arrow ${isFirst ? 'disabled' : ''}" onclick="moveCategoryOrder('${category.id}', 'up')" title="위로" ${isFirst ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button class="btn-sort-arrow ${isLast ? 'disabled' : ''}" onclick="moveCategoryOrder('${category.id}', 'down')" title="아래로" ${isLast ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-down"></i>
+                </button>`;
+    } else {
+        html += `
                 <button class="btn-move" onclick="showCategoryMoveOptions('${category.id}', ${level})" title="카테고리 이동">
                     <i class="fas fa-arrows-alt"></i> 이동
                 </button>
@@ -90,16 +114,14 @@ function renderCategoryItem(category) {
                 </button>
                 <button class="btn-icon btn-delete" onclick="deleteCategory('${category.id}')" title="삭제">
                     <i class="fas fa-trash"></i>
-                </button>
-    `;
-    
-    // 3차 카테고리가 아니면 추가 버튼 표시
-    if (level < 3) {
-        html += `
+                </button>`;
+        
+        if (level < 3) {
+            html += `
                 <button class="btn-icon btn-add" onclick="toggleAddCategoryForm('${category.id}', ${level + 1})" title="하위 카테고리 추가">
                     <i class="fas fa-plus"></i>
-                </button>
-        `;
+                </button>`;
+        }
     }
     
     html += `
@@ -744,6 +766,64 @@ async function toggleCategoryHidden(categoryId, isHidden) {
     }
 }
 
+// 순서 변경 모드 토글
+function toggleCategorySortMode() {
+    isSortMode = !isSortMode;
+    const btn = document.getElementById('toggleSortModeBtn');
+    if (btn) {
+        if (isSortMode) {
+            btn.classList.add('active');
+            btn.innerHTML = '<i class="fas fa-check"></i> 순서변경 완료';
+        } else {
+            btn.classList.remove('active');
+            btn.innerHTML = '<i class="fas fa-sort"></i> 순서변경';
+        }
+    }
+    renderCategoryTree();
+}
+
+// 카테고리 순서 이동 (위/아래)
+async function moveCategoryOrder(categoryId, direction) {
+    const category = categoriesData.find(cat => cat.id === categoryId);
+    if (!category) return;
+    
+    const siblings = categoriesData
+        .filter(cat => cat.parentId === category.parentId && cat.level === category.level)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    
+    const currentIndex = siblings.findIndex(s => s.id === categoryId);
+    if (currentIndex === -1) return;
+    
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= siblings.length) return;
+    
+    const targetCategory = siblings[targetIndex];
+    
+    // sortOrder 값 교환
+    const tempOrder = category.sortOrder || currentIndex;
+    const targetOrder = targetCategory.sortOrder || targetIndex;
+    
+    category.sortOrder = targetOrder;
+    targetCategory.sortOrder = tempOrder;
+    
+    // Firestore 업데이트
+    try {
+        const db = firebase.firestore();
+        const batch = db.batch();
+        batch.update(db.collection('categories').doc(category.id), { sortOrder: category.sortOrder });
+        batch.update(db.collection('categories').doc(targetCategory.id), { sortOrder: targetCategory.sortOrder });
+        await batch.commit();
+    } catch (error) {
+        console.error('순서 변경 저장 오류:', error);
+        // 롤백
+        targetCategory.sortOrder = category.sortOrder;
+        category.sortOrder = tempOrder;
+        alert('순서 변경에 실패했습니다.');
+    }
+    
+    renderCategoryTree();
+}
+
 // 전역으로 export
 window.loadCategories = loadCategories;
 window.toggleAddCategoryForm = toggleAddCategoryForm;
@@ -762,6 +842,8 @@ window.closeCategoryMoveOptions = closeCategoryMoveOptions;
 window.selectMoveLevel = selectMoveLevel;
 window.showParentCategorySelection = showParentCategorySelection;
 window.moveCategoryToLevel = moveCategoryToLevel;
+window.toggleCategorySortMode = toggleCategorySortMode;
+window.moveCategoryOrder = moveCategoryOrder;
 
 // 페이지 로드 시 카테고리 로드
 if (document.readyState === 'loading') {

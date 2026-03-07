@@ -844,8 +844,14 @@ img {
     position: relative;
     height: 720px;
     background: linear-gradient(135deg, rgba(0,0,0,0.35), rgba(0,0,0,0.25)),
-                url('../image/business-shopping-situation-idea-concept-2026-01-09-09-18-13-utc.jpg') center / cover no-repeat;
+                url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDACgcHiMeGSgjISMtKygwPGRBPDc3PHtYXUlkkYCZlo+AjIqgtObDoKrarYqMyP/L2u71////m8H////6/+b9//j/2wBDASstLTw1PHZBQXb4pYyl+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj/wAARCAAVACADASIAAhEBAxEB/8QAGAAAAwEBAAAAAAAAAAAAAAAAAAMEAQX/xAAjEAACAgICAQQDAAAAAAAAAAABAgMRABIEIUETIjFRI0Kh/8QAFQEBAQAAAAAAAAAAAAAAAAAAAQL/xAAXEQEBAQEAAAAAAAAAAAAAAAAAATER/9oADAMBAAIRAxEAPwCo/kkcG+mrE8gemztt+wGOi2V336BYkC/nMlMfIhoEBi90fOTIUjLu71R1PdHN5UcglYlGo0Aw+MrPHi9VJgNaNV94yaQhRHoG2+z1lcHXNecyIwIAseMVxV25CEnzeGGMwXXTmYmeUeAgr+5EGbce49YYYzFTK//Z') center / cover no-repeat;
+    background-color: #1a1a2e;
     overflow: hidden;
+}
+
+.main-slider.bg-loaded {
+    background: linear-gradient(135deg, rgba(0,0,0,0.35), rgba(0,0,0,0.25)),
+                url('../image/hero-bg-1920.jpg') center / cover no-repeat;
 }
 
 .slider-container {
@@ -900,7 +906,7 @@ img {
     font-weight: 700;
     line-height: 1;
     vertical-align: middle;
-    background: linear-gradient(90deg, #ffd1dc, #c9e4de, #e2d5f1, #fff0f5, #a8e6cf, #ffd3b6, #dcf0f8, #ffd1dc);
+    background: linear-gradient(90deg, #ffe600, #ffcc00, #ffd700, #ffea00, #ffc800, #ffe600, #ffdb00, #ffe600);
     background-size: 300% 100%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -2557,6 +2563,11 @@ body.show-admin-link li .admin-link {
         height: 460px;
     }
 
+    .main-slider.bg-loaded {
+        background: linear-gradient(135deg, rgba(0,0,0,0.35), rgba(0,0,0,0.25)),
+                    url('../image/hero-bg-1024.jpg') center / cover no-repeat;
+    }
+
     .slide-content {
         transform: translateY(-24px);
     }
@@ -2907,6 +2918,11 @@ body.show-admin-link li .admin-link {
 @media (max-width: 480px) {
     .container {
         padding: 0 15px;
+    }
+
+    .main-slider.bg-loaded {
+        background: linear-gradient(135deg, rgba(0,0,0,0.35), rgba(0,0,0,0.25)),
+                    url('../image/hero-bg-640.jpg') center / cover no-repeat;
     }
 
     .slide-content h1 br.hero-br {
