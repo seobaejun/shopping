@@ -416,8 +416,10 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
     const isSearchResults = options.isSearchResults === true;
 
     if (!tbody) return;
+    var isMdAdmin = window.isMdAdmin === true;
+    var emptyColspan = isMdAdmin ? 7 : 13;
     if (!membersToRender || membersToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" class="empty-message">검색 결과가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="' + emptyColspan + '" class="empty-message">검색 결과가 없습니다.</td></tr>';
         if (paginationElId) {
             const paginationEl = document.getElementById(paginationElId);
             if (paginationEl) {
@@ -446,45 +448,24 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
     const tableHTML = pageMembers.map((member, index) => {
         const memberId = member.userId || member.id || '';
         const name = member.name || '';
-        const phone = member.phone || '';
         let joinDate = '';
         if (member.joinDate) joinDate = member.joinDate;
         else if (member.createdAt) {
             if (member.createdAt.seconds) joinDate = new Date(member.createdAt.seconds * 1000).toISOString().replace('T', ' ').substring(0, 19);
             else if (member.createdAt.toDate) joinDate = member.createdAt.toDate().toISOString().replace('T', ' ').substring(0, 19);
         }
-        const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
         const referralCode = member.referralCode || member.recommender || '';
+        if (isMdAdmin) {
+            return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td></tr>';
+        }
+        const phone = member.phone || '';
+        const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
         const status = member.status || '정상';
-        const statusDisplay = status === 'withdrawn' ? '탈퇴' : status;
         const safeId = String(member.id || memberId).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         const statusCell = status === 'withdrawn'
-            ? `<span class="badge badge-secondary">탈퇴</span>`
-            : `<select class="status-select" data-member-id="${safeId}" onchange="changeMemberStatus(this.dataset.memberId, this.value)">
-                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
-                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
-                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
-                    </select>`;
-        return `
-            <tr>
-                <td>${startIndex + index + 1}</td>
-                <td>${escapeHtml(memberId)}</td>
-                <td>${escapeHtml(name)}</td>
-                <td>${escapeHtml(phone)}</td>
-                <td>${escapeHtml(joinDate)}</td>
-                <td>${escapeHtml(address)}</td>
-                <td>${escapeHtml(member.bank || '')}</td>
-                <td>${escapeHtml(member.accountNumber || '')}</td>
-                <td>${escapeHtml(referralCode)}</td>
-                <td>${Number(member.purchaseAmount || 0).toLocaleString()}</td>
-                <td>${formatTrix(Number(member.supportAmount || 0))} trix</td>
-                <td>${statusCell}</td>
-                <td>
-                    <button class="btn-icon btn-edit" data-member-id="${safeId}" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon btn-delete" data-member-id="${safeId}" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `;
+            ? '<span class="badge badge-secondary">탈퇴</span>'
+            : '<select class="status-select" data-member-id="' + safeId + '" onchange="changeMemberStatus(this.dataset.memberId, this.value)"><option value="정상" ' + (status === '정상' ? 'selected' : '') + '>정상</option><option value="대기" ' + (status === '대기' ? 'selected' : '') + '>대기</option><option value="정지" ' + (status === '정지' ? 'selected' : '') + '>정지</option></select>';
+        return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(phone) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(address) + '</td><td>' + escapeHtml(member.bank || '') + '</td><td>' + escapeHtml(member.accountNumber || '') + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td><td>' + statusCell + '</td><td><button class="btn-icon btn-edit" data-member-id="' + safeId + '" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button><button class="btn-icon btn-delete" data-member-id="' + safeId + '" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button></td></tr>';
     }).join('');
 
     tbody.innerHTML = tableHTML;

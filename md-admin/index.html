@@ -95,23 +95,17 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>번호</th>
+                                    <th>순번</th>
                                     <th>아이디</th>
                                     <th>이름</th>
-                                    <th>전화번호</th>
-                                    <th>가입날짜</th>
-                                    <th>주소</th>
-                                    <th>은행</th>
-                                    <th>계좌번호</th>
+                                    <th>가입일자</th>
                                     <th>추천인</th>
-                                    <th>구매금액</th>
-                                    <th>지원금</th>
-                                    <th>상태</th>
-                                    <th>관리</th>
+                                    <th>구매총액</th>
+                                    <th>지원토큰</th>
                                 </tr>
                             </thead>
                             <tbody id="searchResultsBody">
-                                <tr><td colspan="13" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
+                                <tr><td colspan="7" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -126,33 +120,19 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>번호</th>
+                                <th>순번</th>
                                 <th>아이디</th>
                                 <th>이름</th>
-                                <th>전화번호</th>
-                                <th>가입날짜</th>
-                                <th>주소</th>
-                                <th>은행</th>
-                                <th>계좌번호</th>
+                                <th>가입일자</th>
                                 <th>추천인</th>
-                                <th>구매금액</th>
-                                <th>지원금</th>
-                                <th>상태</th>
-                                <th>관리</th>
+                                <th>구매총액</th>
+                                <th>지원토큰</th>
                             </tr>
                         </thead>
                         <tbody id="memberTableBody"></tbody>
                     </table>
                 </div>
-                <div class="pagination" id="memberPagination">
-                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
-                    <button class="page-num active">1</button>
-                    <button class="page-num">2</button>
-                    <button class="page-num">3</button>
-                    <button class="page-num">4</button>
-                    <button class="page-num">5</button>
-                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                </div>
+                <div id="memberPagination" class="pagination"></div>
             </div>
 
             <!-- 개인별 구매 누적정보 페이지 (관리자와 동일) -->
@@ -193,7 +173,7 @@
                                 <span style="color: #666; font-size: 13px;">이름:</span>
                                 <strong id="memberInfoName" style="display: block; margin-top: 5px; font-size: 15px;"></strong>
                             </div>
-                            <div>
+                            <div id="memberInfoPhoneRow" style="display: none;"><!-- MD 관리자: 전화번호 비노출 -->
                                 <span style="color: #666; font-size: 13px;">전화번호:</span>
                                 <strong id="memberInfoPhone" style="display: block; margin-top: 5px; font-size: 15px;"></strong>
                             </div>
@@ -252,6 +232,7 @@
                     if (!window.db && typeof firebase !== 'undefined') window.db = firebase.firestore();
                     var sMd=document.createElement('script'); sMd.src='js/md-firebase.js'; document.body.appendChild(sMd);
                     sMd.onload=function(){
+                        window.isMdAdmin = true;
                         var s2=document.createElement('script'); s2.src='../admin/js/member-search.js?v='+Date.now(); document.body.appendChild(s2);
                         s2.onload=function(){
                             if (sessionStorage.getItem('mdAdminFromAdmin') !== 'true' && window.mdFirebase && window.firebaseAdmin && window.firebaseAdmin.memberService) {
@@ -277,7 +258,7 @@
                                 if(memberResetBtn&&window.resetMemberSearch) memberResetBtn.onclick=function(e){ e.preventDefault(); window.resetMemberSearch(); return false; };
                                 if(memberExportBtn&&window.exportMembersToExcel) memberExportBtn.onclick=function(e){ e.preventDefault(); window.exportMembersToExcel(); return false; };
                                 var tbody=document.getElementById('memberTableBody');
-                                if(tbody) tbody.innerHTML='<tr><td colspan="13" class="empty-message">회원 정보를 불러오는 중...</td></tr>';
+                                if(tbody) tbody.innerHTML='<tr><td colspan="7" class="empty-message">회원 정보를 불러오는 중...</td></tr>';
                                 if(window.searchMemberInfo) setTimeout(function(){ window.searchMemberInfo(); }, 2000);
                             };
                         };

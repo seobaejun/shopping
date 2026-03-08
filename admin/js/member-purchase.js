@@ -160,7 +160,18 @@ function displayPurchaseResults(member, purchases, totalPaidSupport, paidSupport
     
     document.getElementById('memberInfoUserId').textContent = member.userId || member.id || '-';
     document.getElementById('memberInfoName').textContent = member.name || '-';
-    document.getElementById('memberInfoPhone').textContent = member.phone || '-';
+    var phoneEl = document.getElementById('memberInfoPhone');
+    if (phoneEl) {
+        var phoneRow = phoneEl.closest('div');
+        if (window.isMdAdmin && phoneRow) {
+            phoneRow.style.display = 'none';
+        } else if (phoneRow) {
+            phoneRow.style.display = '';
+            phoneEl.textContent = member.phone || '-';
+        } else {
+            phoneEl.textContent = member.phone || '-';
+        }
+    }
     
     const totalCount = purchases.length;
     const totalAmount = purchases.reduce((sum, p) => sum + (p.productPrice || 0), 0);
@@ -305,7 +316,12 @@ window.initMemberPurchasePage = function() {
         if (resetBtn) {
             resetBtn.onclick = window.resetMemberPurchase;
         }
-        
+        if (window.isMdAdmin) {
+            var phoneElInit = document.getElementById('memberInfoPhone');
+            if (phoneElInit && phoneElInit.closest('div')) {
+                phoneElInit.closest('div').style.display = 'none';
+            }
+        }
         console.log('✅ 구매 정보 페이지 초기화 완료');
     }
 })();
