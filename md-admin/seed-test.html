@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD 테스트 데이터 생성</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+        h1 { font-size: 1.25rem; margin-bottom: 1rem; }
+        .card { background: #f5f5f5; padding: 1.25rem; border-radius: 8px; margin-bottom: 1rem; }
+        .card h2 { font-size: 1rem; margin: 0 0 0.75rem 0; color: #333; }
+        button { background: #4A5FC1; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+        button:hover { background: #3a4fb1; }
+        button:disabled { background: #999; cursor: not-allowed; }
+        .log { margin-top: 1rem; padding: 0.75rem; background: #fff; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+        ul { margin: 0.5rem 0; padding-left: 1.25rem; }
+        a { color: #4A5FC1; }
+    </style>
+</head>
+<body>
+    <h1>MD 테스트 환경 – 데이터 생성</h1>
+    <div class="card">
+        <h2>1. 테스트 데이터 생성</h2>
+        <p>아래 버튼을 누르면 Firestore에 다음이 추가됩니다.</p>
+        <ul>
+            <li><strong>mdManagers</strong> 2명: 4자리 MD(1234), 5자리 MD(12345)</li>
+            <li><strong>members</strong> 6명: 추천인코드 1234(2명), 12341(2명), 12342(1명), 12345(1명)</li>
+        </ul>
+        <button type="button" id="btnSeed">테스트 데이터 생성</button>
+        <div class="log" id="log"></div>
+    </div>
+    <div class="card">
+        <h2>2. 테스트 방법</h2>
+        <p><strong>MD 로그인</strong> (<a href="login.html">md-admin/login.html</a>)</p>
+        <ul>
+            <li><strong>4자리 MD</strong>: 이메일 <code>test4@md.com</code> / 비밀번호 <code>@@7799</code> → 1234·12341·12342 추천인 회원 전부 노출</li>
+            <li><strong>5자리 MD</strong>: 이메일 <code>test5@md.com</code> / 비밀번호 <code>@@7799</code> → 12345 추천인 회원 1명만 노출</li>
+        </ul>
+        <p><strong>관리자 전체보기</strong>: 관리자 페이지에서 MD관리자 메뉴로 진입 시 전체 회원 노출</p>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script>
+        (function(){
+            var logEl = document.getElementById('log');
+            function log(msg) {
+                logEl.textContent = (logEl.textContent ? logEl.textContent + '\n' : '') + msg;
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+            function clearLog() { logEl.textContent = ''; }
+
+            document.getElementById('btnSeed').addEventListener('click', async function() {
+                var btn = this;
+                btn.disabled = true;
+                clearLog();
+                log('Firebase 연결 중...');
+                if (typeof firebase === 'undefined' || !firebase.apps.length) {
+                    log('오류: Firebase를 불러올 수 없습니다.');
+                    btn.disabled = false;
+                    return;
+                }
+                var db = firebase.firestore();
+                var ts = firebase.firestore.FieldValue.serverTimestamp();
+                try {
+                    var mdManagers = [
+                        { name: '4자리테스트', mdCode: '1234', email: 'test4@md.com', phone: '010-1111-1111', status: 'active' },
+                        { name: '5자리테스트', mdCode: '12345', email: 'test5@md.com', phone: '010-2222-2222', status: 'active' }
+                    ];
+                    for (var i = 0; i < mdManagers.length; i++) {
+                        var existing = await db.collection('mdManagers').where('email', '==', mdManagers[i].email).get();
+                        if (existing.empty) {
+                            await db.collection('mdManagers').add({
+                                name: mdManagers[i].name,
+                                mdCode: mdManagers[i].mdCode,
+                                email: mdManagers[i].email,
+                                phone: mdManagers[i].phone,
+                                status: mdManagers[i].status,
+                                createdAt: ts,
+                                updatedAt: ts
+                            });
+                            log('mdManagers 추가: ' + mdManagers[i].email + ' (코드 ' + mdManagers[i].mdCode + ')');
+                        } else {
+                            log('mdManagers 이미 존재: ' + mdManagers[i].email);
+                        }
+                    }
+                    var members = [
+                        { userId: 'test_member_1234_1', name: '회원A', email: 'member_a@test.com', mdCode: '1234', mobile: '010-1001-0001' },
+                        { userId: 'test_member_1234_2', name: '회원B', email: 'member_b@test.com', mdCode: '1234', mobile: '010-1002-0002' },
+                        { userId: 'test_member_12341_1', name: '회원C', email: 'member_c@test.com', mdCode: '12341', mobile: '010-1003-0003' },
+                        { userId: 'test_member_12341_2', name: '회원D', email: 'member_d@test.com', mdCode: '12341', mobile: '010-1004-0004' },
+                        { userId: 'test_member_12342_1', name: '회원E', email: 'member_e@test.com', mdCode: '12342', mobile: '010-1005-0005' },
+                        { userId: 'test_member_12345_1', name: '회원F', email: 'member_f@test.com', mdCode: '12345', mobile: '010-1006-0006' }
+                    ];
+                    for (var j = 0; j < members.length; j++) {
+                        var ex = await db.collection('members').where('userId', '==', members[j].userId).get();
+                        if (ex.empty) {
+                            await db.collection('members').add({
+                                userId: members[j].userId,
+                                name: members[j].name,
+                                email: members[j].email,
+                                mdCode: members[j].mdCode,
+                                mobile: members[j].mobile,
+                                status: '정상',
+                                createdAt: ts
+                            });
+                            log('members 추가: ' + members[j].userId + ' (추천인 ' + members[j].mdCode + ')');
+                        } else {
+                            log('members 이미 존재: ' + members[j].userId);
+                        }
+                    }
+                    log('완료. MD 로그인 페이지에서 test4@md.com / test5@md.com 로 테스트하세요.');
+                } catch (err) {
+                    log('오류: ' + err.message);
+                }
+                btn.disabled = false;
+            });
+        })();
+    </script>
+</body>
+</html>

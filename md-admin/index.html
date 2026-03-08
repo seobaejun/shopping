@@ -260,29 +260,37 @@
             s1.onload=function(){
                 var initP = (window.firebaseAdmin&&window.firebaseAdmin.getInitPromise) ? window.firebaseAdmin.getInitPromise() : Promise.resolve();
                 initP.then(function(){
-                    var s2=document.createElement('script'); s2.src='../admin/js/member-search.js?v='+Date.now(); document.body.appendChild(s2);
-                    s2.onload=function(){
-                        var s3=document.createElement('script'); s3.src='../admin/js/member-purchase.js'; document.body.appendChild(s3);
-                        s3.onload=function(){
-                            document.querySelectorAll('.admin-sidebar a[data-page]').forEach(function(a){
-                                a.addEventListener('click',function(e){ e.preventDefault();
-                                    var page=this.getAttribute('data-page');
-                                    document.querySelectorAll('.content-page').forEach(function(p){ p.classList.remove('active'); });
-                                    var el=document.getElementById(page); if(el) el.classList.add('active');
-                                    document.querySelectorAll('.admin-sidebar .nav-list li').forEach(function(li){ li.classList.remove('active'); });
-                                    if(this.parentElement) this.parentElement.classList.add('active');
-                                    if(page==='member-search'&&window.searchMemberInfo) window.searchMemberInfo();
+                    if (!window.db && typeof firebase !== 'undefined') window.db = firebase.firestore();
+                    var sMd=document.createElement('script'); sMd.src='js/md-firebase.js'; document.body.appendChild(sMd);
+                    sMd.onload=function(){
+                        var s2=document.createElement('script'); s2.src='../admin/js/member-search.js?v='+Date.now(); document.body.appendChild(s2);
+                        s2.onload=function(){
+                            if (sessionStorage.getItem('mdAdminFromAdmin') !== 'true' && window.mdFirebase && window.firebaseAdmin && window.firebaseAdmin.memberService) {
+                                var origGetMembers = window.firebaseAdmin.memberService.getMembers;
+                                window.firebaseAdmin.memberService.getMembers = function() { return window.mdFirebase.getAllowedMembers(); };
+                            }
+                            var s3=document.createElement('script'); s3.src='../admin/js/member-purchase.js'; document.body.appendChild(s3);
+                            s3.onload=function(){
+                                document.querySelectorAll('.admin-sidebar a[data-page]').forEach(function(a){
+                                    a.addEventListener('click',function(e){ e.preventDefault();
+                                        var page=this.getAttribute('data-page');
+                                        document.querySelectorAll('.content-page').forEach(function(p){ p.classList.remove('active'); });
+                                        var el=document.getElementById(page); if(el) el.classList.add('active');
+                                        document.querySelectorAll('.admin-sidebar .nav-list li').forEach(function(li){ li.classList.remove('active'); });
+                                        if(this.parentElement) this.parentElement.classList.add('active');
+                                        if(page==='member-search'&&window.searchMemberInfo) window.searchMemberInfo();
+                                    });
                                 });
-                            });
-                            var memberSearchBtn=document.getElementById('memberSearchBtn');
-                            var memberResetBtn=document.getElementById('memberResetBtn');
-                            var memberExportBtn=document.getElementById('memberExportBtn');
-                            if(memberSearchBtn&&window.searchMemberInfo) memberSearchBtn.onclick=function(e){ e.preventDefault(); window.searchMemberInfo(); return false; };
-                            if(memberResetBtn&&window.resetMemberSearch) memberResetBtn.onclick=function(e){ e.preventDefault(); window.resetMemberSearch(); return false; };
-                            if(memberExportBtn&&window.exportMembersToExcel) memberExportBtn.onclick=function(e){ e.preventDefault(); window.exportMembersToExcel(); return false; };
-                            var tbody=document.getElementById('memberTableBody');
-                            if(tbody) tbody.innerHTML='<tr><td colspan="13" class="empty-message">회원 정보를 불러오는 중...</td></tr>';
-                            if(window.searchMemberInfo) setTimeout(function(){ window.searchMemberInfo(); }, 2000);
+                                var memberSearchBtn=document.getElementById('memberSearchBtn');
+                                var memberResetBtn=document.getElementById('memberResetBtn');
+                                var memberExportBtn=document.getElementById('memberExportBtn');
+                                if(memberSearchBtn&&window.searchMemberInfo) memberSearchBtn.onclick=function(e){ e.preventDefault(); window.searchMemberInfo(); return false; };
+                                if(memberResetBtn&&window.resetMemberSearch) memberResetBtn.onclick=function(e){ e.preventDefault(); window.resetMemberSearch(); return false; };
+                                if(memberExportBtn&&window.exportMembersToExcel) memberExportBtn.onclick=function(e){ e.preventDefault(); window.exportMembersToExcel(); return false; };
+                                var tbody=document.getElementById('memberTableBody');
+                                if(tbody) tbody.innerHTML='<tr><td colspan="13" class="empty-message">회원 정보를 불러오는 중...</td></tr>';
+                                if(window.searchMemberInfo) setTimeout(function(){ window.searchMemberInfo(); }, 2000);
+                            };
                         };
                     };
                 }).catch(function(err){ console.error('Firebase init:', err); });
