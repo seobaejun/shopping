@@ -2290,3 +2290,58 @@
     min-width: 0 !important;
     overflow: hidden !important;
 }
+
+/* 은행정보 패널 스타일 */
+.bank-info-panel {
+    margin: 15px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 100%);
+    border: 2px solid #e1ecff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.bank-info-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    color: #2563eb;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.bank-info-header i {
+    font-size: 18px;
+}
+
+.bank-info-content {
+    margin-left: 26px;
+}
+
+.bank-account {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e40af;
+    margin: 8px 0;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+}
+
+.bank-holder {
+    font-size: 14px;
+    color: #374151;
+    margin: 4px 0;
+    font-weight: 500;
+}
+
+.bank-notice {
+    font-size: 13px;
+    color: #dc2626;
+    margin: 8px 0 0 0;
+    font-weight: 500;
+    background: rgba(220, 38, 38, 0.1);
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-left: 3px solid #dc2626;
+}

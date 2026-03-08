@@ -53,20 +53,46 @@ async function loadDashboardData() {
             return orderDate >= todayStart;
         }).length;
         
-        // 3. 총 지원금 계산
-        const totalSupport = allOrders.reduce((sum, order) => {
-            return sum + (order.support || 0);
+        // 3. 총 지원금 계산 (주문 + 추첨 확정 결과)
+        let totalSupport = allOrders.reduce((sum, order) => {
+            return sum + (order.supportAmount || order.support || 0);
         }, 0);
         
-        // 이번 달 지원금
+        // 추첨 확정 결과에서 지원금 추가
+        try {
+            const confirmedResults = await window.firebaseAdmin.lotteryConfirmedService.getConfirmedResults();
+            const confirmedSupport = confirmedResults.reduce((sum, result) => {
+                return sum + (result.support || result.calculatedSupport || 0);
+            }, 0);
+            totalSupport += confirmedSupport;
+        } catch (error) {
+            console.warn('추첨 확정 결과 로드 오류:', error);
+        }
+        
+        // 이번 달 지원금 (주문 + 추첨 확정 결과)
         const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        const monthSupport = allOrders
+        let monthSupport = allOrders
             .filter(order => {
                 if (!order.createdAt) return false;
                 const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
                 return orderDate >= monthStart;
             })
-            .reduce((sum, order) => sum + (order.support || 0), 0);
+            .reduce((sum, order) => sum + (order.supportAmount || order.support || 0), 0);
+            
+        // 이번 달 추첨 확정 결과에서 지원금 추가
+        try {
+            const confirmedResults = await window.firebaseAdmin.lotteryConfirmedService.getConfirmedResults();
+            const monthConfirmedSupport = confirmedResults
+                .filter(result => {
+                    if (!result.date) return false;
+                    const resultDate = new Date(result.date);
+                    return resultDate >= monthStart;
+                })
+                .reduce((sum, result) => sum + (result.support || result.calculatedSupport || 0), 0);
+            monthSupport += monthConfirmedSupport;
+        } catch (error) {
+            console.warn('이번 달 추첨 확정 결과 로드 오류:', error);
+        }
         
         // 4. 승인 대기 주문
         const pendingOrders = allOrders.filter(order => order.status === 'pending' || order.status === '대기');
@@ -97,7 +123,22 @@ async function loadDashboardData() {
         });
         
         const weekTotalAmount = weekOrders.reduce((sum, order) => sum + (order.amount || order.price || 0), 0);
-        const weekSupport = weekOrders.reduce((sum, order) => sum + (order.support || 0), 0);
+        let weekSupport = weekOrders.reduce((sum, order) => sum + (order.supportAmount || order.support || 0), 0);
+        
+        // 이번 주 추첨 확정 결과에서 지원금 추가
+        try {
+            const confirmedResults = await window.firebaseAdmin.lotteryConfirmedService.getConfirmedResults();
+            const weekConfirmedSupport = confirmedResults
+                .filter(result => {
+                    if (!result.date) return false;
+                    const resultDate = new Date(result.date);
+                    return resultDate >= weekStart;
+                })
+                .reduce((sum, result) => sum + (result.support || result.calculatedSupport || 0), 0);
+            weekSupport += weekConfirmedSupport;
+        } catch (error) {
+            console.warn('이번 주 추첨 확정 결과 로드 오류:', error);
+        }
         
         // 추첨 진행 횟수 (이번 주)
         let weekLotteries = [];

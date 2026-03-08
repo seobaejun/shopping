@@ -150,6 +150,78 @@
     }
 
     /**
+     * 내 토큰 입금 내역 조회 (tokenDeposits 컬렉션에서 본인 것만)
+     * @returns {Promise<Array>} { amount, status, createdAt }[]
+     */
+    function getMyTokenDeposits() {
+        return getCurrentMemberId().then(function (ids) {
+            if (!ids || !ids.userId) return [];
+            return getMypageDb().then(function (database) {
+                if (!database) return [];
+                return database.collection('tokenDeposits')
+                    .where('userId', '==', ids.userId)
+                    .get()
+                    .then(function (snap) {
+                        var list = [];
+                        snap.docs.forEach(function (d) {
+                            var data = d.data();
+                            list.push({ 
+                                id: d.id, 
+                                amount: data.amount || 0,
+                                status: data.status || 'pending',
+                                createdAt: data.createdAt,
+                                date: data.date
+                            });
+                        });
+                        list.sort(function (a, b) {
+                            var at = (a.createdAt && a.createdAt.toDate) ? a.createdAt.toDate() : new Date(a.date || 0);
+                            var bt = (b.createdAt && b.createdAt.toDate) ? b.createdAt.toDate() : new Date(b.date || 0);
+                            return bt - at;
+                        });
+                        return list;
+                    })
+                    .catch(function () { return []; });
+            });
+        });
+    }
+
+    /**
+     * 내 토큰 출금 내역 조회 (tokenWithdrawals 컬렉션에서 본인 것만)
+     * @returns {Promise<Array>} { amount, status, createdAt }[]
+     */
+    function getMyTokenWithdrawals() {
+        return getCurrentMemberId().then(function (ids) {
+            if (!ids || !ids.userId) return [];
+            return getMypageDb().then(function (database) {
+                if (!database) return [];
+                return database.collection('tokenWithdrawals')
+                    .where('userId', '==', ids.userId)
+                    .get()
+                    .then(function (snap) {
+                        var list = [];
+                        snap.docs.forEach(function (d) {
+                            var data = d.data();
+                            list.push({ 
+                                id: d.id, 
+                                amount: data.quantity || data.amount || 0,
+                                status: data.status || 'pending',
+                                createdAt: data.createdAt,
+                                date: data.date
+                            });
+                        });
+                        list.sort(function (a, b) {
+                            var at = (a.createdAt && a.createdAt.toDate) ? a.createdAt.toDate() : new Date(a.date || 0);
+                            var bt = (b.createdAt && b.createdAt.toDate) ? b.createdAt.toDate() : new Date(b.date || 0);
+                            return bt - at;
+                        });
+                        return list;
+                    })
+                    .catch(function () { return []; });
+            });
+        });
+    }
+
+    /**
      * 내 추첨결과 목록 (관리자 추첨 확정 시 저장되는 lotteryConfirmedResults에서 본인 것만 조회)
      * @returns {Promise<Array>} { round, productName, result: 'winner'|'loser', support }[]
      */
@@ -165,7 +237,15 @@
                         var list = [];
                         snap.docs.forEach(function (d) {
                             var data = d.data();
-                            list.push({ id: d.id, round: data.round, productName: data.productName, result: data.result, support: data.support, date: data.date });
+                            list.push({ 
+                                id: d.id, 
+                                round: data.round, 
+                                productName: data.productName, 
+                                result: data.result, 
+                                support: data.support || data.calculatedSupport || 0, 
+                                paymentStatus: data.paymentStatus || 'pending',
+                                date: data.date 
+                            });
                         });
                         list.sort(function (a, b) {
                             var at = (a.date && typeof a.date === 'string') ? a.date : '';
@@ -312,6 +392,8 @@
         getCurrentMemberId: getCurrentMemberId,
         getCurrentMember: getCurrentMember,
         getMyOrders: getMyOrders,
+        getMyTokenDeposits: getMyTokenDeposits,
+        getMyTokenWithdrawals: getMyTokenWithdrawals,
         getMyLotteryResults: getMyLotteryResults,
         getBoardPosts: getBoardPosts,
         updateMember: updateMember,

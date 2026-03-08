@@ -79,7 +79,7 @@ function runMypageInit() {
             }
         }
         window._mypageOrders = orders || [];
-        displayUserInfo(user, member, orders);
+        await displayUserInfo(user, member, orders);
         updateWishlistAndCartCount();
         renderOrderSteps(orders);
         renderOrderList(orders);
@@ -207,23 +207,71 @@ if (document.readyState === 'loading') {
 }
 window.addEventListener('resize', closeMobileSlotIfDesktop);
 
-// 사용자 정보 표시 — 보유 토큰 = 쇼핑지원금(승인된 주문 지원금 합계)와 동일하게 표시
-function displayUserInfo(user, member, orders) {
+// 사용자 정보 표시 — 보유 토큰 = 쇼핑지원금(승인된 주문 지원금 합계 + 추첨 확정 지원금)와 동일하게 표시
+async function displayUserInfo(user, member, orders) {
     member = member || user;
     const name = (member && member.name) || user.name || user.userId || (user.email && user.email.split('@')[0]) || '사용자';
     const userNameEl = document.getElementById('userName');
     if (userNameEl) userNameEl.textContent = name;
 
     var totalSupport = 0;
-    if (orders && orders.length) {
-        var approved = orders.filter(function (o) { return o.status === 'approved'; });
-        approved.forEach(function (o) { totalSupport += (Number(o.supportAmount) || 0); });
+    
+    // 1. 토큰 구매(입금) 승인된 건들
+    try {
+        if (window.mypageApi && typeof window.mypageApi.getMyTokenDeposits === 'function') {
+            const deposits = await window.mypageApi.getMyTokenDeposits();
+            const approvedDeposits = deposits.filter(d => d.status === 'approved');
+            console.log('✅ 승인된 입금:', approvedDeposits.length, '건');
+            approvedDeposits.forEach(function (deposit) {
+                var amount = Number(deposit.amount) || 0;
+                console.log('입금 토큰:', amount, 'trix');
+                totalSupport += amount;
+            });
+        }
+    } catch (error) {
+        console.warn('토큰 입금 내역 로드 오류:', error);
     }
+    
+    // 2. 추첨 지원금 (지급 완료된 건만)
+    try {
+        if (window.mypageApi && typeof window.mypageApi.getMyLotteryResults === 'function') {
+            const lotteryResults = await window.mypageApi.getMyLotteryResults();
+            const paidResults = lotteryResults.filter(r => r.paymentStatus === 'paid');
+            console.log('✅ 지급완료된 추첨 지원금:', paidResults.length, '건');
+            paidResults.forEach(function (result) {
+                var support = Number(result.support) || 0;
+                console.log('추첨 지원금:', support, 'trix');
+                totalSupport += support;
+            });
+        }
+    } catch (error) {
+        console.warn('추첨 지원금 로드 오류:', error);
+    }
+    
+    // 3. 토큰 출금 승인된 건들 (차감)
+    try {
+        if (window.mypageApi && typeof window.mypageApi.getMyTokenWithdrawals === 'function') {
+            const withdrawals = await window.mypageApi.getMyTokenWithdrawals();
+            const approvedWithdrawals = withdrawals.filter(w => w.status === 'completed');
+            console.log('✅ 승인된 출금:', approvedWithdrawals.length, '건');
+            approvedWithdrawals.forEach(function (withdrawal) {
+                var amount = Number(withdrawal.amount) || 0;
+                console.log('출금 토큰:', amount, 'trix (차감)');
+                totalSupport -= amount; // 차감
+            });
+        }
+    } catch (error) {
+        console.warn('토큰 출금 내역 로드 오류:', error);
+    }
+    
     if (totalSupport === 0 && member && typeof member.tokenBalance === 'number') {
         totalSupport = member.tokenBalance;
     }
+    
+    console.log('✅ 총 지원금:', totalSupport, 'trix');
     var currentSupportEl = document.getElementById('currentSupport');
     var supportStr = formatTrix(totalSupport) + ' trix';
+    console.log('✅ 포맷된 지원금:', supportStr);
     if (currentSupportEl) currentSupportEl.textContent = supportStr;
     var withdrawBalanceEl = document.getElementById('tokenWithdrawBalance');
     if (withdrawBalanceEl) withdrawBalanceEl.textContent = supportStr;
@@ -236,7 +284,7 @@ function getCurrentSupportBalance() {
     var el = document.getElementById('currentSupport');
     if (!el) return 0;
     var text = (el.textContent || '').replace(/\s*trix/g, '').replace(/,/g, '').trim();
-    return parseInt(text, 10) || 0;
+    return parseFloat(text) || 0;
 }
 
 // 토큰 구매/출금: 우측 영역 섹션 표시 및 폼 제출
@@ -413,7 +461,7 @@ function renderSupportList() {
     var html = slice.map(function (o) {
         var date = formatDate(o.createdAt);
         var name = (o.productName || '-').replace(/</g, '&lt;');
-        var support = (o.supportAmount != null ? o.supportAmount : 0).toLocaleString();
+        var support = formatTrix(o.supportAmount != null ? o.supportAmount : 0);
         return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + date + '</td><td style="padding: 10px;">' + name + '</td><td style="padding: 10px; text-align: right;">' + support + ' trix</td></tr>';
     }).join('');
     tbody.innerHTML = html;
@@ -529,7 +577,7 @@ function renderLotteryList() {
                 var round = (r.round || r.roundId || '-').toString().replace(/</g, '&lt;');
                 var product = (r.productName || '-').replace(/</g, '&lt;');
                 var result = r.result === 'winner' ? '당첨' : '미선정';
-                var support = (r.support != null ? r.support : 0).toLocaleString();
+                var support = formatTrix(r.support != null ? r.support : 0);
                 return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + round + '</td><td style="padding: 10px;">' + product + '</td><td style="padding: 10px; text-align: center;">' + result + '</td><td style="padding: 10px; text-align: right;">' + support + ' trix</td></tr>';
             }).join('');
             tbody.innerHTML = html;
@@ -591,7 +639,7 @@ function renderOrderList(orders) {
         var priceNum = o.price != null ? o.price : (o.amount != null ? o.amount : 0);
         var price = (typeof priceNum === 'number' ? priceNum : Number(priceNum) || 0).toLocaleString();
         var supportNum = o.supportAmount != null ? o.supportAmount : (o.support != null ? o.support : 0);
-        var support = (typeof supportNum === 'number' ? supportNum : Number(supportNum) || 0).toLocaleString();
+        var support = formatTrix(typeof supportNum === 'number' ? supportNum : Number(supportNum) || 0);
         var status = statusLabel(o);
         html += '<li class="order-accordion-item">' +
             '<button type="button" class="order-accordion-header" aria-expanded="false">' +
@@ -958,6 +1006,7 @@ function bindProfileForm() {
         const postcodeEl = document.getElementById('profilePostcode');
         const addressEl = document.getElementById('profileAddress');
         const detailEl = document.getElementById('profileDetailAddress');
+        const mdCodeEl = document.getElementById('profileMdCode');
         const bankEl = document.getElementById('profileBank');
         const bankDirectEl = document.getElementById('profileBankDirect');
         const accountEl = document.getElementById('profileAccountNumber');
@@ -968,6 +1017,7 @@ function bindProfileForm() {
             postcode: postcodeEl ? postcodeEl.value.trim() : '',
             address: addressEl ? addressEl.value.trim() : '',
             detailAddress: detailEl ? detailEl.value.trim() : '',
+            mdCode: mdCodeEl ? mdCodeEl.value.trim() : '',
             bank: bankValue,
             accountNumber: accountEl ? accountEl.value.trim() : ''
         };
@@ -1017,6 +1067,7 @@ function fillProfileForm(member) {
     set('profilePostcode', member.postcode);
     set('profileAddress', member.address);
     set('profileDetailAddress', member.detailAddress);
+    set('profileMdCode', member.mdCode);
     set('profileAccountNumber', member.accountNumber);
     var bank = (member.bank || '').trim();
     var selectEl = document.getElementById('profileBank');

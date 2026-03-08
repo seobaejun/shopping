@@ -312,7 +312,8 @@ function saveStep2Data() {
         address: document.getElementById('address').value.trim(),
         detailAddress: document.getElementById('detailAddress').value.trim(),
         mobile: document.getElementById('mobile').value.trim(),
-        verifyCode: document.getElementById('verifyCode').value.trim()
+        verifyCode: document.getElementById('verifyCode').value.trim(),
+        mdCode: document.getElementById('mdCode').value.trim()
     };
 }
 
@@ -932,6 +933,7 @@ function setupFinalSignup() {
                 address: finalData.address,
                 detailAddress: finalData.detailAddress,
                 referralCode: finalData.referralCode || '',
+                mdCode: signupData.mdCode || '', // MD 추천인 코드 추가
                 agreeEmail: finalData.agreeEmail || false,
                 agreeSMS: finalData.agreeSMS || false,
                 agreePublic: finalData.agreePublic || false,
