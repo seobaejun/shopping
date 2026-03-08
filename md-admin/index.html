@@ -4,17 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MD 관리자 - 회원조회 / 개인별 구매 누적정보</title>
-    <script>
-    (function(){
-        var path = document.location.pathname || '';
-        if (path.indexOf('md-admin') !== -1 && !document.querySelector('base')) {
-            var base = document.createElement('base');
-            var dir = path === '/md-admin' || path === '/' ? '/md-admin/' : (path.endsWith('/') ? path : path.replace(/\/[^/]*$/, '') + '/');
-            base.setAttribute('href', dir);
-            document.head.insertBefore(base, document.head.firstChild);
-        }
-    })();
-    </script>
     <script src="../js/image-config.js"></script>
     <link rel="stylesheet" href="../admin/css/admin.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

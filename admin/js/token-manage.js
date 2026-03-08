@@ -239,13 +239,15 @@
         var slice = allOrdersData.slice(start, start + TOKEN_HISTORY_PER_PAGE);
         tbody.innerHTML = slice.map(function (o) {
             var dateStr = formatDate(o.createdAt);
-            var info = tokenMemberMap[o.memberId] || { userId: o.memberId || '-', name: '' };
+            var info = tokenMemberMap[o.memberId] || { userId: o.memberId || o.userId || '-', name: '' };
             var memberStr = escapeHtml(info.name) + ' (' + escapeHtml(info.userId) + ')';
             var name = escapeHtml((o.productName || '-').replace(/</g, '&lt;'));
-            var price = (o.price != null ? o.price : 0).toLocaleString();
-            var support = (o.supportAmount != null ? o.supportAmount : 0).toLocaleString();
+            var amount = Number(o.totalPrice ?? o.productPrice ?? o.amount ?? 0) || (Number(o.price || 0) * Number(o.quantity || 1));
+            var priceStr = amount.toLocaleString();
+            var supportNum = Number(o.supportAmount ?? o.support ?? o.productSupport ?? 0);
+            var support = supportNum.toLocaleString();
             var status = orderStatusLabel(o.status);
-            return '<tr><td>' + dateStr + '</td><td>' + memberStr + '</td><td>' + name + '</td><td>' + price + '원</td><td>' + support + ' trix</td><td>' + escapeHtml(status) + '</td></tr>';
+            return '<tr><td>' + dateStr + '</td><td>' + memberStr + '</td><td>' + name + '</td><td>' + priceStr + '원</td><td>' + support + ' trix</td><td>' + escapeHtml(status) + '</td></tr>';
         }).join('');
         renderTokenPagination(total, currentOrdersPage, 'tokenAllOrdersPagination', 'goToTokenOrdersPage');
     }

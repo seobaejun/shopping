@@ -420,7 +420,11 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
         tbody.innerHTML = '<tr><td colspan="13" class="empty-message">검색 결과가 없습니다.</td></tr>';
         if (paginationElId) {
             const paginationEl = document.getElementById(paginationElId);
-            if (paginationEl) paginationEl.innerHTML = '';
+            if (paginationEl) {
+                const changeFn = isSearchResults ? 'changeSearchResultsPage' : 'changeMemberPage';
+                paginationEl.innerHTML = '<button type="button" class="page-btn" disabled><i class="fas fa-chevron-left"></i></button><button type="button" class="page-num active" data-page="1">1</button><button type="button" class="page-btn" disabled><i class="fas fa-chevron-right"></i></button>';
+                paginationEl.dataset.changeFn = changeFn;
+            }
         }
         return;
     }
@@ -488,15 +492,12 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
     if (paginationElId) {
         const paginationEl = document.getElementById(paginationElId);
         if (paginationEl) {
-            if (totalPages > 1) {
-                const changeFn = isSearchResults ? 'changeSearchResultsPage' : 'changeMemberPage';
-                let html = `<button class="page-btn" ${page === 1 ? 'disabled' : ''} onclick="${changeFn}(${page - 1})"><i class="fas fa-chevron-left"></i></button>`;
-                for (let i = 1; i <= totalPages; i++) html += `<button class="page-num ${i === page ? 'active' : ''}" onclick="${changeFn}(${i})">${i}</button>`;
-                html += `<button class="page-btn" ${page === totalPages ? 'disabled' : ''} onclick="${changeFn}(${page + 1})"><i class="fas fa-chevron-right"></i></button>`;
-                paginationEl.innerHTML = html;
-            } else {
-                paginationEl.innerHTML = '';
-            }
+            const changeFn = isSearchResults ? 'changeSearchResultsPage' : 'changeMemberPage';
+            let html = `<button type="button" class="page-btn" data-page="${page - 1}" ${page === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+            for (let i = 1; i <= totalPages; i++) html += `<button type="button" class="page-num ${i === page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+            html += `<button type="button" class="page-btn" data-page="${page + 1}" ${page === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+            paginationEl.innerHTML = html;
+            paginationEl.dataset.changeFn = changeFn;
         }
     }
 }
@@ -881,11 +882,36 @@ console.log('✅ 회원 관리 함수 전역 등록 완료:', {
     deleteMemberInfo: typeof window.deleteMemberInfo
 });
 
+// 페이지네이션 클릭 이벤트 위임 (버튼 눌러도 반응하도록)
+(function() {
+    function handlePaginationClick(e) {
+        var btn = e.target.closest('button[data-page]');
+        if (!btn || btn.disabled) return;
+        var p = parseInt(btn.getAttribute('data-page'), 10);
+        if (isNaN(p) || p < 1) return;
+        var pagEl = e.target.closest('#memberPagination');
+        var searchPagEl = e.target.closest('#searchResultsPagination');
+        if (pagEl && typeof window.changeMemberPage === 'function') {
+            e.preventDefault();
+            window.changeMemberPage(p);
+        } else if (searchPagEl && typeof window.changeSearchResultsPage === 'function') {
+            e.preventDefault();
+            window.changeSearchResultsPage(p);
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.addEventListener('click', handlePaginationClick);
+        });
+    } else {
+        document.body.addEventListener('click', handlePaginationClick);
+    }
+})();
+
 // 페이지 로드 시 자동 초기화 (member-search 페이지가 활성화되어 있으면 즉시 로드)
 (function() {
     console.log('🔵 member-search.js 로드 완료');
     
-    // DOM이 준비되면 실행
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', checkAndLoad);
     } else {
@@ -893,7 +919,6 @@ console.log('✅ 회원 관리 함수 전역 등록 완료:', {
     }
     
     function checkAndLoad() {
-        // member-search 페이지가 활성화되어 있는지 확인
         const memberSearchPage = document.getElementById('member-search');
         if (memberSearchPage && memberSearchPage.classList.contains('active')) {
             console.log('🔵 member-search 페이지가 활성화되어 있음, 즉시 데이터 로드');

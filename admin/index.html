@@ -4,20 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>10쇼핑게임 관리자</title>
-    <script>
-    (function(){
-        var path = document.location.pathname || '';
-        if (path.indexOf('admin') !== -1 && !document.querySelector('base')) {
-            var base = document.createElement('base');
-            var dir;
-            if (path === '/admin' || path === '/') dir = '/admin/';
-            else if (path.endsWith('/')) dir = path;
-            else dir = path.replace(/\/[^/]*$/, '') + '/';
-            base.setAttribute('href', dir);
-            document.head.insertBefore(base, document.head.firstChild);
-        }
-    })();
-    </script>
     <script src="../js/image-config.js"></script>
     <link rel="stylesheet" href="css/admin.css?v=20260219-25">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1082,6 +1068,7 @@
                         <button class="btn btn-primary" id="memberSearchBtn">검색</button>
                         <button class="btn btn-secondary" id="memberExportBtn">엑셀 다운로드</button>
                         <button class="btn btn-default" id="memberResetBtn">취소</button>
+                        <button type="button" class="btn btn-default" id="memberDeleteFakeBtn" title="테스트/가짜 회원·MD만 삭제 (진짜 데이터 유지)">테스트 데이터 삭제</button>
                     </div>
                 </div>
 
@@ -1152,16 +1139,8 @@
                     </table>
                 </div>
 
-                <!-- 페이지네이션 -->
-                <div class="pagination">
-                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
-                    <button class="page-num active">1</button>
-                    <button class="page-num">2</button>
-                    <button class="page-num">3</button>
-                    <button class="page-num">4</button>
-                    <button class="page-num">5</button>
-                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                </div>
+                <!-- 페이지네이션 (1페이지만 있으면 비움, 2페이지 이상일 때만 버튼 표시) -->
+                <div id="memberPagination" class="pagination"></div>
             </div>
 
             <!-- 토큰 관리 페이지 -->

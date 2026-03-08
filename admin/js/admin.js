@@ -2102,8 +2102,8 @@ async function loadAllMembers() {
     }
 }
 
-// 전역 함수로 export
-window.loadAllMembers = loadAllMembers;
+// 전역 export는 member-search.js의 loadAllMembers 사용 (전체회원 테이블 표시 일원화)
+// window.loadAllMembers = loadAllMembers;
 
 // 테스트 함수 - 콘솔에서 직접 호출 가능
 window.testFirestoreMembers = async function() {
@@ -2337,64 +2337,39 @@ function escapeHtml(str) {
     });
 }
 
-// 페이지네이션 렌더링
+// 페이지네이션 렌더링 (1페이지일 때도 "1" 표시)
 function renderMemberPagination(totalMembers) {
     const paginationEl = document.getElementById('memberPagination');
     if (!paginationEl) return;
     
-    const totalPages = Math.ceil(totalMembers / membersPerPage);
-    
-    if (totalPages <= 1) {
-        paginationEl.innerHTML = '';
-        return;
-    }
-    
+    const totalPages = Math.max(1, Math.ceil(totalMembers / membersPerPage));
+    const page = Math.min(Math.max(1, currentMemberPage), totalPages);
+
     let paginationHTML = '';
-    
-    // 이전 버튼
-    paginationHTML += `<button class="page-btn" ${currentMemberPage === 1 ? 'disabled' : ''} onclick="changeMemberPage(${currentMemberPage - 1})">
-        <i class="fas fa-chevron-left"></i>
-    </button>`;
-    
-    // 페이지 번호
+    paginationHTML += `<button class="page-btn" ${page === 1 ? 'disabled' : ''} onclick="changeMemberPage(${page - 1})"><i class="fas fa-chevron-left"></i></button>`;
     const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentMemberPage - Math.floor(maxVisiblePages / 2));
+    let startPage = Math.max(1, page - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
     if (endPage - startPage < maxVisiblePages - 1) {
         startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
-    
     for (let i = startPage; i <= endPage; i++) {
-        paginationHTML += `<button class="page-num ${i === currentMemberPage ? 'active' : ''}" onclick="changeMemberPage(${i})">${i}</button>`;
+        paginationHTML += `<button class="page-num ${i === page ? 'active' : ''}" onclick="changeMemberPage(${i})">${i}</button>`;
     }
-    
-    // 다음 버튼
-    paginationHTML += `<button class="page-btn" ${currentMemberPage === totalPages ? 'disabled' : ''} onclick="changeMemberPage(${currentMemberPage + 1})">
-        <i class="fas fa-chevron-right"></i>
-    </button>`;
-    
+    paginationHTML += `<button class="page-btn" ${page === totalPages ? 'disabled' : ''} onclick="changeMemberPage(${page + 1})"><i class="fas fa-chevron-right"></i></button>`;
     paginationEl.innerHTML = paginationHTML;
 }
 
-// 페이지 변경
-function changeMemberPage(page) {
-    const totalPages = Math.ceil(filteredMembersData.length / membersPerPage);
+// 페이지 변경 (전체회원 테이블은 member-search.js의 changeMemberPage 사용 — 덮어쓰지 않음)
+function changeMemberPageLocal(page) {
+    const data = window.filteredMembersData || filteredMembersData || [];
+    const totalPages = Math.ceil(data.length / membersPerPage);
     if (page < 1 || page > totalPages) return;
-    
     currentMemberPage = page;
+    window.currentMemberPage = page;
     renderMemberInfoTable();
-    
-    // 페이지 상단으로 스크롤
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
-// 전역 함수로 export (member-search.js의 함수를 사용)
-// window.searchMemberInfo는 member-search.js에서 export됨
-// window.resetMemberSearch는 member-search.js에서 export됨
-// window.editMemberInfo는 member-search.js에서 export됨
-// window.deleteMemberInfo는 member-search.js에서 export됨
-window.changeMemberPage = changeMemberPage;
 
 function renderMemberTable(data) {
     const tbody = document.getElementById('memberSearchBody');
@@ -4797,6 +4772,13 @@ async function loadAdminSettings() {
                     if (m.userId) memberMap[m.userId] = m;
                     if (m.name && !memberMap[m.name]) memberMap[m.name] = m;
                 });
+                var wrongAdmin = admins.find(function(a) { return a.userId === 'seobaejun' && (a.name === '서태순' || a.name === '서배준'); });
+                if (wrongAdmin) {
+                    try {
+                        await adminService.updateAdmin(wrongAdmin.id, { userId: '어린왕자', name: '서배준' });
+                        admins = await adminService.getAdmins();
+                    } catch (fixErr) { console.warn('관리자 서배준 보정 실패:', fixErr); }
+                }
             }
         } catch (e) {
             console.warn('회원 목록 보조 로드 실패:', e);
@@ -4829,7 +4811,8 @@ function renderAdminSettingsTable(admins, memberMap) {
     }
     tbody.innerHTML = admins.map((a, i) => {
         var member = memberMap[a.userId] || memberMap[a.name];
-        var displayUserId = (member && member.userId) ? member.userId : (a.userId || '');
+        var displayUserId = (a.userId || '').trim();
+        var displayName = (a.name || '').trim();
         var displayEmail = (member && member.email) ? member.email : (a.email || '');
         var displayPhone = (member && member.phone) ? member.phone : (a.phone || '');
         const createdAt = formatAdminDate(a.createdAt);
@@ -4840,7 +4823,7 @@ function renderAdminSettingsTable(admins, memberMap) {
         return `<tr data-admin-id="${a.id}">
             <td>${i + 1}</td>
             <td>${escapeHtml(displayUserId)}</td>
-            <td>${escapeHtml(a.name || '')}</td>
+            <td>${escapeHtml(displayName)}</td>
             <td>${escapeHtml(displayEmail)}</td>
             <td>${escapeHtml(displayPhone)}</td>
             <td>${createdAt}</td>
@@ -5804,6 +5787,19 @@ async function initAdminPage() {
                 return false;
             };
             console.log('✅ 회원정보 엑셀 다운로드 버튼 등록 완료');
+        }
+
+        var memberDeleteFakeBtn = document.getElementById('memberDeleteFakeBtn');
+        if (memberDeleteFakeBtn) {
+            memberDeleteFakeBtn.onclick = async function(e) {
+                e.preventDefault();
+                if (typeof window.deleteFakeMembers === 'function') {
+                    await window.deleteFakeMembers();
+                } else {
+                    alert('delete-firebase-data.js가 로드된 후 사용해주세요.');
+                }
+                return false;
+            };
         }
 
         // 관리권한설정: 추가 버튼, 모달, 테이블 이벤트

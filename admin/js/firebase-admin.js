@@ -165,6 +165,22 @@ const collections = {
     }
 };
 
+// 테스트/가짜 회원 판별 (seed-test, md-admin 테스트 계정 등)
+const TEST_USER_IDS = ['testmd1', 'testmd2', 'testuser'];
+const TEST_EMAIL_PATTERN = /@test\./i;
+const TEST_NAMES = ['회원A', '회원B', '회원C', '회원D', '회원E', '회원F', '테스트MD1', '테스트MD2', '테스트사용자', '4자리테스트', '5자리테스트'];
+
+function isTestMember(m) {
+    if (!m) return false;
+    var uid = (m.userId || '').toString().trim().toLowerCase();
+    var email = (m.email || '').toString().trim().toLowerCase();
+    var name = (m.name || m.userName || '').toString().trim();
+    if (uid && (uid.startsWith('test_') || TEST_USER_IDS.includes(uid))) return true;
+    if (email && (TEST_EMAIL_PATTERN.test(email) || email.endsWith('@test.com'))) return true;
+    if (name && TEST_NAMES.includes(name)) return true;
+    return false;
+}
+
 // 회원 관리 함수
 const memberService = {
     // 회원 목록 가져오기
@@ -215,30 +231,66 @@ const memberService = {
             const snapshot = await query.get();
             console.log('✅ Firestore 쿼리 성공, 문서 개수:', snapshot.docs.length);
             
-            if (snapshot.empty) {
-                console.warn('⚠️ members 컬렉션이 비어있습니다.');
-                return [];
+            let members = snapshot.empty
+                ? []
+                : snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return { id: doc.id, ...data };
+                });
+            if (snapshot.empty) console.warn('⚠️ members 컬렉션이 비어있습니다.');
+
+            // 이미 있는 식별자 (userId/email 기준, 중복 방지)
+            const memberIds = new Set(members.map(m => (m.userId || m.email || '').toString().toLowerCase().trim()).filter(Boolean));
+
+            function addAdminOrMd(data, docId, label) {
+                const key = (data.userId || data.email || data.name || '').toString().toLowerCase().trim() || ('_' + docId);
+                if (key.startsWith('_') === false && memberIds.has(key)) return; // 동일 회원이 이미 있으면 스킵
+                if (!key.startsWith('_')) memberIds.add(key);
+                members.push({
+                    id: docId,
+                    userId: data.userId || data.email || '(관리자)',
+                    name: data.name || data.userName || '관리자',
+                    email: data.email || '',
+                    phone: data.phone || data.mobile || '',
+                    status: data.status || 'active',
+                    createdAt: data.createdAt,
+                    isAdmin: true,
+                    _source: label
+                });
             }
-            
-            const members = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data
-                };
-            });
+
+            var beforeAdmins = members.length;
+            try {
+                const adminsSnap = await db.collection('admins').get();
+                adminsSnap.docs.forEach(doc => addAdminOrMd(doc.data(), doc.id, 'admins'));
+                console.log('✅ admins 병합:', (members.length - beforeAdmins) + '명 추가, 총', members.length, '명');
+            } catch (e) { console.warn('admins 병합 실패:', e); }
+
+            var beforeMd = members.length;
+            try {
+                const mdSnap = await db.collection('mdManagers').get();
+                mdSnap.docs.forEach(doc => addAdminOrMd(doc.data(), doc.id, 'mdManagers'));
+                console.log('✅ mdManagers 병합:', (members.length - beforeMd) + '명 추가, 총', members.length, '명');
+            } catch (e) { console.warn('mdManagers 병합 실패:', e); }
             
             console.log('✅ 회원 데이터 변환 완료:', members.length, '명');
-            console.log('첫 번째 회원 샘플:', members[0]);
+            if (members.length > 0) console.log('첫 번째 회원 샘플:', members[0]);
             
-            // createdAt이 있으면 클라이언트 측에서 정렬
-            if (members.length > 0 && members[0].createdAt) {
+            // createdAt 기준 정렬 (없으면 0으로 처리해 맨 뒤로)
+            if (members.length > 1) {
                 members.sort((a, b) => {
-                    const aTime = a.createdAt?.seconds || (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0) || 0;
-                    const bTime = b.createdAt?.seconds || (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0) || 0;
-                    return bTime - aTime; // 내림차순
+                    const aTime = a.createdAt?.seconds != null ? a.createdAt.seconds * 1000 : (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0) || 0;
+                    const bTime = b.createdAt?.seconds != null ? b.createdAt.seconds * 1000 : (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0) || 0;
+                    return bTime - aTime;
                 });
-                console.log('✅ createdAt 기준 정렬 완료');
+                console.log('✅ 정렬 완료');
+            }
+
+            // 테스트/가짜 회원 제외 (회원조회에 진짜 데이터만 표시)
+            var beforeFilter = members.length;
+            members = members.filter(function (m) { return !isTestMember(m); });
+            if (beforeFilter !== members.length) {
+                console.log('✅ 테스트 회원 제외:', (beforeFilter - members.length) + '명 제외, 표시:', members.length + '명');
             }
             
             return members;
@@ -1081,6 +1133,7 @@ window.firebaseAdmin = {
     getDb,
     get db() { return db; },
     collections,
+    isTestMember,
     memberService,
     productService,
     orderService,
