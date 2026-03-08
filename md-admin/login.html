@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD 관리자 로그인 - 10쇼핑게임</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .login-container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-header {
+            margin-bottom: 2rem;
+        }
+
+        .login-header h1 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-login {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 1rem;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .login-footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .login-footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .info-box h4 {
+            margin-bottom: 0.5rem;
+            color: #0c5460;
+        }
+
+        .info-box ul {
+            margin-left: 1rem;
+        }
+
+        .info-box li {
+            margin-bottom: 0.3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1><i class="fas fa-user-tie"></i> MD 관리자</h1>
+            <p>MD코드와 비밀번호로 로그인하세요</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="userId">MD코드</label>
+                <input type="text" id="userId" name="userId" placeholder="MD코드를 입력하세요 (예: 1024, 12041)" required maxlength="5">
+            </div>
+
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" name="password" placeholder="MD 관리자 비밀번호를 입력하세요" required>
+            </div>
+
+            <button type="submit" class="btn-login" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i> 로그인
+            </button>
+            
+            <button type="button" class="btn-login" onclick="testFirebase()" style="background: #6c757d; margin-top: 0.5rem;">
+                <i class="fas fa-database"></i> Firebase 연결 테스트
+            </button>
+            
+            <button type="button" class="btn-login" onclick="testMemberSearch()" style="background: #17a2b8; margin-top: 0.5rem;">
+                <i class="fas fa-search"></i> MD코드 검색 테스트
+            </button>
+            
+            <button type="button" class="btn-login" onclick="createTestMember()" style="background: #28a745; margin-top: 0.5rem;">
+                <i class="fas fa-user-plus"></i> 테스트 회원 생성
+            </button>
+            
+            <button type="button" class="btn-login" onclick="quickLogin()" style="background: #fd7e14; margin-top: 0.5rem;">
+                <i class="fas fa-bolt"></i> 빠른 로그인 (1024)
+            </button>
+            
+            <button type="button" class="btn-login" onclick="simpleLogin()" style="background: #dc3545; margin-top: 0.5rem;">
+                <i class="fas fa-key"></i> 강제 로그인 (테스트용)
+            </button>
+        </form>
+
+        <div class="login-footer">
+            <a href="../index.html"><i class="fas fa-home"></i> 메인 페이지로 돌아가기</a>
+        </div>
+    </div>
+
+    <!-- Firebase 설정 -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script>
+        // Firebase 초기화 확인
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('페이지 로드됨');
+            console.log('Firebase:', typeof firebase);
+            console.log('window.db:', window.db);
+            
+            // Firebase 수동 초기화 시도
+            if (typeof firebase !== 'undefined' && !window.db) {
+                try {
+                    if (!firebase.apps.length) {
+                        // Firebase 설정 (firebase-config.js에서 가져와야 함)
+                        const firebaseConfig = {
+                            apiKey: "AIzaSyDGpAHia_wEmrhnmYjrPf1n1TrAzwEMiAI",
+                            authDomain: "shopping-2e9d5.firebaseapp.com",
+                            projectId: "shopping-2e9d5",
+                            storageBucket: "shopping-2e9d5.firebasestorage.app",
+                            messagingSenderId: "381044411321",
+                            appId: "1:381044411321:web:7c197439b0c7098bb83085"
+                        };
+                        firebase.initializeApp(firebaseConfig);
+                    }
+                    window.db = firebase.firestore();
+                    console.log('Firebase 수동 초기화 완료');
+                } catch (error) {
+                    console.error('Firebase 수동 초기화 오류:', error);
+                }
+            }
+        });
+    </script>
+    <script>
+        // MD 로그인 처리
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const mdCode = document.getElementById('userId').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            console.log('MD 로그인 시도:', mdCode);
+            
+            if (!mdCode || !password) {
+                showError('MD코드와 비밀번호를 모두 입력해주세요.');
+                return;
+            }
+            
+            // MD코드 유효성 검사
+            if (!/^\d{4,5}$/.test(mdCode)) {
+                showError('MD코드는 4자리 또는 5자리 숫자여야 합니다.');
+                return;
+            }
+            
+            // 고정 비밀번호 확인
+            if (password !== '@@7799') {
+                showError('비밀번호가 올바르지 않습니다.');
+                return;
+            }
+            
+            // 로딩 시작
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<div class="loading"></div> 로그인 중...';
+            hideError();
+            
+            try {
+                console.log('Firebase 확인 시작...');
+                
+                // Firebase 초기화 대기
+                let retryCount = 0;
+                const maxRetries = 50; // 5초 대기
+                
+                while (!window.db && retryCount < maxRetries) {
+                    console.log('Firebase 대기 중...', retryCount);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    retryCount++;
+                }
+                
+                if (!window.db) {
+                    console.error('Firebase 연결 실패');
+                    showError('Firebase 연결에 실패했습니다. 페이지를 새로고침해주세요.');
+                    return;
+                }
+                
+                console.log('Firebase 연결 성공, MD 조회 시작...');
+                
+                // 1. MD코드로 회원 조회
+                console.log('MD코드로 회원 조회 시작:', mdCode, '(타입:', typeof mdCode, ')');
+                
+                // 문자열과 숫자 둘 다 시도
+                const memberSnapshot1 = await window.db.collection('members')
+                    .where('mdCode', '==', mdCode)
+                    .get();
+                
+                const memberSnapshot2 = await window.db.collection('members')
+                    .where('mdCode', '==', parseInt(mdCode))
+                    .get();
+                
+                console.log('MD코드 문자열 조회 결과:', memberSnapshot1.size, '개');
+                console.log('MD코드 숫자 조회 결과:', memberSnapshot2.size, '개');
+                
+                let memberSnapshot = memberSnapshot1.size > 0 ? memberSnapshot1 : memberSnapshot2;
+                
+                if (memberSnapshot.empty) {
+                    // 전체 MD코드 확인
+                    console.log('=== 전체 MD코드 확인 ===');
+                    const allMembers = await window.db.collection('members').get();
+                    let allMdCodes = [];
+                    
+                    allMembers.forEach(doc => {
+                        const data = doc.data();
+                        if (data.mdCode) {
+                            allMdCodes.push({
+                                mdCode: data.mdCode,
+                                type: typeof data.mdCode,
+                                userId: data.userId,
+                                userName: data.userName
+                            });
+                        }
+                    });
+                    
+                    console.log('존재하는 모든 MD코드들:', allMdCodes);
+                    
+                    const exactMatch = allMdCodes.find(m => m.mdCode.toString() === mdCode.toString());
+                    if (exactMatch) {
+                        console.log('정확한 일치 발견:', exactMatch);
+                        showError(`MD코드 ${mdCode}는 존재하지만 조회에 실패했습니다. 관리자에게 문의하세요.`);
+                    } else {
+                        const availableCodes = allMdCodes.map(m => m.mdCode).join(', ');
+                        showError(`존재하지 않는 MD코드입니다. 사용 가능한 MD코드: ${availableCodes}`);
+                    }
+                    return;
+                }
+                
+                // 첫 번째 회원을 MD로 사용 (같은 MD코드를 가진 회원이 여러 명일 수 있음)
+                const memberDoc = memberSnapshot.docs[0];
+                const memberData = memberDoc.data();
+                
+                console.log('MD 회원 데이터:', {
+                    userId: memberData.userId,
+                    userName: memberData.userName,
+                    mdCode: memberData.mdCode,
+                    email: memberData.email
+                });
+                
+                console.log('로그인 성공, 세션 저장 중...');
+                
+                // 2. 로그인 성공
+                const loginData = {
+                    id: memberDoc.id,
+                    userId: memberData.userId,
+                    userName: memberData.userName,
+                    mdCode: memberData.mdCode,
+                    email: memberData.email,
+                    phone: memberData.mobile,
+                    loginTime: new Date().toISOString()
+                };
+                
+                // 세션 저장
+                localStorage.setItem('isMdAdmin', 'true');
+                localStorage.setItem('mdAdminData', JSON.stringify(loginData));
+                localStorage.setItem('currentMdCode', memberData.mdCode);
+                
+                console.log('세션 저장 완료, 페이지 이동...');
+                
+                // MD 관리자 페이지로 이동
+                window.location.href = 'index.html';
+                
+            } catch (error) {
+                console.error('로그인 오류:', error);
+                showError('로그인 중 오류가 발생했습니다: ' + error.message);
+            } finally {
+                // 로딩 종료
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 로그인';
+            }
+        });
+        
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+        
+        function hideError() {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'none';
+        }
+        
+        // Firebase 연결 테스트
+        async function testFirebase() {
+            console.log('=== Firebase 테스트 시작 ===');
+            console.log('Firebase 객체:', typeof firebase);
+            console.log('window.db:', window.db);
+            
+            try {
+                if (!window.db) {
+                    console.log('Firebase 수동 초기화 시도...');
+                    if (typeof firebase !== 'undefined') {
+                        window.db = firebase.firestore();
+                        console.log('수동 초기화 완료');
+                    } else {
+                        console.error('Firebase 라이브러리가 로드되지 않음');
+                        alert('Firebase 라이브러리가 로드되지 않았습니다.');
+                        return;
+                    }
+                }
+                
+                console.log('=== 모든 컬렉션 확인 ===');
+                
+                // 가능한 컬렉션들 확인
+                const collections = ['members', 'users', 'accounts', 'customers'];
+                
+                for (const collectionName of collections) {
+                    try {
+                        console.log(`${collectionName} 컬렉션 조회 중...`);
+                        const snapshot = await window.db.collection(collectionName).limit(3).get();
+                        console.log(`${collectionName} 결과:`, snapshot.size, '개 문서');
+                        
+                        if (snapshot.size > 0) {
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                console.log(`${collectionName} 데이터:`, {
+                                    id: doc.id,
+                                    ...Object.keys(data).reduce((obj, key) => {
+                                        if (key.toLowerCase().includes('id') || 
+                                            key.toLowerCase().includes('name') || 
+                                            key.toLowerCase().includes('email') ||
+                                            key.toLowerCase().includes('user') ||
+                                            key.toLowerCase().includes('password')) {
+                                            obj[key] = typeof data[key] === 'string' ? data[key] : typeof data[key];
+                                        }
+                                        return obj;
+                                    }, {})
+                                });
+                            });
+                        }
+                    } catch (error) {
+                        console.log(`${collectionName} 컬렉션 조회 실패:`, error.message);
+                    }
+                }
+                
+                // 관리자 컬렉션도 확인
+                try {
+                    console.log('=== 관리자 관련 컬렉션 확인 ===');
+                    const adminSnapshot = await window.db.collection('admins').limit(3).get();
+                    console.log('admins 결과:', adminSnapshot.size, '개 문서');
+                    
+                    const mdAdminSnapshot = await window.db.collection('mdAdmins').limit(3).get();
+                    console.log('mdAdmins 결과:', mdAdminSnapshot.size, '개 문서');
+                } catch (error) {
+                    console.log('관리자 컬렉션 조회 오류:', error.message);
+                }
+                
+                alert('컬렉션 조회 완료! 콘솔을 확인하세요.');
+                
+            } catch (error) {
+                console.error('Firebase 테스트 오류:', error);
+                alert('Firebase 연결 실패: ' + error.message);
+            }
+        }
+        
+        // MD코드 검색 테스트
+        async function testMemberSearch() {
+            const mdCode = document.getElementById('userId').value.trim();
+            if (!mdCode) {
+                alert('MD코드를 입력하고 테스트하세요.');
+                return;
+            }
+            
+            try {
+                console.log('=== MD코드 검색 테스트 ===');
+                console.log('검색할 MD코드:', mdCode);
+                
+                if (!window.db) {
+                    window.db = firebase.firestore();
+                }
+                
+                // MD코드로 정확한 일치 검색
+                const exactSnapshot = await window.db.collection('members')
+                    .where('mdCode', '==', mdCode)
+                    .get();
+                
+                console.log('MD코드 정확한 일치 결과:', exactSnapshot.size, '개');
+                
+                if (exactSnapshot.size > 0) {
+                    exactSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        console.log('MD코드 일치 회원:', {
+                            id: doc.id,
+                            userId: data.userId,
+                            userName: data.userName,
+                            mdCode: data.mdCode,
+                            email: data.email
+                        });
+                    });
+                }
+                
+                // 모든 회원의 MD코드 확인
+                console.log('=== 전체 회원의 MD코드 확인 ===');
+                const allSnapshot = await window.db.collection('members').get();
+                console.log('전체 회원 수:', allSnapshot.size);
+                
+                let mdCodeMembers = [];
+                allSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.mdCode) {
+                        mdCodeMembers.push({
+                            id: doc.id,
+                            userId: data.userId,
+                            userName: data.userName,
+                            mdCode: data.mdCode,
+                            mdCodeType: typeof data.mdCode
+                        });
+                    }
+                });
+                
+                console.log('MD코드가 있는 회원들:', mdCodeMembers);
+                
+                // 입력한 MD코드와 유사한 것들 찾기
+                const similarMdCodes = mdCodeMembers.filter(m => 
+                    m.mdCode.toString().includes(mdCode) || mdCode.includes(m.mdCode.toString())
+                );
+                
+                if (similarMdCodes.length > 0) {
+                    console.log('유사한 MD코드들:', similarMdCodes);
+                }
+                
+                alert('MD코드 검색 테스트 완료! 콘솔을 확인하세요.');
+                
+            } catch (error) {
+                console.error('MD코드 검색 테스트 오류:', error);
+                alert('검색 실패: ' + error.message);
+            }
+        }
+        
+        // 테스트 회원 생성
+        async function createTestMember() {
+            try {
+                console.log('=== 테스트 회원 생성 ===');
+                
+                if (!window.db) {
+                    window.db = firebase.firestore();
+                }
+                
+                // 테스트 회원 데이터
+                const testMembers = [
+                    {
+                        userId: 'testmd1',
+                        password: 'testmd1',
+                        userName: '테스트MD1',
+                        email: 'testmd1@test.com',
+                        mobile: '010-1234-5678',
+                        mdCode: '1024',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    },
+                    {
+                        userId: 'testmd2',
+                        password: 'testmd2',
+                        userName: '테스트MD2',
+                        email: 'testmd2@test.com',
+                        mobile: '010-1234-5679',
+                        mdCode: '10241',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    },
+                    {
+                        userId: 'testuser',
+                        password: 'testuser',
+                        userName: '테스트사용자',
+                        email: 'testuser@test.com',
+                        mobile: '010-1234-5680',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }
+                ];
+                
+                // 회원 생성
+                for (const member of testMembers) {
+                    // 중복 확인
+                    const existingSnapshot = await window.db.collection('members')
+                        .where('userId', '==', member.userId)
+                        .get();
+                    
+                    if (existingSnapshot.empty) {
+                        await window.db.collection('members').add(member);
+                        console.log('회원 생성 완료:', member.userId);
+                    } else {
+                        console.log('이미 존재하는 회원:', member.userId);
+                    }
+                }
+                
+                // MD 관리자 권한 추가
+                const mdMembers = testMembers.filter(m => m.mdCode);
+                for (const mdMember of mdMembers) {
+                    const existingMdSnapshot = await window.db.collection('mdAdmins')
+                        .where('userId', '==', mdMember.userId)
+                        .get();
+                    
+                    if (existingMdSnapshot.empty) {
+                        await window.db.collection('mdAdmins').add({
+                            userId: mdMember.userId,
+                            userName: mdMember.userName,
+                            mdCode: mdMember.mdCode,
+                            email: mdMember.email,
+                            phone: mdMember.mobile,
+                            status: 'active',
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log('MD 관리자 권한 추가 완료:', mdMember.userId);
+                    } else {
+                        console.log('이미 MD 권한이 있는 회원:', mdMember.userId);
+                    }
+                }
+                
+                alert('테스트 회원 생성 완료!\n\n로그인 테스트 계정:\n- testmd1 / testmd1 (4자리 MD)\n- testmd2 / testmd2 (5자리 MD)\n- testuser / testuser (일반 회원)');
+                
+            } catch (error) {
+                console.error('테스트 회원 생성 오류:', error);
+                alert('테스트 회원 생성 실패: ' + error.message);
+            }
+        }
+        
+        // 빠른 로그인 테스트
+        async function quickLogin() {
+            document.getElementById('userId').value = '1024';
+            document.getElementById('password').value = '@@7799';
+            
+            // 잠시 후 로그인 시도
+            setTimeout(() => {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }, 500);
+        }
+        
+        // 단순 로그인 테스트 (모든 검증 생략)
+        async function simpleLogin() {
+            try {
+                console.log('=== 단순 로그인 테스트 ===');
+                
+                if (!window.db) {
+                    window.db = firebase.firestore();
+                }
+                
+                // 로그인 성공으로 가정하고 세션 저장
+                const loginData = {
+                    id: 'test-id',
+                    userId: 'testmd1',
+                    userName: '테스트MD1',
+                    mdCode: '1024',
+                    email: 'testmd1@test.com',
+                    phone: '010-1234-5678',
+                    loginTime: new Date().toISOString()
+                };
+                
+                localStorage.setItem('isMdAdmin', 'true');
+                localStorage.setItem('mdAdminData', JSON.stringify(loginData));
+                localStorage.setItem('currentMdCode', '1024');
+                
+                console.log('세션 저장 완료, 페이지 이동...');
+                window.location.href = 'index.html';
+                
+            } catch (error) {
+                console.error('단순 로그인 오류:', error);
+                alert('단순 로그인 실패: ' + error.message);
+            }
+        }
+        
+        // 엔터키 처리
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+        
+        // MD코드 입력 필드에 숫자만 입력되도록 제한
+        document.getElementById('userId').addEventListener('input', function(e) {
+            // 숫자가 아닌 문자 제거
+            this.value = this.value.replace(/[^0-9]/g, '');
+            // 5자리 초과 제한
+            if (this.value.length > 5) {
+                this.value = this.value.slice(0, 5);
+            }
+        });
+    </script>
+</body>
+</html>
+

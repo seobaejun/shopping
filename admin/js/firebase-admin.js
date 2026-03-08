@@ -127,6 +127,10 @@ const collections = {
         if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
         return db.collection('admins');
     },
+    mdManagers: () => {
+        if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+        return db.collection('mdManagers');
+    },
     settings: () => {
         if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
         return db.collection('settings');
@@ -434,6 +438,40 @@ const orderService = {
             console.error('주문 수정 오류:', error);
             throw error;
         }
+    },
+
+    /** 회원별 구매금액·지원금 집계 (orders 기준). userId·memberId 둘 다 키로 넣어 회원 조회 시 매칭 보장 */
+    async getMemberOrderAggregates() {
+        try {
+            if (!db) await initFirebase();
+            if (!db) {
+                console.warn('getMemberOrderAggregates: db 없음, 빈 객체 반환');
+                return {};
+            }
+            const snapshot = await db.collection('orders').get();
+            const byMember = {};
+            snapshot.docs.forEach(doc => {
+                const d = doc.data();
+                const uid1 = (d.userId || '').toString().trim();
+                const uid2 = (d.memberId != null && d.memberId !== '') ? String(d.memberId).trim() : '';
+                const orderTotal = Number(d.totalPrice ?? d.productPrice ?? d.amount ?? 0) || (Number(d.price || 0) * Number(d.quantity || 1));
+                const support = Number(d.supportAmount ?? d.support ?? d.productSupport ?? 0);
+                function addTo(key) {
+                    if (!key) return;
+                    if (!byMember[key]) byMember[key] = { purchaseAmount: 0, supportAmount: 0, accumulatedSupport: 0 };
+                    byMember[key].purchaseAmount += orderTotal;
+                    byMember[key].supportAmount += support;
+                    byMember[key].accumulatedSupport += support;
+                }
+                addTo(uid1);
+                if (uid2 && uid2 !== uid1) addTo(uid2);
+            });
+            console.log('getMemberOrderAggregates: orders', snapshot.docs.length, '건, 회원별 집계 키', Object.keys(byMember).length, '개');
+            return byMember;
+        } catch (error) {
+            console.error('getMemberOrderAggregates 오류:', error);
+            return {};
+        }
     }
 };
 
@@ -586,6 +624,66 @@ const adminService = {
             await collections.admins().doc(adminId).delete();
         } catch (error) {
             console.error('관리자 삭제 오류:', error);
+            throw error;
+        }
+    }
+};
+
+// MD 목록 서비스 (관리권한설정에서 관리자 추가와 동일 패턴)
+const mdService = {
+    async getMdList() {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            const snapshot = await collections.mdManagers().get();
+            let list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            list.sort((a, b) => {
+                const at = a.createdAt && (a.createdAt.seconds != null ? a.createdAt.seconds : 0);
+                const bt = b.createdAt && (b.createdAt.seconds != null ? b.createdAt.seconds : 0);
+                return bt - at;
+            });
+            return list;
+        } catch (error) {
+            console.error('MD 목록 가져오기 오류:', error);
+            return [];
+        }
+    },
+    async addMd(data) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            const docRef = await collections.mdManagers().add({
+                userId: data.userId || '',
+                name: data.name || '',
+                mdCode: data.mdCode || '',
+                email: data.email || '',
+                phone: data.phone || '',
+                status: data.status || 'active',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return docRef.id;
+        } catch (error) {
+            console.error('MD 추가 오류:', error);
+            throw error;
+        }
+    },
+    async updateMd(mdId, data) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            await collections.mdManagers().doc(mdId).update({
+                ...data,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (error) {
+            console.error('MD 수정 오류:', error);
+            throw error;
+        }
+    },
+    async deleteMd(mdId) {
+        try {
+            if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
+            await collections.mdManagers().doc(mdId).delete();
+        } catch (error) {
+            console.error('MD 삭제 오류:', error);
             throw error;
         }
     }
@@ -892,10 +990,90 @@ const lotteryConfirmedService = {
             console.error('추첨 확정 전체 삭제 오류:', e);
             throw e;
         }
+    },
+    /** 회원별 지급 완료된 추첨 지원금 합계 (마이페이지 보유 토큰과 동일한 기준). 반환: { [userId 또는 memberId]: 합계 } */
+    async getPaidSupportByMember() {
+        try {
+            if (!db) await initFirebase();
+            if (!db) {
+                console.warn('getPaidSupportByMember: db 없음, 빈 객체 반환');
+                return {};
+            }
+            var snap = await collections.lotteryConfirmedResults().get();
+            var byMember = {};
+            snap.docs.forEach(function (doc) {
+                var d = doc.data();
+                if ((d.paymentStatus || '') !== 'paid') return;
+                var support = Number(d.support) || 0;
+                var uid1 = (d.userId || '').toString().trim();
+                var uid2 = (d.memberId != null && d.memberId !== '') ? String(d.memberId).trim() : '';
+                function addTo(key) {
+                    if (!key) return;
+                    byMember[key] = (byMember[key] || 0) + support;
+                }
+                addTo(uid1);
+                if (uid2 && uid2 !== uid1) addTo(uid2);
+            });
+            console.log('getPaidSupportByMember: paid 문서', snap.docs.length, '건, 회원별 키', Object.keys(byMember).length, '개');
+            return byMember;
+        } catch (e) {
+            console.error('getPaidSupportByMember 오류:', e);
+            return {};
+        }
+    },
+    /** 회원의 지급완료된 추첨 결과를 orderId별 지원금 맵으로 반환. 구매 상세 내역에서 행별 지급 지원금 표시용. 반환: { [orderId]: support } */
+    async getPaidSupportByOrderId(memberUserId, memberId) {
+        try {
+            if (!db) await initFirebase();
+            if (!db) return {};
+            var snap = await collections.lotteryConfirmedResults().get();
+            var byOrderId = {};
+            snap.docs.forEach(function (doc) {
+                var d = doc.data();
+                if ((d.paymentStatus || '') !== 'paid') return;
+                var uid = (d.userId || '').toString().trim();
+                var mid = (d.memberId != null && d.memberId !== '') ? String(d.memberId).trim() : '';
+                var match = (memberUserId && uid === memberUserId) || (memberId && mid === memberId) || (memberUserId && mid === memberUserId) || (memberId && uid === memberId);
+                if (!match) return;
+                var oid = d.orderId || '';
+                if (!oid) return;
+                byOrderId[oid] = Number(d.support) || 0;
+            });
+            return byOrderId;
+        } catch (e) {
+            console.error('getPaidSupportByOrderId 오류:', e);
+            return {};
+        }
     }
 };
 
-// 전역으로 export (db는 getter + getDb 함수로 참조)
+// 관리자·MD 관리자 동일 데이터용: 회원 목록에 구매금액·지원금 병합 (한 곳에서만 로직 유지)
+async function enrichMembersWithOrderStats(members) {
+    if (!members || members.length === 0) return members;
+    try {
+        var orderAgg = orderService && typeof orderService.getMemberOrderAggregates === 'function'
+            ? await orderService.getMemberOrderAggregates()
+            : {};
+        var paidSupport = lotteryConfirmedService && typeof lotteryConfirmedService.getPaidSupportByMember === 'function'
+            ? await lotteryConfirmedService.getPaidSupportByMember()
+            : {};
+        return members.map(function (m) {
+            var key1 = (m.userId || '').toString().trim();
+            var key2 = (m.id != null && m.id !== '') ? String(m.id).trim() : '';
+            var o = orderAgg[key1] || orderAgg[key2] || { purchaseAmount: 0 };
+            var support = paidSupport[key1] != null ? paidSupport[key1] : (paidSupport[key2] != null ? paidSupport[key2] : 0);
+            return Object.assign({}, m, {
+                purchaseAmount: m.purchaseAmount != null ? m.purchaseAmount : (o.purchaseAmount || 0),
+                supportAmount: m.supportAmount != null ? m.supportAmount : support,
+                accumulatedSupport: m.accumulatedSupport != null ? m.accumulatedSupport : support
+            });
+        });
+    } catch (e) {
+        console.warn('enrichMembersWithOrderStats 실패:', e);
+        return members;
+    }
+}
+
 function getDb() { return db; }
 window.firebaseAdmin = {
     initFirebase,
@@ -910,9 +1088,11 @@ window.firebaseAdmin = {
     lotteryConfirmedService,
     settingsService,
     adminService,
+    mdService,
     visitorStatsService,
     boardService,
-    tokenService
+    tokenService,
+    enrichMembersWithOrderStats
 };
 
 // 스크립트 실행 시점에 firebase가 이미 있으면 즉시 db 연결 (동기)

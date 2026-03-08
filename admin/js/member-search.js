@@ -71,18 +71,75 @@ async function waitForFirebaseAdmin(maxWait = 10000) {
     return window.firebaseAdmin;
 }
 
+// trix 지원금 표시: 실제 값을 소수점 8자리까지 그대로 표시 (9번째 자리 버림)
+function formatTrix(value) {
+    var num = Number(value) || 0;
+    var truncated = Math.floor(num * 1e8) / 1e8;
+    return truncated.toFixed(8);
+}
+
+/** 구매금액은 orders 기준, 지원금/누적은 조별추첨 확정 후 지급완료(paid)된 추첨 지원금 기준으로 회원에 병합 */
+async function enrichMembersWithOrderStats(firebaseAdmin, members) {
+    console.log('🔵 구매금액·지원금 집계 시작 (enrichMembersWithOrderStats), 회원 수:', members ? members.length : 0);
+    if (!members || members.length === 0) return members;
+    var orderAgg = {};
+    var paidSupport = {};
+    try {
+        if (firebaseAdmin.orderService && typeof firebaseAdmin.orderService.getMemberOrderAggregates === 'function') {
+            orderAgg = await firebaseAdmin.orderService.getMemberOrderAggregates();
+            console.log('🔵 주문 집계(orders) 키 수:', Object.keys(orderAgg).length, '샘플 키:', Object.keys(orderAgg).slice(0, 3));
+        } else {
+            console.warn('⚠️ orderService.getMemberOrderAggregates 없음');
+        }
+        if (firebaseAdmin.lotteryConfirmedService && typeof firebaseAdmin.lotteryConfirmedService.getPaidSupportByMember === 'function') {
+            paidSupport = await firebaseAdmin.lotteryConfirmedService.getPaidSupportByMember();
+            console.log('🔵 지원금 집계(paid) 키 수:', Object.keys(paidSupport).length, '샘플 키:', Object.keys(paidSupport).slice(0, 3));
+        } else {
+            console.warn('⚠️ lotteryConfirmedService.getPaidSupportByMember 없음');
+        }
+        var out = members.map(function (m) {
+            var key1 = (m.userId || '').toString().trim();
+            var key2 = (m.id != null && m.id !== '') ? String(m.id).trim() : '';
+            var o = orderAgg[key1] || orderAgg[key2] || { purchaseAmount: 0 };
+            var support = paidSupport[key1] != null ? paidSupport[key1] : (paidSupport[key2] != null ? paidSupport[key2] : 0);
+            var purchaseAmount = m.purchaseAmount != null ? Number(m.purchaseAmount) : (Number(o.purchaseAmount) || 0);
+            var supportAmount = m.supportAmount != null ? Number(m.supportAmount) : (Number(support) || 0);
+            return Object.assign({}, m, {
+                purchaseAmount: purchaseAmount,
+                supportAmount: supportAmount,
+                accumulatedSupport: m.accumulatedSupport != null ? Number(m.accumulatedSupport) : supportAmount
+            });
+        });
+        if (out.length > 0) {
+            console.log('✅ 구매금액·지원금 집계 반영 완료. 첫 회원:', out[0].userId || out[0].id, '구매금액:', out[0].purchaseAmount, '지원금:', out[0].supportAmount);
+        }
+        return out;
+    } catch (e) {
+        console.warn('회원 구매/지원금 집계 반영 실패:', e);
+        return members.map(function (m) {
+            return Object.assign({}, m, {
+                purchaseAmount: m.purchaseAmount != null ? Number(m.purchaseAmount) : 0,
+                supportAmount: m.supportAmount != null ? Number(m.supportAmount) : 0,
+                accumulatedSupport: m.accumulatedSupport != null ? Number(m.accumulatedSupport) : 0
+            });
+        });
+    }
+}
+
 // 회원 목록 로드 함수 (settings.js의 loadSettings와 동일한 패턴)
 async function loadAllMembers() {
     console.log('🔵🔵🔵 loadAllMembers 함수 호출됨');
     
     try {
-        // Firebase Admin 초기화 대기
         const firebaseAdmin = await waitForFirebaseAdmin();
+        if (typeof firebaseAdmin.getInitPromise === 'function') {
+            await firebaseAdmin.getInitPromise();
+        }
         console.log('✅ 회원조회: Firebase Admin 초기화 완료');
+        await new Promise(function(r){ setTimeout(r, 500); });
         
-        // Firestore에서 회원 데이터 가져오기
         console.log('🔵 회원조회: Firestore에서 회원 데이터 가져오기 시작...');
-        const members = await firebaseAdmin.memberService.getMembers();
+        let members = await firebaseAdmin.memberService.getMembers();
         console.log('✅ 회원조회: Firestore에서 데이터 가져오기 완료:', members.length, '명');
         
         if (members && members.length > 0) {
@@ -91,19 +148,59 @@ async function loadAllMembers() {
             console.warn('⚠️ 회원조회: 데이터가 없습니다.');
         }
         
-        // 전역 변수에 저장 (무조건 설정)
+        var membersArr = Array.isArray(members) ? members : [];
+        if (membersArr.length > 0 && firebaseAdmin.enrichMembersWithOrderStats) {
+            try {
+                members = await firebaseAdmin.enrichMembersWithOrderStats(membersArr);
+                console.log('✅ 회원조회: 구매금액·지원금 집계 반영 완료');
+            } catch (enrichErr) {
+                console.warn('회원조회: 구매/지원금 집계 실패:', enrichErr);
+            }
+        }
+        members = members.map(function(m){ return Object.assign({}, m, { purchaseAmount: Number(m.purchaseAmount || 0), supportAmount: Number(m.supportAmount || 0) }); });
+        if (members.length) console.log('회원조회 렌더 직전 첫 회원 구매금액/지원금:', members[0].purchaseAmount, members[0].supportAmount);
+        
         window.allMembersData = members;
         window.filteredMembersData = members;
         window.currentMemberPage = 1;
         
-        // 총 회원 수 업데이트
-        const totalCountEl = document.getElementById('totalMemberCount');
-        if (totalCountEl) {
-            totalCountEl.textContent = members.length;
-        }
+        var totalCountEl = document.getElementById('totalMemberCount');
+        if (totalCountEl) totalCountEl.textContent = members.length;
         
-        // 테이블 렌더링 (renderMemberTable 함수 사용)
         renderMemberTable(members);
+        
+        // 첫 화면에서 집계가 전부 0이면 Firestore 준비 지연으로 간주 → 1.2초 후 구매/지원금만 다시 불러와 갱신
+        var allZeros = members.length > 0 && members.every(function(m){ return (m.purchaseAmount || 0) === 0 && (m.supportAmount || 0) === 0; });
+        if (allZeros && firebaseAdmin.orderService && firebaseAdmin.lotteryConfirmedService) {
+            setTimeout(function(){
+                (async function(){
+                    try {
+                        var orderAgg2 = await firebaseAdmin.orderService.getMemberOrderAggregates();
+                        var paidSupport2 = await firebaseAdmin.lotteryConfirmedService.getPaidSupportByMember();
+                        if (Object.keys(orderAgg2).length === 0 && Object.keys(paidSupport2).length === 0) return;
+                        var base = window.allMembersData || [];
+                        if (base.length === 0) return;
+                        var enriched = base.map(function (m) {
+                            var key1 = (m.userId || '').toString().trim();
+                            var key2 = (m.id != null && m.id !== '') ? String(m.id).trim() : '';
+                            var o = orderAgg2[key1] || orderAgg2[key2] || { purchaseAmount: 0 };
+                            var support = paidSupport2[key1] != null ? paidSupport2[key1] : (paidSupport2[key2] != null ? paidSupport2[key2] : 0);
+                            return Object.assign({}, m, {
+                                purchaseAmount: Number(m.purchaseAmount || 0) || (o.purchaseAmount || 0),
+                                supportAmount: Number(m.supportAmount || 0) || support,
+                                accumulatedSupport: m.accumulatedSupport != null ? m.accumulatedSupport : support
+                            });
+                        });
+                        window.allMembersData = enriched;
+                        window.filteredMembersData = enriched;
+                        window.currentMemberPage = 1;
+                        renderMemberTable(enriched);
+                        if (totalCountEl) totalCountEl.textContent = enriched.length;
+                        console.log('✅ 회원조회: 첫 화면 지연 보강 완료 (구매금액·지원금 갱신)');
+                    } catch (e) { console.warn('회원조회 지연 보강 실패:', e); }
+                })();
+            }, 1200);
+        }
         
         return members;
         
@@ -134,6 +231,7 @@ window.changeMemberPage = function(page) {
 
 // 회원 검색 함수 (전체회원 loadAllMembers와 동일한 패턴)
 async function searchMemberInfo() {
+    if (!window._memberSearchRetryCount) window._memberSearchRetryCount = 0;
     console.log('🔵🔵🔵 searchMemberInfo 함수 호출됨');
     
     const searchId = document.getElementById('memberSearchId')?.value.trim() || '';
@@ -144,13 +242,14 @@ async function searchMemberInfo() {
     console.log('검색 조건:', { searchId, searchName, searchReferrer, searchStatus });
     
     try {
-        // Firebase Admin 초기화 대기 (전체회원과 동일)
         const firebaseAdmin = await waitForFirebaseAdmin();
+        if (typeof firebaseAdmin.getInitPromise === 'function') {
+            await firebaseAdmin.getInitPromise();
+        }
         console.log('✅ 회원검색: Firebase Admin 초기화 완료');
         
-        // Firestore에서 회원 데이터 가져오기 (전체회원과 동일)
         console.log('🔵 회원검색: Firestore에서 회원 데이터 가져오기 시작...');
-        const members = await firebaseAdmin.memberService.getMembers();
+        let members = await firebaseAdmin.memberService.getMembers();
         console.log('✅ 회원검색: Firestore에서 데이터 가져오기 완료:', members.length, '명');
         
         if (members && members.length > 0) {
@@ -159,7 +258,17 @@ async function searchMemberInfo() {
             console.warn('⚠️ 회원검색: 데이터가 없습니다.');
         }
         
-        // 전역 변수에 저장 (무조건 설정 - 전체회원과 동일)
+        var membersArrSearch = Array.isArray(members) ? members : [];
+        if (membersArrSearch.length > 0 && firebaseAdmin.enrichMembersWithOrderStats) {
+            try {
+                members = await firebaseAdmin.enrichMembersWithOrderStats(membersArrSearch);
+                console.log('✅ 회원검색: 구매금액·지원금 집계 반영 완료');
+            } catch (enrichErr) {
+                console.warn('회원검색: 구매/지원금 집계 실패:', enrichErr);
+            }
+        }
+        members = members.map(function(m){ return Object.assign({}, m, { purchaseAmount: Number(m.purchaseAmount || 0), supportAmount: Number(m.supportAmount || 0) }); });
+        
         window.allMembersData = members;
         window.currentMemberPage = 1;
         
@@ -222,43 +331,46 @@ async function searchMemberInfo() {
             totalCountEl.textContent = window.filteredMembersData.length;
         }
         
-        // 검색 결과 영역 표시
         const searchResultsContainer = document.getElementById('searchResultsContainer');
         const searchResultCount = document.getElementById('searchResultCount');
         
         if (!searchResultsContainer) {
             console.error('❌ searchResultsContainer를 찾을 수 없습니다!');
-            alert('검색 결과 영역을 찾을 수 없습니다. 페이지를 새로고침해주세요.');
             return;
         }
         
-        // 검색 결과 영역 표시
-        searchResultsContainer.style.display = 'block';
-        searchResultsContainer.style.visibility = 'visible';
-        searchResultsContainer.style.marginTop = '20px';
-        searchResultsContainer.style.marginBottom = '30px';
-        console.log('✅ 검색 결과 영역 표시됨');
-        
-        if (searchResultCount) {
-            searchResultCount.textContent = window.filteredMembersData.length;
-        }
-        
-        // 검색 결과는 항상 1페이지부터 표시
         window.currentSearchResultsPage = 1;
         window.currentMemberPage = 1;
-        // 검색 결과 테이블: 컨테이너 안의 tbody를 직접 사용 (같은 DOM 노드에 그리기)
-        const searchResultsTbody = searchResultsContainer.querySelector('tbody');
-        if (searchResultsTbody) {
-            renderMembersIntoBody(window.filteredMembersData, searchResultsTbody, {
-                currentPage: 1,
-                paginationElId: 'searchResultsPagination',
-                isSearchResults: true
-            });
+        
+        if (hasSearchCondition) {
+            searchResultsContainer.style.display = 'block';
+            searchResultsContainer.style.visibility = 'visible';
+            searchResultsContainer.style.marginTop = '20px';
+            searchResultsContainer.style.marginBottom = '30px';
+            if (searchResultCount) searchResultCount.textContent = window.filteredMembersData.length;
+            const searchResultsTbody = searchResultsContainer.querySelector('tbody');
+            if (searchResultsTbody) {
+                renderMembersIntoBody(window.filteredMembersData, searchResultsTbody, {
+                    currentPage: 1,
+                    paginationElId: 'searchResultsPagination',
+                    isSearchResults: true
+                });
+            }
+            searchResultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            searchResultsContainer.style.display = 'none';
         }
-        // 메인 테이블(전체회원)에도 검색 결과 표시
-        renderMemberTable(window.filteredMembersData);
-        // 검색 결과 영역으로 스크롤
-        searchResultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        renderMemberTable(window.allMembersData || []);
+        
+        var data = window.allMembersData || [];
+        var allZeros = data.length > 0 && data.every(function(m){ return (m.purchaseAmount || 0) === 0 && (m.supportAmount || 0) === 0; });
+        if (allZeros && !hasSearchCondition && (window._memberSearchRetryCount || 0) < 1) {
+            window._memberSearchRetryCount = (window._memberSearchRetryCount || 0) + 1;
+            setTimeout(function(){ searchMemberInfo(); }, 1200);
+        } else if (!allZeros) {
+            window._memberSearchRetryCount = 0;
+        }
         
     } catch (error) {
         console.error('❌ 회원검색: 데이터 로드 오류:', error);
@@ -360,8 +472,8 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
                 <td>${escapeHtml(member.bank || '')}</td>
                 <td>${escapeHtml(member.accountNumber || '')}</td>
                 <td>${escapeHtml(referralCode)}</td>
-                <td>${(member.purchaseAmount || 0).toLocaleString()}</td>
-                <td>${(member.supportAmount || 0).toLocaleString()} / ${(member.accumulatedSupport || 0).toLocaleString()}</td>
+                <td>${Number(member.purchaseAmount || 0).toLocaleString()}</td>
+                <td>${formatTrix(Number(member.supportAmount || 0))} trix</td>
                 <td>${statusCell}</td>
                 <td>
                     <button class="btn-icon btn-edit" data-member-id="${safeId}" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button>
@@ -755,7 +867,8 @@ window.deleteMemberInfo = async function(memberId) {
     }
 };
 
-// 전역으로 export
+// 전역으로 export (admin.js에서 loadAllMembers 대신 이 enrichment만 사용할 수 있도록)
+window.enrichMembersWithOrderStats = enrichMembersWithOrderStats;
 window.loadAllMembers = loadAllMembers;
 window.searchMemberInfo = searchMemberInfo;
 window.resetMemberSearch = resetMemberSearch;

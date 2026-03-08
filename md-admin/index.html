@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD 관리자 - 회원조회 / 개인별 구매 누적정보</title>
+    <script>
+    (function(){
+        var path = document.location.pathname || '';
+        if (path.indexOf('md-admin') !== -1 && !document.querySelector('base')) {
+            var base = document.createElement('base');
+            var dir = path === '/md-admin' || path === '/' ? '/md-admin/' : (path.endsWith('/') ? path : path.replace(/\/[^/]*$/, '') + '/');
+            base.setAttribute('href', dir);
+            document.head.insertBefore(base, document.head.firstChild);
+        }
+    })();
+    </script>
+    <script src="../js/image-config.js"></script>
+    <link rel="stylesheet" href="../admin/css/admin.css?v=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .md-admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; height: 70px; }
+        .md-admin-header .header-right { display: flex; align-items: center; gap: 1rem; }
+        .md-admin-header .btn-logout { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
+        .md-admin-header .btn-logout:hover { background: rgba(255,255,255,0.3); }
+        body { padding-top: 70px; }
+    </style>
+</head>
+<body>
+    <script>
+    (function(){
+        var fromAdmin = sessionStorage.getItem('mdAdminFromAdmin') === 'true' || (location.search && location.search.indexOf('from=admin') !== -1);
+        if (fromAdmin) { sessionStorage.setItem('mdAdminFromAdmin', 'true'); return; }
+        var isMdAdmin = localStorage.getItem('isMdAdmin') === 'true';
+        var mdAdminData = localStorage.getItem('mdAdminData');
+        if (!isMdAdmin || !mdAdminData) { window.location.replace('login.html'); }
+    })();
+    </script>
+
+    <header class="md-admin-header">
+        <div class="header-left">
+            <h1 class="md-admin-title">MD 관리자 - 회원조회 / 개인별 구매 누적정보</h1>
+        </div>
+        <div class="header-right">
+            <span id="mdAdminName">MD관리자</span>
+            <button class="btn-logout" type="button" onclick="var fromAdmin=sessionStorage.getItem('mdAdminFromAdmin')==='true'; sessionStorage.removeItem('mdAdminFromAdmin'); localStorage.removeItem('isMdAdmin'); localStorage.removeItem('mdAdminData'); localStorage.removeItem('currentMdCode'); window.location.replace(fromAdmin?'../admin/index.html':'login.html');">LOGOUT</button>
+        </div>
+    </header>
+
+    <div class="admin-container">
+        <aside class="admin-sidebar" id="adminSidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section active">
+                    <h3 class="nav-title"><i class="fas fa-users"></i> 회원관리</h3>
+                    <ul class="nav-list">
+                        <li class="active"><a href="#" data-page="member-search"><i class="fas fa-search"></i> 회원조회</a></li>
+                        <li><a href="#" data-page="member-purchase"><i class="fas fa-shopping-cart"></i> 개인별 구매 누적정보</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="admin-content">
+            <!-- 회원조회 페이지 (관리자와 동일) -->
+            <div id="member-search" class="content-page active">
+                <div class="page-header">
+                    <h2>회원정보</h2>
+                    <p class="page-description">총 <strong id="totalMemberCount">0</strong>명의 회원이 등록되어 있습니다.</p>
+                </div>
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>아이디</label>
+                            <input type="text" class="form-control" id="memberSearchId" placeholder="아이디 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>이름</label>
+                            <input type="text" class="form-control" id="memberSearchName" placeholder="이름 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>추천인 ID</label>
+                            <input type="text" class="form-control" id="memberSearchReferrer" placeholder="추천인 ID 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>승인상태</label>
+                            <select class="form-control" id="memberSearchStatus">
+                                <option value="">전체</option>
+                                <option value="정상">정상</option>
+                                <option value="대기">대기</option>
+                                <option value="정지">정지</option>
+                                <option value="withdrawn">탈퇴</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary" id="memberSearchBtn">검색</button>
+                        <button class="btn btn-secondary" id="memberExportBtn">엑셀 다운로드</button>
+                        <button class="btn btn-default" id="memberResetBtn">취소</button>
+                    </div>
+                </div>
+                <div id="searchResultsContainer" class="search-results-container" style="display: block; margin-top: 20px; margin-bottom: 30px;">
+                    <div class="page-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #4A5FC1;">
+                        <h3 style="font-size: 18px; margin: 0; color: #333;">검색 결과: <strong id="searchResultCount" style="color: #4A5FC1; font-size: 20px;">0</strong>명</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>번호</th>
+                                    <th>아이디</th>
+                                    <th>이름</th>
+                                    <th>전화번호</th>
+                                    <th>가입날짜</th>
+                                    <th>주소</th>
+                                    <th>은행</th>
+                                    <th>계좌번호</th>
+                                    <th>추천인</th>
+                                    <th>구매금액</th>
+                                    <th>지원금</th>
+                                    <th>상태</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="searchResultsBody">
+                                <tr><td colspan="13" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="searchResultsPagination" style="margin-top: 20px;"></div>
+                </div>
+                <div style="margin-top: 30px;">
+                    <div class="page-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #4A5FC1;">
+                        <h3 style="font-size: 18px; margin: 0; color: #333;">전체회원</h3>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>아이디</th>
+                                <th>이름</th>
+                                <th>전화번호</th>
+                                <th>가입날짜</th>
+                                <th>주소</th>
+                                <th>은행</th>
+                                <th>계좌번호</th>
+                                <th>추천인</th>
+                                <th>구매금액</th>
+                                <th>지원금</th>
+                                <th>상태</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="memberPagination">
+                    <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
+                    <button class="page-num active">1</button>
+                    <button class="page-num">2</button>
+                    <button class="page-num">3</button>
+                    <button class="page-num">4</button>
+                    <button class="page-num">5</button>
+                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+
+            <!-- 개인별 구매 누적정보 페이지 (관리자와 동일) -->
+            <div id="member-purchase" class="content-page">
+                <div class="page-header">
+                    <h2>개인별 구매 누적정보</h2>
+                    <p class="page-description">회원별 구매 이력과 누적 정보를 확인합니다.</p>
+                </div>
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>아이디 또는 이름</label>
+                            <input type="text" class="form-control" id="purchaseSearchKeyword" placeholder="아이디 또는 이름 입력">
+                        </div>
+                        <div class="form-group">
+                            <label>시작일</label>
+                            <input type="date" class="form-control" id="purchaseStartDate">
+                        </div>
+                        <div class="form-group">
+                            <label>종료일</label>
+                            <input type="date" class="form-control" id="purchaseEndDate">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary" id="searchPurchaseBtn">검색</button>
+                        <button class="btn btn-default" id="resetPurchaseBtn">초기화</button>
+                    </div>
+                </div>
+                <div id="purchaseResultsContainer" style="display: none; margin-top: 30px;">
+                    <div class="member-info-card" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #4A5FC1; padding-bottom: 10px;">회원 정보</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            <div>
+                                <span style="color: #666; font-size: 13px;">아이디:</span>
+                                <strong id="memberInfoUserId" style="display: block; margin-top: 5px; font-size: 15px;"></strong>
+                            </div>
+                            <div>
+                                <span style="color: #666; font-size: 13px;">이름:</span>
+                                <strong id="memberInfoName" style="display: block; margin-top: 5px; font-size: 15px;"></strong>
+                            </div>
+                            <div>
+                                <span style="color: #666; font-size: 13px;">전화번호:</span>
+                                <strong id="memberInfoPhone" style="display: block; margin-top: 5px; font-size: 15px;"></strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stats-panel" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #4A5FC1; padding-bottom: 10px;">누계 정보</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="color: #666; font-size: 13px; margin-bottom: 8px;">구매 건수</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #4A5FC1;"><span id="totalPurchaseCount">0</span>건</div>
+                            </div>
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="color: #666; font-size: 13px; margin-bottom: 8px;">구매 총금액</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #28a745;"><span id="totalPurchaseAmount">0</span>원</div>
+                            </div>
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="color: #666; font-size: 13px; margin-bottom: 8px;">누적 지원금</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #dc3545;"><span id="totalSupportAmount">0</span> trix</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #4A5FC1; padding-bottom: 10px;">구매 상세 내역</h3>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>번호</th>
+                                    <th>구매일시</th>
+                                    <th>상품명</th>
+                                    <th>상품가격</th>
+                                    <th>지원금</th>
+                                    <th>상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="purchaseDetailBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script>
+    (function(){
+        function waitFirebase(){ return new Promise(function(resolve,reject){ var a=0; var t=setInterval(function(){ if(typeof firebase!=='undefined'&&firebase.apps){ clearInterval(t); resolve(); } else if(++a>=50){ clearInterval(t); reject(new Error('Firebase timeout')); } },100); }); }
+        waitFirebase().then(function(){
+            var s1=document.createElement('script'); s1.src='../admin/js/firebase-admin.js'; document.body.appendChild(s1);
+            s1.onload=function(){
+                var initP = (window.firebaseAdmin&&window.firebaseAdmin.getInitPromise) ? window.firebaseAdmin.getInitPromise() : Promise.resolve();
+                initP.then(function(){
+                    var s2=document.createElement('script'); s2.src='../admin/js/member-search.js?v='+Date.now(); document.body.appendChild(s2);
+                    s2.onload=function(){
+                        var s3=document.createElement('script'); s3.src='../admin/js/member-purchase.js'; document.body.appendChild(s3);
+                        s3.onload=function(){
+                            document.querySelectorAll('.admin-sidebar a[data-page]').forEach(function(a){
+                                a.addEventListener('click',function(e){ e.preventDefault();
+                                    var page=this.getAttribute('data-page');
+                                    document.querySelectorAll('.content-page').forEach(function(p){ p.classList.remove('active'); });
+                                    var el=document.getElementById(page); if(el) el.classList.add('active');
+                                    document.querySelectorAll('.admin-sidebar .nav-list li').forEach(function(li){ li.classList.remove('active'); });
+                                    if(this.parentElement) this.parentElement.classList.add('active');
+                                    if(page==='member-search'&&window.searchMemberInfo) window.searchMemberInfo();
+                                });
+                            });
+                            var memberSearchBtn=document.getElementById('memberSearchBtn');
+                            var memberResetBtn=document.getElementById('memberResetBtn');
+                            var memberExportBtn=document.getElementById('memberExportBtn');
+                            if(memberSearchBtn&&window.searchMemberInfo) memberSearchBtn.onclick=function(e){ e.preventDefault(); window.searchMemberInfo(); return false; };
+                            if(memberResetBtn&&window.resetMemberSearch) memberResetBtn.onclick=function(e){ e.preventDefault(); window.resetMemberSearch(); return false; };
+                            if(memberExportBtn&&window.exportMembersToExcel) memberExportBtn.onclick=function(e){ e.preventDefault(); window.exportMembersToExcel(); return false; };
+                            var tbody=document.getElementById('memberTableBody');
+                            if(tbody) tbody.innerHTML='<tr><td colspan="13" class="empty-message">회원 정보를 불러오는 중...</td></tr>';
+                            if(window.searchMemberInfo) setTimeout(function(){ window.searchMemberInfo(); }, 2000);
+                        };
+                    };
+                }).catch(function(err){ console.error('Firebase init:', err); });
+            };
+        }).catch(function(err){ console.error(err); });
+    })();
+    </script>
+</body>
+</html>

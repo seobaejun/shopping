@@ -1,11 +1,8 @@
-// 소수점 8자리까지 표시, 9번째부터 버림
+// trix 지원금 표시: 실제 값을 소수점 8자리까지 그대로 표시 (9번째 자리 버림)
 function formatTrix(value) {
     var num = Number(value) || 0;
-    if (num === 0) return '0';
     var truncated = Math.floor(num * 1e8) / 1e8;
-    var str = truncated.toFixed(8);
-    str = str.replace(/0+$/, '').replace(/\.$/, '');
-    return str;
+    return truncated.toFixed(8);
 }
 
 // 개인별 구매 누적정보 페이지 관리
@@ -84,11 +81,19 @@ window.searchMemberPurchase = async function() {
         // 현재는 더미 데이터 사용
         const searchId = member.userId || member.id;
         const purchases = await getMemberPurchases(searchId, startDate, endDate);
-        
-        console.log('✅ 구매 내역:', purchases);
-        
-        // 결과 표시
-        displayPurchaseResults(member, purchases);
+        var paidSupport = 0;
+        var paidSupportByOrderId = {};
+        if (firebaseAdmin.lotteryConfirmedService) {
+            if (typeof firebaseAdmin.lotteryConfirmedService.getPaidSupportByMember === 'function') {
+                var byMember = await firebaseAdmin.lotteryConfirmedService.getPaidSupportByMember();
+                paidSupport = byMember[member.userId] ?? byMember[member.id] ?? 0;
+            }
+            if (typeof firebaseAdmin.lotteryConfirmedService.getPaidSupportByOrderId === 'function') {
+                paidSupportByOrderId = await firebaseAdmin.lotteryConfirmedService.getPaidSupportByOrderId(member.userId, member.id);
+            }
+        }
+        console.log('✅ 구매 내역:', purchases.length, '건, 지급완료 지원금:', paidSupport);
+        displayPurchaseResults(member, purchases, paidSupport, paidSupportByOrderId);
         
     } catch (error) {
         console.error('❌ 구매 정보 검색 오류:', error);
@@ -145,35 +150,34 @@ async function getMemberPurchases(memberId, startDate, endDate) {
     }
 }
 
-// 검색 결과 표시
-function displayPurchaseResults(member, purchases) {
-    // 결과 영역 표시
+// 검색 결과 표시. totalPaidSupport=지급완료 지원금 합계, paidSupportByOrderId=행별 지급완료 지원금 맵
+function displayPurchaseResults(member, purchases, totalPaidSupport, paidSupportByOrderId) {
+    paidSupportByOrderId = paidSupportByOrderId || {};
     const resultsContainer = document.getElementById('purchaseResultsContainer');
     if (resultsContainer) {
         resultsContainer.style.display = 'block';
     }
     
-    // 회원 정보 표시
     document.getElementById('memberInfoUserId').textContent = member.userId || member.id || '-';
     document.getElementById('memberInfoName').textContent = member.name || '-';
     document.getElementById('memberInfoPhone').textContent = member.phone || '-';
     
-    // 누계 정보 계산
     const totalCount = purchases.length;
     const totalAmount = purchases.reduce((sum, p) => sum + (p.productPrice || 0), 0);
-    const totalSupport = purchases.reduce((sum, p) => sum + (p.supportAmount || 0), 0);
+    const totalSupport = (totalPaidSupport != null && totalPaidSupport !== undefined)
+        ? Number(totalPaidSupport)
+        : purchases.reduce((sum, p) => sum + (p.supportAmount || 0), 0);
     
-    // 누계 정보 표시
     document.getElementById('totalPurchaseCount').textContent = totalCount.toLocaleString();
     document.getElementById('totalPurchaseAmount').textContent = totalAmount.toLocaleString();
-    document.getElementById('totalSupportAmount').textContent = totalSupport.toLocaleString();
+    document.getElementById('totalSupportAmount').textContent = formatTrix(totalSupport);
     
-    // 구매 내역 테이블 렌더링
-    renderPurchaseDetailTable(purchases);
+    renderPurchaseDetailTable(purchases, paidSupportByOrderId);
 }
 
-// 구매 상세 내역 테이블 렌더링
-function renderPurchaseDetailTable(purchases) {
+// 구매 상세 내역 테이블 렌더링. 지원금 컬럼은 지급완료된 금액만 표시(paidSupportByOrderId[orderId], 없으면 0)
+function renderPurchaseDetailTable(purchases, paidSupportByOrderId) {
+    paidSupportByOrderId = paidSupportByOrderId || {};
     const tbody = document.getElementById('purchaseDetailBody');
     
     if (!tbody) {
@@ -199,10 +203,21 @@ function renderPurchaseDetailTable(purchases) {
             }
         }
         
-        // 상태 표시
-        const status = purchase.status || '완료';
-        const statusClass = status === '완료' ? 'badge-success' : 
-                           status === '대기' ? 'badge-warning' : 'badge-danger';
+        var paidSupport = paidSupportByOrderId[purchase.id] != null ? Number(paidSupportByOrderId[purchase.id]) : 0;
+        var isPaid = paidSupport > 0;
+        
+        var statusDisplay, statusClass;
+        if (isPaid) {
+            statusDisplay = '지급완료';
+            statusClass = 'badge-success';
+        } else {
+            var statusRaw = (purchase.status || '완료').toLowerCase();
+            var statusMap = { pending: '대기', approved: '승인', cancelled: '취소', '완료': '완료', '대기': '대기', '정상': '승인', '취소': '취소' };
+            statusDisplay = statusMap[statusRaw] || purchase.status || '완료';
+            statusClass = (statusRaw === 'approved' || statusRaw === '승인' || statusRaw === '완료') ? 'badge-success' :
+                               (statusRaw === 'pending' || statusRaw === '대기') ? 'badge-warning' :
+                               (statusRaw === 'cancelled' || statusRaw === '취소') ? 'badge-secondary' : 'badge-danger';
+        }
         
         return `
             <tr>
@@ -210,8 +225,8 @@ function renderPurchaseDetailTable(purchases) {
                 <td>${purchaseDate}</td>
                 <td>${purchase.productName || '-'}</td>
                 <td>${(purchase.productPrice || 0).toLocaleString()}원</td>
-                <td>${formatTrix(purchase.supportAmount || 0)} trix</td>
-                <td><span class="badge ${statusClass}">${status}</span></td>
+                <td>${formatTrix(paidSupport)} trix</td>
+                <td><span class="badge ${statusClass}">${statusDisplay}</span></td>
             </tr>
         `;
     }).join('');

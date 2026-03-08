@@ -357,6 +357,13 @@ async function loadPageData(pageId) {
             console.log('기본환경설정 페이지 로드 완료');
             break;
         case 'admin-settings':
+            if (window.firebaseAdmin && typeof window.firebaseAdmin.getInitPromise === 'function') {
+                try {
+                    await window.firebaseAdmin.getInitPromise();
+                } catch (e) {
+                    console.warn('Firebase 초기화 대기:', e);
+                }
+            }
             if (typeof loadAdminSettings === 'function') {
                 await loadAdminSettings();
             }
@@ -1953,12 +1960,10 @@ async function loadAllMembers() {
             }
             return;
         }
-        
-        // Firebase 초기화 확인
-        if (!window.firebaseAdmin.db) {
-            console.log('Firebase DB 초기화 중...');
-            const initResult = await window.firebaseAdmin.initFirebase();
-            console.log('초기화 결과:', initResult);
+
+        if (typeof window.firebaseAdmin.getInitPromise === 'function') {
+            await window.firebaseAdmin.getInitPromise();
+            console.log('✅ Firestore getInitPromise 완료');
         }
         
         if (!window.firebaseAdmin.db) {
@@ -2049,6 +2054,17 @@ async function loadAllMembers() {
             console.log('Firestore Console에서 members 컬렉션을 확인하세요.');
         }
         
+        // 관리자·MD 동일 데이터: firebase-admin 공통 보강 함수 사용
+        const membersArr = Array.isArray(members) ? members : [];
+        if (window.firebaseAdmin && typeof window.firebaseAdmin.enrichMembersWithOrderStats === 'function' && membersArr.length > 0) {
+            try {
+                members = await window.firebaseAdmin.enrichMembersWithOrderStats(membersArr);
+                console.log('✅ 회원별 구매금액·지원금 집계 반영 완료');
+            } catch (enrichErr) {
+                console.warn('회원 구매/지원금 집계 반영 실패:', enrichErr);
+            }
+        }
+
         // 데이터 저장 (전역 변수에 저장 - member-search.js에서 사용)
         window.allMembersData = Array.isArray(members) ? members : [];
         window.filteredMembersData = window.allMembersData;
@@ -2259,9 +2275,8 @@ function renderMemberInfoTable(data = null) {
         // 구매금액 (현재는 없음, 추후 추가 가능)
         const purchaseAmount = member.purchaseAmount || 0;
         
-        // 지원금/누적 (현재는 없음, 추후 추가 가능)
+        // 지원금 (조별추첨 지급완료 기준)
         const supportAmount = member.supportAmount || 0;
-        const accumulatedSupport = member.accumulatedSupport || 0;
         
         // 상태 (withdrawn → 탈퇴 표시)
         const status = member.status || '정상';
@@ -2286,7 +2301,7 @@ function renderMemberInfoTable(data = null) {
                 <td>${escapeHtml(accountNumber)}</td>
                 <td>${escapeHtml(referralCode)}</td>
                 <td>${purchaseAmount.toLocaleString()}</td>
-                <td>${formatTrix(supportAmount)} trix / ${formatTrix(accumulatedSupport)} trix</td>
+                <td>${formatTrix(supportAmount)} trix</td>
                 <td>${statusCell}</td>
                 <td>
                     <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
@@ -3600,14 +3615,11 @@ document.addEventListener('click', (e) => {
 // 추첨 시스템
 // ============================================
 
-// 소수점 8자리까지 표시, 9번째부터 버림
+// trix 지원금 표시: 실제 값을 소수점 8자리까지 그대로 표시 (9번째 자리 버림)
 function formatTrix(value) {
     var num = Number(value) || 0;
-    if (num === 0) return '0';
     var truncated = Math.floor(num * 1e8) / 1e8;
-    var str = truncated.toFixed(8);
-    str = str.replace(/0+$/, '').replace(/\.$/, '');
-    return str;
+    return truncated.toFixed(8);
 }
 
 // 추첨 대기 데이터 — 승인(approved)된 주문 전체를 선착순 1개 대기열로 사용. 상품 구분 없음.
@@ -4791,6 +4803,7 @@ async function loadAdminSettings() {
         }
         if (infoText) infoText.textContent = `총 ${admins.length}명의 관리자가 있습니다.`;
         renderAdminSettingsTable(admins, memberMap);
+        await loadMdSettings();
     } catch (err) {
         console.error('관리자 목록 로드 오류:', err);
         showAdminSettingsError(tbody, infoText, '오류: ' + (err.message || '알 수 없음'));
@@ -5043,6 +5056,251 @@ async function deleteAdminById(adminId) {
     try {
         await adminService.deleteAdmin(adminId);
         await loadAdminSettings();
+    } catch (err) {
+        alert('삭제 중 오류: ' + (err.message || '알 수 없음'));
+    }
+}
+
+// ============================================
+// 관리권한설정 - MD 목록 (관리자 추가와 동일 패턴)
+// ============================================
+
+async function loadMdSettings() {
+    const tbody = document.getElementById('mdSettingsTableBody');
+    const infoText = document.getElementById('mdSettingsInfoText');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-message">데이터를 불러오는 중...</td></tr>';
+    try {
+        var fa = window.firebaseAdmin;
+        if (!fa) {
+            await ensureFirebaseReady();
+            fa = window.firebaseAdmin;
+        }
+        var db = (fa && fa.getDb) ? fa.getDb() : (fa && fa.db);
+        if (!db && fa && typeof fa.initFirebase === 'function') {
+            await fa.initFirebase();
+            db = (fa.getDb) ? fa.getDb() : fa.db;
+        }
+        if (!db) {
+            if (infoText) infoText.textContent = 'Firebase가 준비되지 않았습니다.';
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-message">Firebase가 준비되지 않았습니다. <button type="button" class="btn btn-primary btn-sm" id="mdSettingsRetryBtn" style="margin-left:8px;">재시도</button></td></tr>';
+            var retryBtn = document.getElementById('mdSettingsRetryBtn');
+            if (retryBtn) retryBtn.onclick = function () { loadMdSettings(); };
+            return;
+        }
+        var mdList = [];
+        var mdService = fa && fa.mdService;
+        if (mdService && typeof mdService.getMdList === 'function') {
+            mdList = await mdService.getMdList();
+        } else {
+            var collections = fa && fa.collections;
+            if (collections && typeof collections.mdManagers === 'function') {
+                var snapshot = await collections.mdManagers().get();
+                mdList = snapshot.docs.map(function (doc) { return { id: doc.id, ...doc.data() }; });
+                mdList.sort(function (a, b) {
+                    var at = a.createdAt && (a.createdAt.seconds != null ? a.createdAt.seconds : 0);
+                    var bt = b.createdAt && (b.createdAt.seconds != null ? b.createdAt.seconds : 0);
+                    return bt - at;
+                });
+            }
+        }
+        var memberMap = {};
+        try {
+            var memberService = fa && fa.memberService;
+            if (memberService) {
+                var members = await memberService.getMembers();
+                (members || []).forEach(function (m) {
+                    if (m.userId) memberMap[m.userId] = m;
+                    if (m.name) memberMap[m.name] = m;
+                    if (m.email) memberMap[m.email] = m;
+                });
+            }
+        } catch (e) {
+            console.warn('MD 목록 회원 보조 로드 실패:', e);
+        }
+        if (infoText) infoText.textContent = '총 ' + mdList.length + '명의 MD가 있습니다.';
+        renderMdSettingsTable(mdList, memberMap);
+    } catch (err) {
+        console.error('MD 목록 로드 오류:', err);
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-message">오류: ' + (err.message || '알 수 없음') + '</td></tr>';
+        if (infoText) infoText.textContent = '로드 중 오류가 발생했습니다.';
+    }
+}
+
+function renderMdSettingsTable(mdList, memberMap) {
+    memberMap = memberMap || {};
+    const tbody = document.getElementById('mdSettingsTableBody');
+    if (!tbody) return;
+    if (!mdList || mdList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-message">등록된 MD가 없습니다.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = mdList.map(function (md, i) {
+        var member = memberMap[md.userId] || memberMap[md.name];
+        var displayUserId = (member && member.userId) ? member.userId : (md.userId || '');
+        var displayEmail = (member && (member.email != null)) ? (member.email || '') : (md.email || '');
+        var displayPhone = (member && (member.phone != null || member.mobile != null)) ? (member.phone || member.mobile || '') : (md.phone || '');
+        var createdAt = formatAdminDate(md.createdAt);
+        var statusBadge = md.status === 'active'
+            ? '<span class="badge badge-success">활성</span>'
+            : '<span class="badge badge-secondary">비활성</span>';
+        return '<tr data-md-id="' + escapeHtml(md.id) + '">' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td>' + escapeHtml(displayUserId) + '</td>' +
+            '<td>' + escapeHtml(md.name || '') + '</td>' +
+            '<td>' + escapeHtml(md.mdCode || '') + '</td>' +
+            '<td>' + escapeHtml(displayEmail) + '</td>' +
+            '<td>' + escapeHtml(displayPhone) + '</td>' +
+            '<td>' + createdAt + '</td>' +
+            '<td>' + statusBadge + '</td>' +
+            '<td>' +
+            '<button type="button" class="btn btn-sm btn-secondary btn-md-edit">수정</button> ' +
+            '<button type="button" class="btn btn-sm btn-danger btn-md-delete">삭제</button>' +
+            '</td></tr>';
+    }).join('');
+}
+
+async function openMdModal(editId) {
+    var modal = document.getElementById('mdEditModal');
+    var title = document.getElementById('mdEditModalTitle');
+    var addSection = document.getElementById('mdAddFormSection');
+    var editForm = document.getElementById('mdEditForm');
+    if (!modal) return;
+    if (editId) {
+        if (addSection) addSection.style.display = 'none';
+        if (editForm) editForm.style.display = 'block';
+        title.textContent = 'MD 수정';
+        document.getElementById('mdEditId').value = editId;
+        var mdService = window.firebaseAdmin && window.firebaseAdmin.mdService;
+        if (!mdService) return;
+        var mdList = await mdService.getMdList();
+        var md = mdList.find(function (x) { return x.id === editId; });
+        if (md) {
+            var memberService = window.firebaseAdmin && window.firebaseAdmin.memberService;
+            var editUserId = md.userId || '';
+            var editEmail = md.email || '';
+            var editPhone = md.phone || '';
+            if (memberService && (editUserId || md.name)) {
+                try {
+                    var members = await memberService.getMembers(editUserId ? { searchTerm: editUserId } : { searchTerm: md.name });
+                    var mem = (members && members[0]) ? members[0] : null;
+                    if (mem) {
+                        editUserId = mem.userId || editUserId;
+                        editEmail = mem.email || editEmail;
+                        editPhone = mem.phone || mem.mobile || editPhone;
+                    }
+                } catch (e) { console.warn('MD 수정 시 회원 정보 보조 로드 실패:', e); }
+            }
+            document.getElementById('mdEditUserId').value = editUserId;
+            document.getElementById('mdEditName').value = md.name || '';
+            document.getElementById('mdEditMdCode').value = md.mdCode || '';
+            document.getElementById('mdEditEmail').value = editEmail;
+            document.getElementById('mdEditPhone').value = editPhone;
+        }
+    } else {
+        title.textContent = 'MD 추가';
+        if (addSection) addSection.style.display = 'block';
+        if (editForm) editForm.style.display = 'none';
+        document.getElementById('mdEditId').value = '';
+        var nameEl = document.getElementById('mdAddName');
+        var userIdEl = document.getElementById('mdAddUserId');
+        var mdCodeEl = document.getElementById('mdAddMdCode');
+        if (nameEl) nameEl.value = '';
+        if (userIdEl) userIdEl.value = '';
+        if (mdCodeEl) mdCodeEl.value = '';
+    }
+    modal.style.display = 'flex';
+}
+
+function closeMdModal() {
+    var modal = document.getElementById('mdEditModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function saveMdModal() {
+    var id = (document.getElementById('mdEditId') && document.getElementById('mdEditId').value) || '';
+    await ensureFirebaseReady();
+    var mdService = window.firebaseAdmin && window.firebaseAdmin.mdService;
+    if (!mdService || !window.firebaseAdmin.db) {
+        alert('Firebase가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+        return;
+    }
+    try {
+        if (id) {
+            var name = (document.getElementById('mdEditName') && document.getElementById('mdEditName').value || '').trim();
+            var mdCode = (document.getElementById('mdEditMdCode') && document.getElementById('mdEditMdCode').value || '').trim();
+            var email = (document.getElementById('mdEditEmail') && document.getElementById('mdEditEmail').value || '').trim();
+            var phone = (document.getElementById('mdEditPhone') && document.getElementById('mdEditPhone').value || '').trim();
+            if (!name || !mdCode) {
+                alert('이름과 MD코드를 입력해주세요.');
+                return;
+            }
+            await mdService.updateMd(id, { name: name, mdCode: mdCode, email: email, phone: phone });
+            alert('수정되었습니다.');
+        } else {
+            var addName = (document.getElementById('mdAddName') && document.getElementById('mdAddName').value || '').trim();
+            var addUserId = (document.getElementById('mdAddUserId') && document.getElementById('mdAddUserId').value || '').trim();
+            var addMdCode = (document.getElementById('mdAddMdCode') && document.getElementById('mdAddMdCode').value || '').trim();
+            if (!addName) {
+                alert('이름을 입력해주세요.');
+                return;
+            }
+            if (!addUserId) {
+                alert('아이디를 입력해주세요.');
+                return;
+            }
+            if (!addMdCode) {
+                alert('MD코드를 입력해주세요.');
+                return;
+            }
+            var email = '';
+            var phone = '';
+            var memberService = window.firebaseAdmin && window.firebaseAdmin.memberService;
+            if (memberService) {
+                try {
+                    var members = await memberService.getMembers({ searchTerm: addUserId });
+                    if (members && members.length) {
+                        var m = members.find(function (x) { return x.userId === addUserId; }) || members[0];
+                        if (m.userId === addUserId || (m.name && m.name === addName)) {
+                            email = m.email || '';
+                            phone = m.phone || m.mobile || '';
+                        }
+                    }
+                    if (!email && !phone) {
+                        members = await memberService.getMembers({ searchTerm: addName });
+                        if (members && members.length) {
+                            var m = (members.find(function (x) { return x.name === addName; }) || members[0]);
+                            email = m.email || '';
+                            phone = m.phone || m.mobile || '';
+                        }
+                    }
+                } catch (e) { console.warn('MD 추가 시 회원 조회 실패:', e); }
+            }
+            await mdService.addMd({
+                userId: addUserId,
+                name: addName,
+                mdCode: addMdCode,
+                email: email,
+                phone: phone,
+                status: 'active'
+            });
+            alert('MD로 추가되었습니다.');
+        }
+        closeMdModal();
+        await loadMdSettings();
+    } catch (err) {
+        console.error(err);
+        alert('저장 중 오류가 발생했습니다: ' + (err.message || '알 수 없음'));
+    }
+}
+
+async function deleteMdById(mdId) {
+    if (!confirm('이 MD를 목록에서 삭제하시겠습니까?')) return;
+    var mdService = window.firebaseAdmin && window.firebaseAdmin.mdService;
+    if (!mdService) return;
+    try {
+        await mdService.deleteMd(mdId);
+        await loadMdSettings();
     } catch (err) {
         alert('삭제 중 오류: ' + (err.message || '알 수 없음'));
     }
@@ -5448,7 +5706,8 @@ async function initAdminPage() {
     if (mdAdminBtn) {
         mdAdminBtn.onclick = function(e) {
             e.preventDefault();
-            alert('MD관리자 페이지로 이동합니다.');
+            sessionStorage.setItem('mdAdminFromAdmin', 'true');
+            window.location.href = '../md-admin/index.html';
             return false;
         };
     }
@@ -5573,6 +5832,35 @@ async function initAdminPage() {
                     toggleAdminStatus(adminId);
                 } else if (e.target.classList.contains('btn-admin-delete')) {
                     deleteAdminById(adminId);
+                }
+            });
+        }
+        // MD 추가/수정 모달 및 테이블 이벤트
+        const mdSettingsAddBtn = document.getElementById('mdSettingsAddBtn');
+        if (mdSettingsAddBtn) {
+            mdSettingsAddBtn.onclick = function () { openMdModal(null); };
+        }
+        const mdEditModal = document.getElementById('mdEditModal');
+        const mdEditModalClose = document.getElementById('mdEditModalClose');
+        const mdEditModalCancel = document.getElementById('mdEditModalCancel');
+        const mdEditModalSave = document.getElementById('mdEditModalSave');
+        if (mdEditModalClose) mdEditModalClose.onclick = closeMdModal;
+        if (mdEditModalCancel) mdEditModalCancel.onclick = closeMdModal;
+        if (mdEditModalSave) mdEditModalSave.onclick = function () { saveMdModal(); };
+        if (mdEditModal && mdEditModal.querySelector('.modal-content')) {
+            mdEditModal.querySelector('.modal-content').onclick = function (e) { e.stopPropagation(); };
+            mdEditModal.onclick = function (e) { if (e.target === mdEditModal) closeMdModal(); };
+        }
+        const mdSettingsTableBody = document.getElementById('mdSettingsTableBody');
+        if (mdSettingsTableBody) {
+            mdSettingsTableBody.addEventListener('click', function (e) {
+                var row = e.target.closest('tr[data-md-id]');
+                if (!row) return;
+                var mdId = row.getAttribute('data-md-id');
+                if (e.target.classList.contains('btn-md-edit')) {
+                    openMdModal(mdId);
+                } else if (e.target.classList.contains('btn-md-delete')) {
+                    deleteMdById(mdId);
                 }
             });
         }
