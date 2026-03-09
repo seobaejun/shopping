@@ -935,19 +935,27 @@ function updatePageInfo() {
     
     // 상품 정보 테이블 업데이트 (오른쪽 패널, 데이터 있으면 사용/없으면 기본값)
     const productInfoTable = productDetailElements.productInfoTable;
-    var defaultTitles = ['카테고리', '제조사', '제품소재', '색상', '치수', '제조자', '제조국', '사용기한', '취급 시 주의사항', '품질보증기준'];
+    var defaultTitles = ['카테고리', '제품소재', '색상', '치수', '제조국', '사용기한', '취급 시 주의사항', '품질보증기준'];
+    function isManufacturerTitle(title) {
+        if (!title || typeof title !== 'string') return false;
+        var t = title.trim();
+        return t === '제조사' || t === '제조자' || t.indexOf('제조사') !== -1 || t.indexOf('제조자') !== -1;
+    }
     function buildInfoTableBody() {
         var map = {};
         if (PRODUCT_INFO.details && PRODUCT_INFO.details.length > 0) {
-            PRODUCT_INFO.details.forEach(function (d) { map[(d.title || '').trim()] = (d.content || '').trim(); });
+            PRODUCT_INFO.details.forEach(function (d) {
+                var t = (d.title || '').trim();
+                if (isManufacturerTitle(t)) return;
+                map[t] = (d.content || '').trim();
+            });
         }
         function val(title) {
             if (map[title] != null && String(map[title]).trim() !== '') return String(map[title]).trim();
             if (title === '카테고리') return PRODUCT_INFO.category || '-';
-            if (title === '제조사' || title === '제조자') return PRODUCT_INFO.manufacturer || '-';
             return '-';
         }
-        return defaultTitles.map(function (title) {
+        return defaultTitles.filter(function (title) { return !isManufacturerTitle(title); }).map(function (title) {
             var content = val(title);
             var tdClass = title === '카테고리' ? ' class="product-info-category-cell"' : '';
             return '<tr><th>' + String(title).replace(/</g, '&lt;') + '</th><td' + tdClass + '>' + String(content).replace(/</g, '&lt;') + '</td></tr>';
@@ -1010,7 +1018,7 @@ function updatePageInfo() {
     
     // 상세정보 탭의 상품 정보 테이블 업데이트 (엑셀/관리자 details 있으면 사용, 없으면 기본값)
     const productSpecTable = document.getElementById('productSpecTable');
-    var defaultSpecTitles = ['카테고리', '제조사', '제품소재', '색상', '치수', '제조자', '제조국', '사용기한', '취급 시 주의사항', '품질보증기준'];
+    var defaultSpecTitles = ['카테고리', '제품소재', '색상', '치수', '제조국', '사용기한', '취급 시 주의사항', '품질보증기준'];
     function buildSpecTableBody() {
         var detailMap = {};
         var extraDetails = [];
@@ -1018,7 +1026,7 @@ function updatePageInfo() {
             PRODUCT_INFO.details.forEach(function (d) {
                 var t = (d.title || '').trim();
                 var c = (d.content || '').trim();
-                if (!t) return;
+                if (!t || isManufacturerTitle(t)) return;
                 detailMap[t] = c;
                 if (defaultSpecTitles.indexOf(t) === -1) extraDetails.push({ title: t, content: c });
             });
@@ -1027,21 +1035,23 @@ function updatePageInfo() {
             var fromDetail = detailMap[title];
             if (fromDetail != null && String(fromDetail).trim() !== '') return String(fromDetail).trim();
             if (title === '카테고리') return PRODUCT_INFO.category || '-';
-            if (title === '제조사' || title === '제조자') return PRODUCT_INFO.manufacturer || '-';
             return '-';
         }
-        var rows = defaultSpecTitles.map(function (title) {
+        var rows = defaultSpecTitles.filter(function (title) { return !isManufacturerTitle(title); }).map(function (title) {
             var content = getCellContent(title);
             var tdClass = title === '카테고리' ? ' class="product-spec-category-cell"' : '';
             return '<tr><th>' + String(title).replace(/</g, '&lt;') + '</th><td' + tdClass + '>' + String(content).replace(/</g, '&lt;') + '</td></tr>';
         });
         extraDetails.forEach(function (d) {
+            if (isManufacturerTitle(d.title)) return;
             rows.push('<tr><th>' + String(d.title).replace(/</g, '&lt;') + '</th><td>' + String(d.content || '-').replace(/</g, '&lt;') + '</td></tr>');
         });
         return rows.join('');
     }
     if (productSpecTable) {
-        productSpecTable.innerHTML = buildSpecTableBody();
+        var tableHtml = buildSpecTableBody();
+        tableHtml = tableHtml.replace(/<tr><th>[^<]*제조사[^<]*<\/th><td>[^<]*<\/td><\/tr>/g, '').replace(/<tr><th>[^<]*제조자[^<]*<\/th><td>[^<]*<\/td><\/tr>/g, '');
+        productSpecTable.innerHTML = tableHtml;
     }
     
     // 카테고리 ID → 이름 변환 후 태그/브레드크럼/테이블에 반영

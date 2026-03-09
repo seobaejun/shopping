@@ -80,7 +80,7 @@ async function loadAllProducts() {
         if (products.length === 0) {
             selectedProductIds.clear();
             const tbody = document.getElementById('productListBody');
-            tbody.innerHTML = '<tr><td colspan="11" class="empty-message">등록된 상품이 없습니다.<br><a href="#" onclick="document.querySelector(\'[data-page=product-register]\').click(); return false;" class="btn btn-primary" style="margin-top:10px;display:inline-block;">상품 등록</a></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="empty-message">등록된 상품이 없습니다.<br><a href="#" onclick="document.querySelector(\'[data-page=product-register]\').click(); return false;" class="btn btn-primary" style="margin-top:10px;display:inline-block;">상품 등록</a></td></tr>';
             renderProductListPagination(0);
             const bulkBtn = document.getElementById('productListBulkDeleteBtn');
             if (bulkBtn) bulkBtn.style.display = 'none';
@@ -173,7 +173,7 @@ function resetProductSearch() {
     document.getElementById('searchProductCount').textContent = '0';
     const tbody = document.getElementById('productSearchResultsBody');
     if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>';
     }
 }
 
@@ -229,7 +229,7 @@ function renderSearchResultsTable(products) {
     }
 
     if (products.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-message">검색 결과가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 결과가 없습니다.</td></tr>';
         return;
     }
 
@@ -246,6 +246,7 @@ function renderSearchResultsTable(products) {
                     ${renderProductListImage(product)}
                 </td>
                 <td style="text-align: center;">${escapeHtml(product.name)}</td>
+                <td>${escapeHtml(product.manufacturer || '')}</td>
                 <td>${categoryName}</td>
                 <td>${formatPrice(product.price)}원</td>
                 <td>${formatPrice(supportAmount)} trix</td>
@@ -281,7 +282,7 @@ function renderAllProductsTable(products, startIndex) {
     }
 
 if (products.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="11" class="empty-message">등록된 상품이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="empty-message">등록된 상품이 없습니다.</td></tr>';
             return;
         }
 
@@ -301,6 +302,7 @@ if (products.length === 0) {
                     ${renderProductListImage(product)}
                 </td>
                 <td style="text-align: center;">${escapeHtml(product.name)}</td>
+                <td>${escapeHtml(product.manufacturer || '')}</td>
                 <td>${categoryName}</td>
                 <td>${formatPrice(product.price)}원</td>
                 <td>${formatPrice(supportAmount)} trix</td>
