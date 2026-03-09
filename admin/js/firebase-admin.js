@@ -896,13 +896,22 @@ const tokenService = {
             approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        const memberRef = collections.members().doc(memberId);
-        const memberSnap = await memberRef.get();
-        const current = (memberSnap.exists && memberSnap.data().tokenBalance != null) ? Number(memberSnap.data().tokenBalance) : 0;
-        await memberRef.update({
+        if (quantity <= 0) return;
+        var memberRef = collections.members().doc(memberId);
+        var memberSnap = await memberRef.get();
+        if (!memberSnap.exists && d.userId) {
+            var byUserId = await collections.members().where('userId', '==', d.userId).limit(1).get();
+            if (!byUserId.empty) {
+                memberRef = byUserId.docs[0].ref;
+                memberSnap = await memberRef.get();
+            }
+        }
+        if (!memberSnap.exists) throw new Error('해당 회원을 찾을 수 없습니다. (memberId: ' + (memberId || '') + ')');
+        const current = (memberSnap.data().tokenBalance != null) ? Number(memberSnap.data().tokenBalance) : 0;
+        await memberRef.set({
             tokenBalance: current + quantity,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }, { merge: true });
     },
     async completeWithdrawal(withdrawalId) {
         const doc = await collections.tokenWithdrawals().doc(withdrawalId).get();
@@ -915,13 +924,22 @@ const tokenService = {
             completedAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        const memberRef = collections.members().doc(memberId);
-        const memberSnap = await memberRef.get();
-        const current = (memberSnap.exists && memberSnap.data().tokenBalance != null) ? Number(memberSnap.data().tokenBalance) : 0;
-        await memberRef.update({
+        if (quantity <= 0) return;
+        var memberRef = collections.members().doc(memberId);
+        var memberSnap = await memberRef.get();
+        if (!memberSnap.exists && d.userId) {
+            var byUserId = await collections.members().where('userId', '==', d.userId).limit(1).get();
+            if (!byUserId.empty) {
+                memberRef = byUserId.docs[0].ref;
+                memberSnap = await memberRef.get();
+            }
+        }
+        if (!memberSnap.exists) throw new Error('해당 회원을 찾을 수 없습니다. (memberId: ' + (memberId || '') + ')');
+        const current = (memberSnap.data().tokenBalance != null) ? Number(memberSnap.data().tokenBalance) : 0;
+        await memberRef.set({
             tokenBalance: Math.max(0, current - quantity),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }, { merge: true });
     },
     async cancelDeposit(depositId) {
         const doc = await collections.tokenDeposits().doc(depositId).get();

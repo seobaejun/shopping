@@ -223,9 +223,9 @@ async function displayUserInfo(user, member, orders) {
             const approvedDeposits = deposits.filter(d => d.status === 'approved');
             console.log('✅ 승인된 입금:', approvedDeposits.length, '건');
             approvedDeposits.forEach(function (deposit) {
-                var amount = Number(deposit.amount) || 0;
-                console.log('입금 토큰:', amount, 'trix');
-                totalSupport += amount;
+                var qty = Number(deposit.quantity) || 0;
+                console.log('입금 토큰:', qty, 'trix');
+                totalSupport += qty;
             });
         }
     } catch (error) {
@@ -255,16 +255,16 @@ async function displayUserInfo(user, member, orders) {
             const approvedWithdrawals = withdrawals.filter(w => w.status === 'completed');
             console.log('✅ 승인된 출금:', approvedWithdrawals.length, '건');
             approvedWithdrawals.forEach(function (withdrawal) {
-                var amount = Number(withdrawal.amount) || 0;
-                console.log('출금 토큰:', amount, 'trix (차감)');
-                totalSupport -= amount; // 차감
+                var qty = Number(withdrawal.quantity) || 0;
+                console.log('출금 토큰:', qty, 'trix (차감)');
+                totalSupport -= qty; // 차감
             });
         }
     } catch (error) {
         console.warn('토큰 출금 내역 로드 오류:', error);
     }
     
-    if (totalSupport === 0 && member && typeof member.tokenBalance === 'number') {
+    if (member && typeof member.tokenBalance === 'number' && member.tokenBalance >= 0) {
         totalSupport = member.tokenBalance;
     }
     
