@@ -925,11 +925,15 @@ function updatePageInfo() {
     const breadcrumbCategory = document.querySelector('.breadcrumb li:nth-child(3) a');
     // breadcrumbCategory는 카테고리 이름 설정 시 함께 업데이트
     
-    // 메인 이미지 업데이트
+    // 메인 이미지: 로드 완료 후에만 표시 (노이미지 플래시 방지)
     const mainImage = productDetailElements.mainImage;
     if (mainImage) {
+        mainImage.style.opacity = '0';
+        mainImage.onerror = function () { this.style.opacity = '1'; };
+        mainImage.onload = function () { this.style.opacity = '1'; };
         mainImage.src = PRODUCT_INFO.image;
         mainImage.alt = PRODUCT_INFO.name;
+        if (mainImage.complete && mainImage.naturalWidth) mainImage.style.opacity = '1';
         console.log('✅ 메인 이미지 업데이트:', PRODUCT_INFO.image);
     }
     
@@ -1004,7 +1008,7 @@ function updatePageInfo() {
         if (PRODUCT_INFO.detailImages && PRODUCT_INFO.detailImages.length > 0) {
             parts.push(PRODUCT_INFO.detailImages.map(imageUrl => `
                 <div class="detail-image">
-                    <img src="${imageUrl}" alt="상세 이미지" style="width: 100%; height: auto;">
+                    <img src="${imageUrl.replace(/"/g, '&quot;')}" alt="상세 이미지" style="width: 100%; height: auto;" loading="lazy" decoding="async">
                 </div>
             `).join(''));
         }
