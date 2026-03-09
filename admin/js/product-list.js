@@ -1010,9 +1010,9 @@ function getExcelHeaderMapping() {
         '간단설명': 'shortDesc', '요약설명': 'shortDesc', 'shortDesc': 'shortDesc', 'it_basic': 'shortDesc',
         '이미지': 'imageUrl', '이미지주소': 'imageUrl', '상품이미지': 'imageUrl', '대표이미지': 'imageUrl',
         '메인이미지': 'imageUrl', '메인이미지주소': 'imageUrl', '대표이미지주소': 'imageUrl', '메인이미지가서버에저장된주소': 'imageUrl',
-        'it_img': 'imageUrl', 'it_img1': 'imageUrl', '이미지1': 'imageUrl', 'it_img2': 'imageUrl', 'it_img3': 'imageUrl',
+        'it_img': 'imageUrl', 'it_img1': 'imageUrl', 'small_piit_img1': 'imageUrl', '이미지1': 'imageUrl', 'it_img2': 'imageUrl', 'it_img3': 'imageUrl',
         'img': 'imageUrl', 'image': 'imageUrl', '이미지경로': 'imageUrl', '이미지파일': 'imageUrl',
-        '상세이미지': 'detailImageUrl', '이미지2': 'detailImageUrl', '이미지3': 'detailImageUrl', '이미지4': 'detailImageUrl', '이미지5': 'detailImageUrl', '상세이미지주소': 'detailImageUrl', '상세이미지가서버에저장된주소': 'detailImageUrl', 'detailImageUrl': 'detailImageUrl',
+        '상세이미지': 'detailImageUrl', '이미지2': 'detailImageUrl', '이미지3': 'detailImageUrl', '이미지4': 'detailImageUrl', '이미지5': 'detailImageUrl', '상세이미지주소': 'detailImageUrl', '상세이미지가서버에저장된주소': 'detailImageUrl', 'detailImageUrl': 'detailImageUrl', 'it_explan': 'detailImageUrl',
         '옵션': 'options', 'option': 'options', 'it_option': 'options', '추가옵션': 'options'
     };
 }
@@ -1050,22 +1050,50 @@ function parseOptionsFromExcel(str, defaultPrice) {
     return out.length > 0 ? out : null;
 }
 
-/** 이미지 값이 상대 경로면 절대 URL로 변환. IMAGE_BASE_URL(개인 서버)이 있으면 그쪽으로, 없으면 현재 사이트 기준 */
-function toAbsoluteImageUrl(value) {
-    if (!value || typeof value !== 'string') return '';
-    const v = value.trim();
+/** 이미지 서버 표시용 URL 기준 (image-config.js와 동일) */
+function getImageBaseUrl() {
+    return (typeof window !== 'undefined' && window.IMAGE_BASE_URL && String(window.IMAGE_BASE_URL).trim()) || 'http://1.228.243.28/item';
+}
+
+/** 경로 또는 전체 URL을 이미지 서버 표시용 URL로 변환. /product/xxx 또는 data/editor//product/xxx → base/item/파일명 */
+function pathToDisplayUrl(path) {
+    if (path == null || typeof path !== 'string') return '';
+    const v = path.trim();
     if (!v) return '';
     if (/^https?:\/\//i.test(v)) return v;
     if (/^data:/.test(v)) return v;
-    const base = typeof window !== 'undefined' && window.IMAGE_BASE_URL && String(window.IMAGE_BASE_URL).trim();
-    if (base && v.startsWith('/')) return base.replace(/\/$/, '') + v;
-    if (typeof window === 'undefined' || !window.location) return v.startsWith('/') ? v : '/' + v;
-    const origin = window.location.origin || '';
-    const pathname = window.location.pathname || '';
-    const basePath = pathname.includes('/admin') ? pathname.split('/admin')[0] : '';
-    const prefix = basePath.endsWith('/') ? basePath : basePath + '/';
-    const path = v.startsWith('/') ? v.slice(1) : v;
-    return origin + prefix + path;
+    const base = getImageBaseUrl();
+    const match = v.match(/product\/([^/]+)$/);
+    if (match) return base.replace(/\/$/, '') + '/' + match[1];
+    if (v.charAt(0) === '/') return base.replace(/\/$/, '') + v;
+    return v;
+}
+
+/** 셀 값(HTML 또는 주소 문자열)에서 이미지 표시용 URL 배열 추출. HTML이면 img src만 뽑아 변환, 아니면 주소를 변환 */
+function extractImageUrlsFromCell(value) {
+    if (value == null || typeof value !== 'string') return [];
+    const v = value.trim();
+    if (!v) return [];
+    const urls = [];
+    if (/<img[\s\S]*?src\s*=\s*['"]?([^'">\s]+)/i.test(v) || /src\s*=\s*['"]?([^'">\s]+)/i.test(v)) {
+        const regex = /src\s*=\s*['"]?([^'">\s]+)/gi;
+        let m;
+        while ((m = regex.exec(v)) !== null) {
+            const src = m[1].trim();
+            if (!src || /^data:$/i.test(src) || /^\/data\/editor\/?$/i.test(src)) continue;
+            urls.push(pathToDisplayUrl(src));
+        }
+    }
+    if (urls.length > 0) return urls;
+    const parts = v.split(/[\s,;|\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    for (let i = 0; i < parts.length; i++) urls.push(pathToDisplayUrl(parts[i]));
+    return urls;
+}
+
+/** 이미지 값이 상대 경로면 절대 URL로 변환. IMAGE_BASE_URL(개인 서버)이 있으면 그쪽으로, 없으면 현재 사이트 기준 (기존 호환용) */
+function toAbsoluteImageUrl(value) {
+    const arr = extractImageUrlsFromCell(value);
+    return arr.length > 0 ? arr[0] : '';
 }
 
 /** 엑셀 셀 숫자 파싱 (쉼표·공백 제거 후 정수) */
@@ -1270,10 +1298,18 @@ async function handleBulkProductFile(file) {
         const total = products.length;
         for (let i = 0; i < products.length; i++) {
             const p = products[i];
-            const mainImgUrl = toAbsoluteImageUrl((p.imageUrl || '').trim());
+            const mainImgUrls = extractImageUrlsFromCell((p.imageUrl || '').trim());
+            const mainImgUrl = mainImgUrls.length > 0 ? mainImgUrls[0] : '';
             const detailRaw = (p.detailImageUrl || '').trim();
-            const detailUrls = detailRaw ? detailRaw.split(/[\s,;|\n]+/).map(s => s.trim()).filter(Boolean).map(toAbsoluteImageUrl) : [];
-            const detailImageUrls = detailUrls.length > 0 ? detailUrls : (mainImgUrl ? [mainImgUrl] : []);
+            const detailLines = detailRaw ? detailRaw.split(/\n/).map(function (s) { return s.trim(); }).filter(Boolean) : [];
+            let detailImageUrls = [];
+            for (let d = 0; d < detailLines.length; d++) {
+                const extracted = extractImageUrlsFromCell(detailLines[d]);
+                for (let e = 0; e < extracted.length; e++) {
+                    if (extracted[e]) detailImageUrls.push(extracted[e]);
+                }
+            }
+            if (detailImageUrls.length === 0 && mainImgUrl) detailImageUrls = [mainImgUrl];
             const opts = (p.options && p.options.length > 0) ? p.options : [{ label: '기본', price: p.price }];
             const productData = {
                 name: p.name,

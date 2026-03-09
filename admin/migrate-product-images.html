@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>상품 이미지 경로 일괄 수정 - Firestore</title>
+    <style>
+        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 20px; }
+        h1 { font-size: 1.2rem; margin-bottom: 8px; }
+        p { color: #555; margin-bottom: 20px; }
+        .info { background: #f0f7ff; border: 1px solid #b3d9ff; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        button { padding: 10px 20px; background: #4A5FC1; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        button:disabled { background: #999; cursor: not-allowed; }
+        #log { margin-top: 20px; white-space: pre-wrap; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; background: #f5f5f5; padding: 12px; border-radius: 6px; }
+        .progress { margin-top: 12px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+        .progress-bar { height: 100%; background: #4A5FC1; width: 0%; transition: width 0.2s; }
+    </style>
+</head>
+<body>
+    <h1>Firestore 상품 이미지 경로 일괄 수정</h1>
+    <div class="info">
+        <strong>저장 위치:</strong> Firestore <code>products</code> 컬렉션<br>
+        <strong>대상 필드:</strong> mainImageUrl, imageUrl, image, detailImageUrls<br>
+        <strong>변환 규칙:</strong> <code>data/editor//product/파일명.png</code> → <code>http://1.228.243.28/item/파일명.png</code><br>
+        이미 전체 URL인 값은 변경하지 않습니다.
+    </div>
+    <p>
+        <button id="runBtn">일괄 수정 실행</button>
+    </p>
+    <div class="progress" id="progressWrap" style="display: none;">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div id="log"></div>
+
+    <script src="../js/image-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="js/firebase-admin.js"></script>
+    <script>
+(function () {
+    var IMAGE_BASE_URL = 'http://1.228.243.28/item';
+
+    function toDisplayUrl(url) {
+        if (url == null || typeof url !== 'string') return '';
+        var v = url.trim();
+        if (!v) return '';
+        if (/^https?:\/\//i.test(v)) return v;
+        if (/^data:/.test(v)) return v;
+        var base = IMAGE_BASE_URL;
+        if (base && typeof base === 'string' && base.trim()) {
+            var match = v.match(/product\/([^/]+)$/);
+            if (match) return base.replace(/\/$/, '') + '/' + match[1];
+            if (v.charAt(0) === '/') return base.replace(/\/$/, '') + v;
+        }
+        return v;
+    }
+
+    function needsConversion(url) {
+        if (!url || typeof url !== 'string') return false;
+        var v = url.trim();
+        if (/^https?:\/\//i.test(v) || /^data:/.test(v)) return false;
+        return /data\/editor|product\//i.test(v) || v.indexOf('product/') !== -1;
+    }
+
+    function log(msg) {
+        var el = document.getElementById('log');
+        if (el) el.textContent += msg + '\n';
+        console.log(msg);
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async function () {
+        var btn = this;
+        var progressWrap = document.getElementById('progressWrap');
+        var progressBar = document.getElementById('progressBar');
+        document.getElementById('log').textContent = '';
+
+        try {
+            btn.disabled = true;
+            progressWrap.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            await window.firebaseAdmin.getInitPromise();
+            var products = await window.firebaseAdmin.productService.getProducts();
+            log('상품 총 ' + products.length + '개 로드됨.');
+
+            var updated = 0;
+            var total = products.length;
+            for (var i = 0; i < products.length; i++) {
+                var p = products[i];
+                var updates = {};
+                var changed = false;
+
+                var mainRaw = p.mainImageUrl || p.imageUrl || p.image || '';
+                if (mainRaw && needsConversion(mainRaw)) {
+                    var resolved = toDisplayUrl(mainRaw);
+                    if (resolved !== mainRaw) {
+                        updates.mainImageUrl = resolved;
+                        updates.imageUrl = resolved;
+                        updates.image = resolved;
+                        changed = true;
+                    }
+                }
+
+                var detailUrls = p.detailImageUrls && Array.isArray(p.detailImageUrls) ? p.detailImageUrls : [];
+                var newDetails = [];
+                var detailsChanged = false;
+                for (var j = 0; j < detailUrls.length; j++) {
+                    var u = detailUrls[j];
+                    var converted = (u && needsConversion(u)) ? toDisplayUrl(u) : (u || '');
+                    newDetails.push(converted);
+                    if (converted !== (u || '')) detailsChanged = true;
+                }
+                if (detailsChanged && newDetails.length > 0) {
+                    updates.detailImageUrls = newDetails;
+                    changed = true;
+                }
+
+                if (changed && Object.keys(updates).length) {
+                    await window.firebaseAdmin.productService.updateProduct(p.id, updates);
+                    updated++;
+                    log('수정: ' + (p.name || p.id) + ' (id: ' + p.id + ')');
+                }
+
+                progressBar.style.width = Math.round(((i + 1) / total) * 100) + '%';
+            }
+
+            progressBar.style.width = '100%';
+            log('');
+            log('완료: 총 ' + products.length + '개 중 ' + updated + '개 상품 이미지 경로 수정됨.');
+        } catch (err) {
+            log('오류: ' + err.message);
+            console.error(err);
+        } finally {
+            btn.disabled = false;
+        }
+    });
+})();
+    </script>
+</body>
+</html>
