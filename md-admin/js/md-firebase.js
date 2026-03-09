@@ -67,8 +67,14 @@ function getSubordinateCodes(mdCode) {
     return subordinates;
 }
 
+// 관리자에서 MD 바로가기로 들어온 경우 전체 권한 허용
+function isAdminViewingMd() {
+    return sessionStorage.getItem('mdAdminFromAdmin') === 'true';
+}
+
 // 현재 로그인한 MD의 권한 체크
 function checkMdPermission(requestedMdCode) {
+    if (isAdminViewingMd()) return true;
     const mdAdminData = localStorage.getItem('mdAdminData');
     if (!mdAdminData) {
         throw new Error('MD 관리자 로그인이 필요합니다.');
@@ -195,12 +201,15 @@ async function getMembersByMdCode(mdCode) {
 async function getAllowedMembers() {
     try {
         await waitForFirebaseMd();
-        
+        if (isAdminViewingMd() && window.firebaseAdmin && window.firebaseAdmin.memberService && typeof window.firebaseAdmin.memberService.getMembers === 'function') {
+            var all = await window.firebaseAdmin.memberService.getMembers();
+            console.log('관리자 조회: 전체 회원 수', all ? all.length : 0);
+            return all || [];
+        }
         const allowedCodes = getAllowedMdCodes();
         if (allowedCodes.length === 0) {
             throw new Error('조회 권한이 없습니다.');
         }
-        
         const members = [];
         
         for (const code of allowedCodes) {

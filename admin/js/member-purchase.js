@@ -58,12 +58,19 @@ window.searchMemberPurchase = async function() {
         // Firebase Admin 초기화 대기
         const firebaseAdmin = await waitForFirebaseAdminPurchase();
         
-        // 회원 정보 검색
-        const members = await firebaseAdmin.memberService.getMembers();
-        const member = members.find(m => 
-            (m.userId && m.userId.toLowerCase().includes(keyword.toLowerCase())) ||
-            (m.name && m.name.includes(keyword))
-        );
+        // 회원 목록 (MD일 때 getAllowedMembers 사용 → 관리자에서 MD 바로가기로 들어와도 동일 목록으로 검색)
+        var members;
+        if (window.isMdAdmin && window.mdFirebase && typeof window.mdFirebase.getAllowedMembers === 'function') {
+            members = await window.mdFirebase.getAllowedMembers();
+        } else {
+            members = await firebaseAdmin.memberService.getMembers();
+        }
+        var keywordLower = keyword.toLowerCase();
+        var member = members.find(function (m) {
+            var uid = (m.userId || m.id || '').toString().trim().toLowerCase();
+            var nm = (m.name || m.userName || '').toString().trim().toLowerCase();
+            return (uid && uid.indexOf(keywordLower) !== -1) || (nm && nm.indexOf(keywordLower) !== -1);
+        });
         
         if (!member) {
             alert('해당 회원을 찾을 수 없습니다.');
