@@ -1,9 +1,11 @@
 /**
  * 상품 이미지가 개인 서버에 있을 때 사용.
- * - 엑셀/DB 저장값: data/editor//product/product_xxx.png
- * - 표시용 URL: IMAGE_BASE_URL + /product_xxx.png (예: http://1.228.243.28/item/product_xxx.png)
+ * - HTTPS(배포): /item/... 으로 요청 → Vercel이 1.228.243.28으로 프록시 (Mixed Content 방지)
+ * - HTTP(로컬): http://1.228.243.28/item/... 직접 요청
  */
-window.IMAGE_BASE_URL = 'http://1.228.243.28/item';
+window.IMAGE_BASE_URL = (typeof window !== 'undefined' && window.location && window.location.protocol === 'https:')
+    ? '/item'
+    : 'http://1.228.243.28/item';
 
 /**
  * 상품 이미지 URL을 표시용 절대 URL로 변환
@@ -14,8 +16,13 @@ window.resolveProductImageUrl = function (url) {
     if (url == null || typeof url !== 'string') return '';
     var v = url.trim();
     if (!v) return '';
-    if (/^https?:\/\//i.test(v)) return v;
     if (/^data:/.test(v)) return v;
+    if (/^https?:\/\//i.test(v)) {
+        if (typeof window !== 'undefined' && window.location && window.location.protocol === 'https:' && /^http:\/\/1\.228\.243\.28\/item\//i.test(v)) {
+            return v.replace(/^http:\/\/1\.228\.243\.28\/item\/?/i, '/item/');
+        }
+        return v;
+    }
     var base = window.IMAGE_BASE_URL;
     if (base && typeof base === 'string' && base.trim()) {
         var match = v.match(/product\/([^/]+)$/);
