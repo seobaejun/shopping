@@ -132,21 +132,28 @@ exports.sendSMS = onCall(
 exports.requestVerificationCode = onCall(
   { region: "asia-northeast3" },
   async (request) => {
-    const phone = request.data && request.data.phone;
-    const phoneTrimmed = typeof phone === "string" ? phone.replace(/\D/g, "") : "";
-    if (!phoneTrimmed || phoneTrimmed.length < 10) {
-      throw new HttpsError("invalid-argument", "올바른 휴대폰번호를 입력해주세요.");
+    try {
+      const phone = request.data && request.data.phone;
+      const phoneTrimmed = typeof phone === "string" ? phone.replace(/\D/g, "") : "";
+      if (!phoneTrimmed || phoneTrimmed.length < 10) {
+        throw new HttpsError("invalid-argument", "올바른 휴대폰번호를 입력해주세요.");
+      }
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + VERIFICATION_EXPIRY_MINUTES * 60 * 1000);
+      await db.collection(VERIFICATION_COLLECTION).doc(phoneTrimmed).set({
+        code,
+        expiresAt,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      const text = `[10쇼핑게임] 인증번호는 ${code}입니다. ${VERIFICATION_EXPIRY_MINUTES}분 내에 입력해주세요.`;
+      await sendSMSViaSolapi(phoneTrimmed, text);
+      return { success: true };
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      console.error("requestVerificationCode 예외:", err);
+      const msg = err && err.message ? err.message : "인증번호 발송 중 오류가 발생했습니다.";
+      throw new HttpsError("internal", msg);
     }
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + VERIFICATION_EXPIRY_MINUTES * 60 * 1000);
-    await db.collection(VERIFICATION_COLLECTION).doc(phoneTrimmed).set({
-      code,
-      expiresAt,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    const text = `[10쇼핑게임] 인증번호는 ${code}입니다. ${VERIFICATION_EXPIRY_MINUTES}분 내에 입력해주세요.`;
-    await sendSMSViaSolapi(phoneTrimmed, text);
-    return { success: true };
   }
 );
 
@@ -158,27 +165,34 @@ exports.requestVerificationCode = onCall(
 exports.verifyVerificationCode = onCall(
   { region: "asia-northeast3" },
   async (request) => {
-    const { phone, code } = request.data || {};
-    const phoneTrimmed = typeof phone === "string" ? phone.replace(/\D/g, "") : "";
-    const codeTrimmed = typeof code === "string" ? code.trim() : "";
-    if (!phoneTrimmed || !codeTrimmed) {
-      throw new HttpsError("invalid-argument", "휴대폰번호와 인증번호를 입력해주세요.");
-    }
-    const ref = db.collection(VERIFICATION_COLLECTION).doc(phoneTrimmed);
-    const snap = await ref.get();
-    if (!snap.exists) {
-      throw new HttpsError("failed-precondition", "인증번호를 먼저 요청해주세요.");
-    }
-    const data = snap.data();
-    const expiresAt = data.expiresAt && data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(0);
-    if (Date.now() > expiresAt.getTime()) {
+    try {
+      const { phone, code } = request.data || {};
+      const phoneTrimmed = typeof phone === "string" ? phone.replace(/\D/g, "") : "";
+      const codeTrimmed = typeof code === "string" ? code.trim() : "";
+      if (!phoneTrimmed || !codeTrimmed) {
+        throw new HttpsError("invalid-argument", "휴대폰번호와 인증번호를 입력해주세요.");
+      }
+      const ref = db.collection(VERIFICATION_COLLECTION).doc(phoneTrimmed);
+      const snap = await ref.get();
+      if (!snap.exists) {
+        throw new HttpsError("failed-precondition", "인증번호를 먼저 요청해주세요.");
+      }
+      const data = snap.data();
+      const expiresAt = data.expiresAt && data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(0);
+      if (Date.now() > expiresAt.getTime()) {
+        await ref.delete();
+        throw new HttpsError("failed-precondition", "인증번호가 만료되었습니다. 다시 요청해주세요.");
+      }
+      if (data.code !== codeTrimmed) {
+        throw new HttpsError("invalid-argument", "인증번호가 올바르지 않습니다.");
+      }
       await ref.delete();
-      throw new HttpsError("failed-precondition", "인증번호가 만료되었습니다. 다시 요청해주세요.");
+      return { success: true };
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      console.error("verifyVerificationCode 예외:", err);
+      const msg = err && err.message ? err.message : "인증번호 확인 중 오류가 발생했습니다.";
+      throw new HttpsError("internal", msg);
     }
-    if (data.code !== codeTrimmed) {
-      throw new HttpsError("invalid-argument", "인증번호가 올바르지 않습니다.");
-    }
-    await ref.delete();
-    return { success: true };
   }
 );

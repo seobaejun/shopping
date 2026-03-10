@@ -45,14 +45,23 @@ async function createNotificationForUser(userId, type, title, message, link) {
         if (type === 'notice') return;
         try {
             var db = window.firebaseAdmin.db || firebase.firestore();
-            var membersSnap = await db.collection('members').where('userId', '==', userId).limit(1).get();
-            if (!membersSnap.empty) {
-                var member = membersSnap.docs[0].data();
+            var member = null;
+            var idStr = String(userId || '');
+            // 주문 등에서는 Firebase UID(문서 ID)로, 공지 등에서는 로그인 userId로 넘어옴
+            if (idStr.length >= 20 && /^[a-zA-Z0-9_-]+$/.test(idStr)) {
+                var docSnap = await db.collection('members').doc(idStr).get();
+                if (docSnap.exists) member = docSnap.data();
+            }
+            if (!member) {
+                var membersSnap = await db.collection('members').where('userId', '==', idStr).limit(1).get();
+                if (!membersSnap.empty) member = membersSnap.docs[0].data();
+            }
+            if (member) {
                 var phone = (member.phone || member.mobile || '').toString().replace(/\D/g, '');
                 if (phone.length >= 10 && typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
                     var smsText = '[10쇼핑게임] ' + (title || message || '알림').trim().substring(0, 80);
                     var sendSMS = firebase.app().functions('asia-northeast3').httpsCallable('sendSMS');
-                    sendSMS({ to: phone, text: smsText }).catch(function (e) { console.warn('알림 문자 발송 실패:', e); });
+                    sendSMS({ to: phone, text: smsText }).then(function () { console.log('알림 문자 발송 완료:', phone.substring(0, 4) + '****'); }).catch(function (e) { console.warn('알림 문자 발송 실패:', e); });
                 }
             }
         } catch (e) {

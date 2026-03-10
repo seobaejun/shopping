@@ -56,3 +56,9 @@ const result = await sendSMS({ to: '01012345678', text: '테스트 메시지' })
 ## 5. 발신번호 변경
 
 나중에 발신번호를 바꿀 때는 위 **3. 환경변수**에서 `SOLAPI_SENDER`만 새 번호로 수정한 뒤 저장(및 필요 시 재배포)하면 됩니다. 코드 수정은 필요 없습니다.
+
+## 6. 인증번호 요청 시 "INTERNAL" 오류
+
+- **원인**: Functions 쪽에서 예외가 나면(환경변수 미설정, 솔라피 API 오류 등) 클라이언트에는 "INTERNAL"만 보입니다.
+- **대응**: `requestVerificationCode` / `verifyVerificationCode`에서 예외를 잡아 `HttpsError` 메시지로 던지도록 수정해 두었습니다. **Functions 재배포** 후에는 알림에 실제 사유(예: "문자 발송 설정이 되어 있지 않습니다.")가 표시됩니다.
+- **확인**: 위 **3. 환경변수**에 `SOLAPI_API_KEY`, `SOLAPI_API_SECRET`, `SOLAPI_SENDER`가 모두 설정되어 있는지 확인하고, 배포 후 다시 인증번호 요청을 시도해 보세요.
