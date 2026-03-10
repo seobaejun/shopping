@@ -15,7 +15,7 @@ const DEFAULT_DETAIL_ROWS = [
     { title: '색상', content: '상품페이지 참고' },
     { title: '치수', content: '상품페이지 참고' },
     { title: '제조자', content: '상품페이지 참고' },
-    { title: '세탁방법 및 취급시 주의사항', content: '상품페이지 참고' },
+    { title: '세탁방법 및 취급 시 주의사항', content: '상품페이지 참고' },
     { title: '제조연월', content: '상품페이지 참고' },
     { title: '품질보증기준', content: '상품페이지 참고' },
     { title: 'A/S 책임자와 전화번호', content: '상품페이지 참고' }
