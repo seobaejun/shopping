@@ -25,7 +25,8 @@ function renderSidebarCategoryMenu(categoryTree) {
     categoryTree.forEach(function (cat1) {
         var hasChildren = cat1.children && cat1.children.length > 0;
         var name = (cat1.name || '(이름 없음)').replace(/</g, '&lt;');
-        html += '<li' + (hasChildren ? ' class="has-submenu"' : '') + '>';
+        var dataId = (cat1.id || '').replace(/"/g, '&quot;');
+        html += '<li' + (hasChildren ? ' class="has-submenu"' : '') + (dataId ? ' data-category-id="' + dataId + '"' : '') + '>';
         if (hasChildren) {
             html += '<a href="#" onclick="toggleSubmenu(event, this)">' + name + '</a>';
             html += '<ul class="submenu">';
@@ -69,7 +70,11 @@ function renderMainNavCategories(categoryTree) {
         var name = (cat1.name || '(이름 없음)').replace(/</g, '&lt;');
         var catHref = getCategoryListHref(cat1.id);
         html += '<li' + (hasChildren ? ' class="has-submenu"' : '') + '>';
-        html += '<a href="' + catHref + '">' + name + (hasChildren ? ' <i class="fas fa-chevron-down nav-cat-chevron"></i>' : '') + '</a>';
+        if (hasChildren) {
+            html += '<span class="mainnav-toggle" data-mainnav-toggle role="button" tabindex="0">' + name + ' <i class="fas fa-chevron-down nav-cat-chevron"></i></span>';
+        } else {
+            html += '<a href="' + catHref + '">' + name + '</a>';
+        }
         if (hasChildren) {
             html += '<ul class="submenu">';
             cat1.children.forEach(function (cat2) {
@@ -89,6 +94,27 @@ function renderMainNavCategories(categoryTree) {
         html += '</li>';
     });
     return html;
+}
+
+function toggleMainNavSubmenu(event, element) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    var li = element && element.closest ? element.closest('li') : (element && element.parentElement);
+    if (!li) return;
+    var mainNav = document.getElementById('mainNavCategories');
+    if (mainNav) {
+        mainNav.querySelectorAll('li.submenu-open').forEach(function (el) {
+            if (el !== li) el.classList.remove('submenu-open');
+        });
+    }
+    var isOpen = li.classList.contains('submenu-open');
+    if (isOpen) {
+        li.classList.remove('submenu-open');
+    } else {
+        li.classList.add('submenu-open');
+    }
 }
 
 function toggleSubmenu(event, element) {
@@ -183,22 +209,82 @@ async function loadNavCategories() {
 }
 
 function initMainNavMobileSubmenu() {
-    var mainNav = document.getElementById('mainNavCategories');
-    if (!mainNav || mainNav._mobileSubmenuInit) return;
-    mainNav._mobileSubmenuInit = true;
-    mainNav.addEventListener('click', function (e) {
-        if (!window.matchMedia('(max-width: 768px)').matches) return;
-        var a = e.target.closest('li.has-submenu > a');
-        if (!a) return;
+    if (window._mainNavDelegationDone) return;
+    window._mainNavDelegationDone = true;
+    var lastTouch = 0;
+    function handleToggle(e) {
+        var toggle = e.target && e.target.closest ? e.target.closest('[data-mainnav-toggle]') : null;
+        if (!toggle) return;
         e.preventDefault();
         e.stopPropagation();
-        var li = a.closest('li');
+        var li = toggle.closest('li');
         if (!li) return;
-        var wasOpen = li.classList.contains('submenu-open');
-        var openItems = mainNav.querySelectorAll('li.submenu-open');
-        openItems.forEach(function (el) { el.classList.remove('submenu-open'); });
-        if (!wasOpen) li.classList.add('submenu-open');
-    });
+        var rectAtClick = toggle.getBoundingClientRect();
+        var nav = document.getElementById('mainNavCategories');
+        var container = document.querySelector('.navbar .container');
+        var existingPortal = document.getElementById('mainNavSubmenuPortal');
+        if (existingPortal) {
+            existingPortal.parentNode.removeChild(existingPortal);
+        }
+        if (nav) {
+            nav.querySelectorAll('li.submenu-open').forEach(function (el) {
+                if (el !== li) {
+                    el.classList.remove('submenu-open');
+                    var s = el.querySelector('.submenu');
+                    if (s) s.style.visibility = '';
+                }
+            });
+        }
+        li.classList.toggle('submenu-open');
+        if (li.classList.contains('submenu-open')) {
+            var sub = li.querySelector('.submenu');
+            if (sub) {
+                sub.style.visibility = '';
+                requestAnimationFrame(function () {
+                    var vw = window.innerWidth;
+                    var clone = sub.cloneNode(true);
+                    clone.id = 'mainNavSubmenuPortal';
+                    clone.className = clone.className + ' main-nav-submenu-portal';
+                    document.body.appendChild(clone);
+                    var subW = clone.offsetWidth;
+                    var clampedLeft = Math.max(0, Math.min(vw - subW, rectAtClick.left));
+                    clone.style.position = 'fixed';
+                    clone.style.left = clampedLeft + 'px';
+                    clone.style.top = rectAtClick.bottom + 'px';
+                    clone.style.maxWidth = (vw - clampedLeft) + 'px';
+                    clone.style.zIndex = '1100';
+                    sub.style.visibility = 'hidden';
+                });
+            }
+        } else {
+            var sub = li.querySelector('.submenu');
+            if (sub) sub.style.visibility = '';
+            var openCount = nav ? nav.querySelectorAll('li.submenu-open').length : 0;
+            if (openCount === 0) {
+                var portal = document.getElementById('mainNavSubmenuPortal');
+                if (portal) portal.parentNode.removeChild(portal);
+            }
+        }
+    }
+    document.body.addEventListener('click', function (e) {
+        if (Date.now() - lastTouch < 400) return;
+        handleToggle(e);
+    }, true);
+    document.body.addEventListener('touchend', function (e) {
+        if (e.target.closest && e.target.closest('[data-mainnav-toggle]')) {
+            e.preventDefault();
+            e.stopPropagation();
+            lastTouch = Date.now();
+            handleToggle(e);
+        }
+    }, { passive: false, capture: true });
+    document.body.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest && e.target.closest('[data-mainnav-toggle]')) {
+            e.preventDefault();
+            handleToggle(e);
+        }
+    }, true);
 }
 
 (function () {
@@ -223,3 +309,4 @@ function initMainNavMobileSubmenu() {
 window.loadNavCategories = loadNavCategories;
 window.initCategorySidebar = initCategorySidebar;
 window.toggleSubmenu = toggleSubmenu;
+window.toggleMainNavSubmenu = toggleMainNavSubmenu;
