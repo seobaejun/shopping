@@ -5,6 +5,7 @@
  * - verifyVerificationCode: 인증번호 확인
  */
 
+const crypto = require("crypto");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 
@@ -25,16 +26,25 @@ function getSolapiCredentials() {
   return { apiKey, apiSecret, sender };
 }
 
+/** 솔라피 API는 Basic이 아니라 HMAC-SHA256 인증만 허용 */
+function createSolapiAuthHeader(apiKey, apiSecret) {
+  const dateTime = new Date().toISOString();
+  const salt = crypto.randomBytes(16).toString("hex");
+  const data = dateTime + salt;
+  const signature = crypto.createHmac("sha256", apiSecret).update(data).digest("hex");
+  return `HMAC-SHA256 apiKey=${apiKey}, date=${dateTime}, salt=${salt}, signature=${signature}`;
+}
+
 async function sendSMSViaSolapi(to, text) {
   const cred = getSolapiCredentials();
   if (!cred) throw new Error("문자 발송 설정이 되어 있지 않습니다.");
   const from = cred.sender.replace(/\D/g, "");
   const toTrimmed = String(to).replace(/\D/g, "");
-  const credentials = Buffer.from(`${cred.apiKey}:${cred.apiSecret}`).toString("base64");
+  const authHeader = createSolapiAuthHeader(cred.apiKey, cred.apiSecret);
   const res = await fetch(SOLAPI_URL, {
     method: "POST",
     headers: {
-      Authorization: `Basic ${credentials}`,
+      Authorization: authHeader,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -42,8 +52,13 @@ async function sendSMSViaSolapi(to, text) {
     }),
   });
   const result = await res.json();
-  if (!res.ok || (result.successCount != null && result.successCount < 1)) {
-    throw new Error(result.errorMessage || "SMS 전송에 실패했습니다.");
+  if (!res.ok) {
+    console.error("Solapi sendSMSViaSolapi HTTP 오류:", res.status, result);
+    throw new Error(result.errorMessage || result.message || "SMS 전송에 실패했습니다.");
+  }
+  if (result.successCount != null && result.successCount < 1) {
+    console.error("Solapi sendSMSViaSolapi 발송 실패:", result);
+    throw new Error(result.errorMessage || result.message || "SMS 전송에 실패했습니다.");
   }
   return result;
 }
@@ -79,7 +94,7 @@ exports.sendSMS = onCall(
     }
 
     const from = sender.replace(/\D/g, "");
-    const credentials = Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
+    const authHeader = createSolapiAuthHeader(apiKey, apiSecret);
 
     const body = {
       message: {
@@ -93,7 +108,7 @@ exports.sendSMS = onCall(
       const res = await fetch(SOLAPI_URL, {
         method: "POST",
         headers: {
-          Authorization: `Basic ${credentials}`,
+          Authorization: authHeader,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
