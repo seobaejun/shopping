@@ -1,7 +1,7 @@
 // 회원가입 페이지 JavaScript
 
 // 개발 모드 (인증번호 요청 없이 진행)
-const DEV_MODE = true; // 개발 완료 후 false로 변경
+const DEV_MODE = false; // true면 휴대폰 인증 생략
 
 // 현재 단계
 let currentStep = 1;
@@ -576,60 +576,33 @@ function setupNicknameCheck() {
     });
 }
 
-// 인증번호 요청 (솔라피 API 사용)
-let verificationCode = null; // 생성된 인증번호 저장
-let verificationExpiry = null; // 인증번호 만료 시간
-let verificationMobile = null; // 인증 요청한 전화번호
+// 인증번호: Firebase Callable (requestVerificationCode / verifyVerificationCode) 사용
+let verificationMobile = null; // 인증 요청한 전화번호 (확인 시 서버에 전달용)
 
-// 솔라피 API 설정 (환경 변수 또는 설정에서 가져오기)
-const SOLAPI_CONFIG = {
-    apiKey: window.SOLAPI_API_KEY || '', // .env 파일이나 설정에서 가져오기
-    apiSecret: window.SOLAPI_API_SECRET || '',
-    sender: window.SOLAPI_SENDER || '01012345678' // 발신번호 (등록된 번호)
-};
-
-// 6자리 랜덤 인증번호 생성
-function generateVerificationCode() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+function getSendVerificationFunctions() {
+    if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) return null;
+    try {
+        const functions = firebase.app().functions('asia-northeast3');
+        return {
+            requestCode: functions.httpsCallable('requestVerificationCode'),
+            verifyCode: functions.httpsCallable('verifyVerificationCode')
+        };
+    } catch (e) {
+        return null;
+    }
 }
 
-// 솔라피 API로 SMS 전송
-async function sendSMSviaSolapi(mobile, code) {
-    // 솔라피 API 엔드포인트
-    const apiUrl = 'https://api.solapi.com/messages/v4/send';
-    
-    // Base64 인코딩 (API Key:API Secret)
-    const credentials = btoa(`${SOLAPI_CONFIG.apiKey}:${SOLAPI_CONFIG.apiSecret}`);
-    
-    // SMS 메시지 내용
-    const message = {
-        message: {
-            to: mobile,
-            from: SOLAPI_CONFIG.sender,
-            text: `[10쇼핑게임] 인증번호는 ${code}입니다. 5분 내에 입력해주세요.`
-        }
-    };
-    
+/** 가입 완료 문자 발송 (3단계) — 실패해도 가입 흐름은 유지 */
+function sendSignupCompleteSMS(phone) {
+    const trimmed = (phone || '').replace(/\D/g, '');
+    if (trimmed.length < 10) return;
     try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Basic ${credentials}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(message)
+        const fn = firebase.app().functions('asia-northeast3').httpsCallable('sendSMS');
+        fn({ to: trimmed, text: '[10쇼핑게임] 회원가입이 완료되었습니다.' }).catch(function (err) {
+            console.warn('가입완료 문자 발송 실패:', err);
         });
-        
-        const result = await response.json();
-        
-        if (response.ok && result.successCount > 0) {
-            return { success: true, messageId: result.messageId };
-        } else {
-            throw new Error(result.errorMessage || 'SMS 전송 실패');
-        }
-    } catch (error) {
-        console.error('솔라피 API 오류:', error);
-        throw error;
+    } catch (e) {
+        console.warn('가입완료 문자 발송 실패:', e);
     }
 }
 
@@ -655,109 +628,67 @@ function setupVerification() {
         return; // 개발 모드에서는 인증 로직 실행 안 함
     }
     
-    // 인증번호 요청 버튼 클릭
+    // 인증번호 요청 버튼 클릭 (Cloud Function requestVerificationCode 호출)
     requestBtn.addEventListener('click', async () => {
         const mobile = mobileInput.value.trim();
-        
         if (!mobile) {
             alert('휴대폰번호를 입력해주세요.');
             mobileInput.focus();
             return;
         }
-        
-        // 휴대폰번호 형식 검사
         const mobilePattern = /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/;
         const cleanMobile = mobile.replace(/-/g, '');
-        
         if (!mobilePattern.test(cleanMobile)) {
             alert('올바른 휴대폰번호 형식을 입력해주세요. (예: 010-1234-5678)');
             mobileInput.focus();
             return;
         }
-        
-        // 솔라피 API 설정 확인
-        if (!SOLAPI_CONFIG.apiKey || !SOLAPI_CONFIG.apiSecret) {
-            alert('솔라피 API 설정이 필요합니다. 관리자에게 문의해주세요.');
-            console.error('솔라피 API 키가 설정되지 않았습니다.');
+        const fns = getSendVerificationFunctions();
+        if (!fns || !fns.requestCode) {
+            alert('인증 서비스를 불러올 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.');
             return;
         }
-        
         requestBtn.disabled = true;
         requestBtn.textContent = '전송중...';
-        
         try {
-            // 인증번호 생성
-            const code = generateVerificationCode();
-            verificationCode = code;
-            verificationExpiry = Date.now() + (5 * 60 * 1000); // 5분 후 만료
+            await fns.requestCode({ phone: cleanMobile });
             verificationMobile = cleanMobile;
-            
-            // 솔라피 API로 SMS 전송
-            await sendSMSviaSolapi(cleanMobile, code);
-            
             alert('인증번호가 전송되었습니다. SMS를 확인해주세요.');
             verifyCodeGroup.style.display = 'block';
             verifyCodeInput.required = true;
             requestBtn.textContent = '재전송';
-            requestBtn.disabled = false;
-            
         } catch (error) {
             console.error('인증번호 전송 오류:', error);
-            
-            let errorMessage = '인증번호 전송에 실패했습니다.';
-            
-            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-                errorMessage = 'API 인증에 실패했습니다. API 키를 확인해주세요.';
-            } else if (error.message.includes('400')) {
-                errorMessage = '잘못된 요청입니다. 전화번호를 확인해주세요.';
-            } else if (error.message.includes('429')) {
-                errorMessage = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            
-            alert(errorMessage);
-            requestBtn.disabled = false;
-            requestBtn.textContent = '인증요청';
-            
-            // 인증번호 초기화
-            verificationCode = null;
-            verificationExpiry = null;
+            const msg = (error.message || error.code || '인증번호 전송에 실패했습니다.').replace(/^functions\/\w+\s*:\s*/i, '');
+            alert(msg);
             verificationMobile = null;
+            requestBtn.textContent = '인증요청';
         }
+        requestBtn.disabled = false;
     });
     
-    // 인증번호 확인 버튼 클릭
+    // 인증번호 확인 버튼 클릭 (Cloud Function verifyVerificationCode 호출)
     if (verifyBtn) {
         verifyBtn.addEventListener('click', async () => {
-            const verifyCode = verifyCodeInput.value.trim();
-            
-            if (!verifyCode) {
+            const codeInput = verifyCodeInput.value.trim();
+            if (!codeInput) {
                 alert('인증번호를 입력해주세요.');
                 verifyCodeInput.focus();
                 return;
             }
-            
-            if (!verificationCode || !verificationMobile) {
+            if (!verificationMobile) {
                 alert('먼저 인증번호를 요청해주세요.');
                 return;
             }
-            
-            // 만료 시간 확인
-            if (Date.now() > verificationExpiry) {
-                alert('인증번호가 만료되었습니다. 다시 요청해주세요.');
-                verificationCode = null;
-                verificationExpiry = null;
-                verificationMobile = null;
+            const fns = getSendVerificationFunctions();
+            if (!fns || !fns.verifyCode) {
+                alert('인증 서비스를 불러올 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.');
                 return;
             }
-            
             verifyBtn.disabled = true;
             verifyBtn.textContent = '확인중...';
-            
-            // 인증번호 확인
-            if (verifyCode === verificationCode) {
-                // 인증 성공
+            try {
+                await fns.verifyCode({ phone: verificationMobile, code: codeInput });
                 alert('인증이 완료되었습니다.');
                 verifyBtn.textContent = '인증완료';
                 verifyBtn.style.background = '#4caf50';
@@ -765,16 +696,11 @@ function setupVerification() {
                 requestBtn.disabled = true;
                 mobileInput.readOnly = true;
                 verifyCodeInput.readOnly = true;
-                
-                // 인증 완료 플래그 저장
                 window.phoneVerified = true;
-                
-                // 인증번호 정보 초기화 (보안)
-                verificationCode = null;
-                verificationExpiry = null;
-            } else {
-                // 인증 실패
-                alert('인증번호가 올바르지 않습니다. 다시 확인해주세요.');
+                verificationMobile = null;
+            } catch (error) {
+                const msg = (error.message || error.code || '인증번호가 올바르지 않습니다.').replace(/^functions\/\w+\s*:\s*/i, '');
+                alert(msg);
                 verifyCodeInput.value = '';
                 verifyCodeInput.focus();
                 verifyBtn.disabled = false;
@@ -906,6 +832,7 @@ function setupFinalSignup() {
                     withdrawnAt: firebase.firestore.FieldValue.delete()
                 });
                 console.log('✅ 재가입 완료 - 기존 문서 복구, docId:', docId);
+                sendSignupCompleteSMS(finalData.mobile);
                 alert('재가입이 완료되었습니다. 입력하신 비밀번호로 로그인해 주세요.');
                 window.location.href = 'login.html';
                 signupBtn.disabled = false;
@@ -948,7 +875,8 @@ function setupFinalSignup() {
             await db.collection('members').doc(uid).set(memberData);
             
             console.log('✅ 회원가입 완료 - Firestore에 저장됨, UID:', uid);
-            
+            sendSignupCompleteSMS(finalData.mobile);
+
             // 가입완료 페이지로 이동
             document.getElementById('welcomeName').textContent = finalData.userName;
             goToStep(4);

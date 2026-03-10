@@ -19,7 +19,7 @@ var _settlementPersonalPage = 1;
 var _settlementRoundPage = 1;
 var _deliveryRegisterPage = 1;
 
-// 알림 생성 헬퍼 함수
+// 알림 생성 헬퍼 함수 (알림 저장 후 해당 회원 전화번호로 문자 발송 — 4단계)
 async function createNotificationForUser(userId, type, title, message, link) {
     try {
         if (!window.firebaseAdmin || !window.firebaseAdmin.collections) {
@@ -40,6 +40,24 @@ async function createNotificationForUser(userId, type, title, message, link) {
 
         await window.firebaseAdmin.collections.notifications().add(notificationData);
         console.log('✅ 알림 생성 완료:', userId, type);
+
+        // 4단계: 알림 문자 발송 (공지는 제외, 나머지는 회원 전화번호로 발송)
+        if (type === 'notice') return;
+        try {
+            var db = window.firebaseAdmin.db || firebase.firestore();
+            var membersSnap = await db.collection('members').where('userId', '==', userId).limit(1).get();
+            if (!membersSnap.empty) {
+                var member = membersSnap.docs[0].data();
+                var phone = (member.phone || member.mobile || '').toString().replace(/\D/g, '');
+                if (phone.length >= 10 && typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+                    var smsText = '[10쇼핑게임] ' + (title || message || '알림').trim().substring(0, 80);
+                    var sendSMS = firebase.app().functions('asia-northeast3').httpsCallable('sendSMS');
+                    sendSMS({ to: phone, text: smsText }).catch(function (e) { console.warn('알림 문자 발송 실패:', e); });
+                }
+            }
+        } catch (e) {
+            console.warn('알림 문자 발송 준비 실패:', e);
+        }
     } catch (error) {
         console.error('❌ 알림 생성 오류:', error);
     }
