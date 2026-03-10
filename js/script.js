@@ -304,6 +304,10 @@ function createProductCard(product, index, type) {
         `<span class="badge ${badge}">${badgeLabels[badge] || badge}</span>`
     ).join('');
     const productId = product.id;
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const priceHtml = isLoggedIn
+        ? ((product.price != null && product.price !== '') ? Number(product.price).toLocaleString() + '원' : '0원')
+        : '';
 
     return `
         <div class="product-card" data-product-id="${productId}">
@@ -316,7 +320,7 @@ function createProductCard(product, index, type) {
             <div class="product-info">
                 <a href="product-detail.html?id=${productId}" class="product-title">${product.title}</a>
                 <div class="product-option">${product.option || ''}</div>
-                <div class="product-price">${product.price ? product.price.toLocaleString() + '원' : ''}</div>
+                <div class="product-price">${priceHtml}</div>
                 <div class="product-support">쇼핑지원금 ${product.support}</div>
                 <div class="product-footer">
                     <div class="product-rating">

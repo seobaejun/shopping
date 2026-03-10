@@ -461,6 +461,7 @@ async function loadProducts() {
                             id: product.id,
                             title: product.name,
                             option: product.shortDesc || '',
+                            price: product.price != null ? product.price : 0,
                             support: (product.supportAmount != null && product.supportAmount > 0) ? (formatTrix(product.supportAmount) + ' trix') : '0 trix',
                             rating: 0,
                             image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
@@ -475,6 +476,7 @@ async function loadProducts() {
                             id: product.id,
                             title: product.name,
                             option: product.shortDesc || '',
+                            price: product.price != null ? product.price : 0,
                             support: (product.supportAmount != null && product.supportAmount > 0) ? (formatTrix(product.supportAmount) + ' trix') : '0 trix',
                             rating: 0,
                             image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
@@ -585,6 +587,8 @@ function renderProducts() {
 function createProductCard(product, index) {
     const productId = product.id;
     const ratingVal = (product.rating != null && product.rating !== undefined) ? product.rating : 0;
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const priceHtml = isLoggedIn && product.price != null && product.price !== '' ? (Number(product.price).toLocaleString() + '원') : '';
     return `
         <div class="product-card" data-product-id="${productId}">
             <a href="product-detail.html?id=${productId}" class="product-link">
@@ -595,6 +599,7 @@ function createProductCard(product, index) {
             <div class="product-info">
                 <a href="product-detail.html?id=${productId}" class="product-title">${product.title}</a>
                 <div class="product-option">${product.option || ''}</div>
+                <div class="product-price">${priceHtml}</div>
                 <div class="product-description">${product.description}</div>
                 <div class="product-support">쇼핑지원금 ${product.support}</div>
                 <div class="product-footer">

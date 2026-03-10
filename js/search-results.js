@@ -85,6 +85,8 @@ function createProductCard(product) {
         .join('');
     
     const productId = product.id || '';
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const priceHtml = isLoggedIn && product.price != null && product.price !== '' ? (Number(product.price).toLocaleString() + '원') : '';
     return `
         <div class="product-card" data-product-id="${productId}">
             <a href="product-detail.html?id=${productId}" class="product-link">
@@ -98,6 +100,7 @@ function createProductCard(product) {
             <div class="product-info">
                 <a href="product-detail.html?id=${productId}" class="product-title">${product.title}</a>
                 <div class="product-option">${product.option || ''}</div>
+                <div class="product-price">${priceHtml}</div>
                 <div class="product-support">쇼핑지원금 ${product.support}</div>
                 <div class="product-footer">
                     <div class="product-rating">
@@ -527,12 +530,13 @@ function initSearchResultsViewedProducts() {
             return;
         }
 
+        const showPrice = localStorage.getItem('isLoggedIn') === 'true';
         const listHTML = uniqueProducts.map(product => `
             <div class="viewed-item" data-product-id="${product.id || ''}" style="cursor: pointer;">
                 <img src="${product.image || 'https://via.placeholder.com/80x80'}" alt="${product.name}">
                 <div class="viewed-item-info">
                     <p>${(product.name || '').replace(/</g, '&lt;')}</p>
-                    <span class="price">${product.price ? product.price.toLocaleString() + '원' : ''}</span>
+                    <span class="price">${showPrice && product.price ? product.price.toLocaleString() + '원' : ''}</span>
                 </div>
             </div>
         `).join('');
