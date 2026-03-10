@@ -811,24 +811,24 @@ async function saveEditProduct() {
     const isBest = currentProduct.isBest || false;
     const isRecommended = currentProduct.isRecommended || false;
 
-    // 대표 이미지 처리: URL 입력 또는 파일 업로드
+    // 대표 이미지 처리: URL 입력 또는 파일 업로드 (파일은 Storage 업로드)
     const editMainImageFile = document.getElementById('editMainImage').files[0];
     let mainImageUrl = document.getElementById('editProductMainImageUrl').value.trim();
     if (editMainImageFile) {
-        mainImageUrl = await fileToBase64(editMainImageFile);
+        mainImageUrl = await (window.firebaseAdmin && window.firebaseAdmin.uploadFileToStorage ? window.firebaseAdmin.uploadFileToStorage(editMainImageFile) : fileToBase64(editMainImageFile));
     } else if (mainImageUrl) {
         mainImageUrl = toAbsoluteImageUrl(mainImageUrl);
     }
     
     // 상세 이미지 수집: 기존/업로드 + URL 입력란
     const detailImageUrls = [];
+    const uploadFile = (window.firebaseAdmin && window.firebaseAdmin.uploadFileToStorage) ? window.firebaseAdmin.uploadFileToStorage.bind(window.firebaseAdmin) : fileToBase64;
     const imageUploads = document.querySelectorAll('#editDetailImagesContainer .detail-image-upload');
     for (const upload of imageUploads) {
         const fileInput = upload.querySelector('input[type="file"]');
         const existingImageInput = upload.querySelector('.existing-detail-image');
         if (fileInput && fileInput.files[0]) {
-            const base64 = await fileToBase64(fileInput.files[0]);
-            detailImageUrls.push(base64);
+            detailImageUrls.push(await uploadFile(fileInput.files[0]));
         } else if (existingImageInput && existingImageInput.value) {
             detailImageUrls.push(existingImageInput.value);
         }

@@ -87,6 +87,36 @@ async function initFirebase() {
     }
 }
 
+/**
+ * Firebase Storage 다운로드 URL에서 파일 경로 추출.
+ * 예: .../o/products%2F123_file.png?alt=media... => products/123_file.png
+ */
+function getStoragePathFromDownloadUrl(url) {
+    if (!url || typeof url !== 'string') return null;
+    try {
+        var match = url.match(/\/o\/(.+?)(\?|$)/);
+        if (match && match[1]) return decodeURIComponent(match[1]);
+    } catch (e) {}
+    return null;
+}
+
+/**
+ * 파일을 Firebase Storage에 업로드하고 다운로드 URL 반환.
+ * 상품 이미지 업로드용 (대표/세부). 서버 URL 입력 방식은 건드리지 않음.
+ */
+async function uploadFileToStorage(file) {
+    if (!file || !file.size) throw new Error('업로드할 파일이 없습니다.');
+    if (typeof firebase === 'undefined' || !firebase.storage) {
+        throw new Error('Firebase Storage를 사용할 수 없습니다. Storage SDK 로드 여부를 확인하세요.');
+    }
+    const storage = firebase.storage();
+    const safeName = (file.name || 'image').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = 'products/' + Date.now() + '_' + safeName;
+    const ref = storage.ref(path);
+    await ref.put(file);
+    return await ref.getDownloadURL();
+}
+
 // Firestore 컬렉션 참조
 const collections = {
     members: () => {
@@ -410,10 +440,40 @@ const productService = {
         }
     },
     
-    // 상품 수정
+    // 상품 수정 (이전 Storage 이미지 중 새 데이터에 없는 것은 삭제)
     async updateProduct(productId, productData) {
         try {
-            await collections.products().doc(productId).update({
+            const docRef = collections.products().doc(productId);
+            if (typeof firebase !== 'undefined' && firebase.storage) {
+                const doc = await docRef.get();
+                if (doc.exists) {
+                    const old = doc.data();
+                    const newMain = productData.mainImageUrl || productData.imageUrl || '';
+                    const newDetails = Array.isArray(productData.detailImageUrls) ? productData.detailImageUrls : [];
+                    const newSet = {};
+                    if (newMain) newSet[newMain] = true;
+                    newDetails.forEach(function (u) { if (u) newSet[u] = true; });
+                    const toDelete = [];
+                    [old.mainImageUrl, old.imageUrl].forEach(function (url) {
+                        if (url && typeof url === 'string' && (url.includes('firebasestorage.googleapis.com') || url.includes('firebasestorage.app')) && !newSet[url]) toDelete.push(url);
+                    });
+                    if (Array.isArray(old.detailImageUrls)) {
+                        old.detailImageUrls.forEach(function (url) {
+                            if (url && typeof url === 'string' && (url.includes('firebasestorage.googleapis.com') || url.includes('firebasestorage.app')) && !newSet[url]) toDelete.push(url);
+                        });
+                    }
+                    const storage = firebase.storage();
+                    for (let i = 0; i < toDelete.length; i++) {
+                        try {
+                            var path = getStoragePathFromDownloadUrl(toDelete[i]);
+                            if (path) await storage.ref(path).delete();
+                        } catch (imgErr) {
+                            console.warn('Storage 이전 이미지 삭제 실패 (무시):', toDelete[i], imgErr);
+                        }
+                    }
+                }
+            }
+            await docRef.update({
                 ...productData,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
@@ -423,10 +483,46 @@ const productService = {
         }
     },
     
-    // 상품 삭제
+    // 상품 삭제 (Firestore 문서 + Storage 이미지 삭제)
     async deleteProduct(productId) {
         try {
-            await collections.products().doc(productId).delete();
+            const docRef = collections.products().doc(productId);
+            const doc = await docRef.get();
+            if (doc.exists && typeof firebase !== 'undefined' && firebase.storage) {
+                const data = doc.data();
+                const storage = firebase.storage();
+                const bucketHost = 'firebasestorage.googleapis.com';
+                const bucketApp = 'firebasestorage.app';
+                const urlsToDelete = [];
+                if (data.mainImageUrl && typeof data.mainImageUrl === 'string' && (data.mainImageUrl.includes(bucketHost) || data.mainImageUrl.includes(bucketApp))) {
+                    urlsToDelete.push(data.mainImageUrl);
+                }
+                if (data.imageUrl && typeof data.imageUrl === 'string' && (data.imageUrl.includes(bucketHost) || data.imageUrl.includes(bucketApp)) && urlsToDelete.indexOf(data.imageUrl) === -1) {
+                    urlsToDelete.push(data.imageUrl);
+                }
+                if (Array.isArray(data.detailImageUrls)) {
+                    data.detailImageUrls.forEach(function (url) {
+                        if (url && typeof url === 'string' && (url.includes(bucketHost) || url.includes(bucketApp)) && urlsToDelete.indexOf(url) === -1) {
+                            urlsToDelete.push(url);
+                        }
+                    });
+                }
+                for (let i = 0; i < urlsToDelete.length; i++) {
+                    try {
+                        var path = getStoragePathFromDownloadUrl(urlsToDelete[i]);
+                        if (path) {
+                            var fileRef = storage.ref(path);
+                            await fileRef.delete();
+                        } else if (typeof storage.refFromURL === 'function') {
+                            var ref = storage.refFromURL(urlsToDelete[i]);
+                            await ref.delete();
+                        }
+                    } catch (imgErr) {
+                        console.warn('Storage 이미지 삭제 실패 (무시):', urlsToDelete[i], imgErr);
+                    }
+                }
+            }
+            await docRef.delete();
         } catch (error) {
             console.error('상품 삭제 오류:', error);
             throw error;
@@ -1149,6 +1245,7 @@ window.firebaseAdmin = {
     initFirebase,
     getInitPromise,
     getDb,
+    uploadFileToStorage,
     get db() { return db; },
     collections,
     isTestMember,

@@ -3427,7 +3427,7 @@ async function registerProduct(event) {
         if (mainImageUrlVal) {
             mainImageUrl = toAbsoluteImageUrl(mainImageUrlVal);
         } else if (mainImageFile && mainImageFile.size > 0) {
-            mainImageUrl = await fileToBase64(mainImageFile);
+            mainImageUrl = await (window.firebaseAdmin && window.firebaseAdmin.uploadFileToStorage ? window.firebaseAdmin.uploadFileToStorage(mainImageFile) : fileToBase64(mainImageFile));
         }
         
         // 상세 이미지: URL 입력 + 파일 업로드
@@ -3440,11 +3440,11 @@ async function registerProduct(event) {
                 if (u) detailImageUrls.push(toAbsoluteImageUrl(u));
             });
         }
+        const uploadFile = (window.firebaseAdmin && window.firebaseAdmin.uploadFileToStorage) ? window.firebaseAdmin.uploadFileToStorage.bind(window.firebaseAdmin) : fileToBase64;
         const detailImageFiles = formData.getAll('detailImages[]');
         for (const file of detailImageFiles) {
             if (file && file.size > 0) {
-                const base64 = await fileToBase64(file);
-                detailImageUrls.push(base64);
+                detailImageUrls.push(await uploadFile(file));
             }
         }
         const bulkInput = document.getElementById('bulkImages');
@@ -3452,8 +3452,7 @@ async function registerProduct(event) {
             for (let i = 0; i < bulkInput.files.length; i++) {
                 const file = bulkInput.files[i];
                 if (file && file.size > 0) {
-                    const base64 = await fileToBase64(file);
-                    detailImageUrls.push(base64);
+                    detailImageUrls.push(await uploadFile(file));
                 }
             }
         }
