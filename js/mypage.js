@@ -1067,7 +1067,7 @@ function fillProfileForm(member) {
     set('profilePostcode', member.postcode);
     set('profileAddress', member.address);
     set('profileDetailAddress', member.detailAddress);
-    set('profileMdCode', member.mdCode);
+    set('profileMdCode', member.mdCode || member.referralCode || member.recommender || '');
     set('profileAccountNumber', member.accountNumber);
     var bank = (member.bank || '').trim();
     var selectEl = document.getElementById('profileBank');
@@ -1203,9 +1203,18 @@ function showSection(sectionName, clickedLink) {
 
     if (isMobile && slot && sectionEl) {
         var linkLi = clickedLink ? clickedLink.closest('li') : null;
+        var insertAfterEl = null;
+        if (sectionName === 'token-purchase') {
+            insertAfterEl = document.getElementById('btnTokenPurchase');
+        } else if (sectionName === 'token-withdraw') {
+            insertAfterEl = document.querySelector('.mypage-sidebar .support-info-section');
+        } else if (linkLi) {
+            insertAfterEl = linkLi;
+        }
         var isAlreadyOpen = slot.contains(sectionEl);
+        var samePosition = insertAfterEl && slot.previousElementSibling === insertAfterEl;
 
-        if (isAlreadyOpen && linkLi && slot.previousElementSibling === linkLi) {
+        if (isAlreadyOpen && samePosition) {
             slot.classList.remove('open');
             slot.setAttribute('aria-hidden', 'true');
             if (mypageContent) mypageContent.appendChild(sectionEl);
@@ -1218,9 +1227,9 @@ function showSection(sectionName, clickedLink) {
             if (mypageContent) mypageContent.appendChild(prev);
         }
         document.querySelectorAll('.mypage-nav li.mobile-panel-open').forEach(function (el) { el.classList.remove('mobile-panel-open'); });
-        if (linkLi) {
-            linkLi.parentNode.insertBefore(slot, linkLi.nextSibling);
-            linkLi.classList.add('mobile-panel-open');
+        if (insertAfterEl) {
+            insertAfterEl.parentNode.insertBefore(slot, insertAfterEl.nextSibling);
+            if (linkLi) linkLi.classList.add('mobile-panel-open');
         }
         slot.appendChild(sectionEl);
         slot.classList.add('open');
