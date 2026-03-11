@@ -108,8 +108,8 @@ function resetSettings() {
     if (confirm('설정을 초기값으로 되돌리시겠습니까?')) {
         // 기본값으로 복원
         document.getElementById('siteName').value = '10쇼핑게임';
-        document.getElementById('siteUrl').value = 'https://10-2market.com';
-        document.getElementById('adminEmail').value = 'admin@10market.com';
+        document.getElementById('siteUrl').value = 'https://www.10shoppinggame.com';
+        document.getElementById('adminEmail').value = 'admin@10shoppinggame.com';
         document.getElementById('customerPhone').value = '1588-0000';
         document.getElementById('supportRate').value = 5;
         document.getElementById('minPurchaseAmount').value = 1000;

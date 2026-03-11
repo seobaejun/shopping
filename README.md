@@ -15,7 +15,8 @@
 > }
 > ```
 
-https://10-2market.com/ 사이트를 분석하여 똑같이 구현한 쇼핑몰 웹사이트입니다.
+https://10-2market.com/ 사이트를 분석하여 똑같이 구현한 쇼핑몰 웹사이트입니다.  
+**배포 URL**: https://www.10shoppinggame.com/
 
 ## 🚀 서버 실행 방법
 
