@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>10쇼핑게임</title>
+    <link>https://www.10shoppinggame.com/</link>
+    <description>10-쇼핑게임 - 판매자의 수익금을 구매자와 함께 나누는 회원전용 쇼핑몰</description>
+    <language>ko</language>
+    <lastBuildDate></lastBuildDate>
+    <atom:link href="https://www.10shoppinggame.com/rss.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title>10쇼핑게임</title>
+      <link>https://www.10shoppinggame.com/</link>
+      <description>판매자의 수익금을 구매자와 함께 나누는 '10쇼핑게임' 은 회원전용 쇼핑몰입니다.</description>
+      <pubDate></pubDate>
+    </item>
+  </channel>
+</rss>
