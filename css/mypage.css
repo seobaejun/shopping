@@ -317,11 +317,23 @@
 .btn-token-action:hover { opacity: 0.9; }
 .btn-token-action:last-of-type { margin-bottom: 0; margin-top: 12px; }
 
+.store-badges-label {
+    margin: 14px 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+}
+.store-badges-label .fa-chevron-down {
+    margin-left: 4px;
+    font-size: 12px;
+    vertical-align: middle;
+}
 .store-badges {
     display: flex !important;
     flex-wrap: wrap;
     gap: 10px;
-    margin-top: 14px;
+    margin-top: 8px;
     padding-top: 4px;
     visibility: visible !important;
     min-height: 46px;
@@ -351,8 +363,12 @@
     margin-right: auto;
 }
 /* 본문(토큰 출금하기 섹션) 안의 스토어 배지 - 가운데 정렬 */
-.token-withdraw-panel .store-badges {
+.token-withdraw-panel .store-badges-label {
     margin-top: 20px;
+    margin-bottom: 8px;
+}
+.token-withdraw-panel .store-badges {
+    margin-top: 8px;
     padding-top: 16px;
     border-top: 1px solid #eee;
     justify-content: center;
