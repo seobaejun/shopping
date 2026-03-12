@@ -292,10 +292,13 @@
     font-size: 17px;
     font-weight: 500;
     margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
     line-height: 1.5;
+    min-height: 3em; /* 한 줄일 때도 두 줄 공간 유지 → 카드 높이 통일 */
 }
 
 .product-grid.grid-view .product-support {

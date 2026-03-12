@@ -310,6 +310,12 @@
             if (data.marketingEmail !== undefined) allowed.marketingEmail = data.marketingEmail === true;
             if (data.marketingSms !== undefined) allowed.marketingSms = data.marketingSms === true;
             if (data.addresses !== undefined && Array.isArray(data.addresses)) allowed.addresses = data.addresses;
+            if (data.mdCode !== undefined) {
+                var code = (data.mdCode || '').trim();
+                allowed.mdCode = code;
+                allowed.referralCode = code;
+                allowed.recommender = code || '관리자';
+            }
             allowed.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
             return database.collection('members').doc(docId).update(allowed);
         });

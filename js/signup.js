@@ -786,10 +786,10 @@ function setupFinalSignup() {
             return;
         }
         
-        // 최종 데이터 수집
+        // 최종 데이터 수집 (추천인/MD는 2단계 mdCode만 사용)
         const finalData = {
             ...signupData,
-            referralCode: document.getElementById('referralCode').value.trim(),
+            referralCode: (signupData.mdCode || '').trim(),
             agreeEmail: document.getElementById('agreeEmail').checked,
             agreeSMS: document.getElementById('agreeSMS').checked,
             agreePublic: document.getElementById('agreePublic').checked
@@ -816,6 +816,7 @@ function setupFinalSignup() {
 
             if (isWithdrawn) {
                 const docId = withdrawnDoc.id;
+                const recommenderValue = (signupData.mdCode || '').trim() || '관리자';
                 await db.collection('members').doc(docId).update({
                     email: finalData.email,
                     name: finalData.userName,
@@ -824,6 +825,8 @@ function setupFinalSignup() {
                     address: finalData.address,
                     detailAddress: finalData.detailAddress,
                     password: finalData.password,
+                    referralCode: (signupData.mdCode || '').trim(),
+                    recommender: recommenderValue,
                     agreeEmail: finalData.agreeEmail,
                     agreeSMS: finalData.agreeSMS,
                     agreePublic: finalData.agreePublic,
@@ -849,23 +852,24 @@ function setupFinalSignup() {
             const uid = userCredential.user.uid;
             console.log('✅ Firebase Auth 계정 생성 완료, UID:', uid);
             
-            // 2. Firestore에 나머지 회원 정보 저장 (UID를 문서 ID로 사용)
+            // 2. Firestore에 나머지 회원 정보 저장 (추천인/MD는 2단계 mdCode 하나로 통일)
+            const recommenderValue = (signupData.mdCode || '').trim() || '관리자';
             const memberData = {
-                uid: uid, // Firebase Auth UID
-                userId: finalData.userId, // 사용자 정의 아이디
+                uid: uid,
+                userId: finalData.userId,
                 email: finalData.email,
                 name: finalData.userName,
                 phone: finalData.mobile,
                 postcode: finalData.postcode,
                 address: finalData.address,
                 detailAddress: finalData.detailAddress,
-                referralCode: finalData.referralCode || '',
-                mdCode: signupData.mdCode || '', // MD 추천인 코드 추가
+                referralCode: (signupData.mdCode || '').trim(),
+                mdCode: (signupData.mdCode || '').trim(),
                 agreeEmail: finalData.agreeEmail || false,
                 agreeSMS: finalData.agreeSMS || false,
                 agreePublic: finalData.agreePublic || false,
                 status: '정상',
-                recommender: finalData.referralCode || '관리자',
+                recommender: recommenderValue,
                 joinDate: new Date().toISOString().split('T')[0],
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()

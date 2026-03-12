@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "analyze-xls": "node scripts/analyze-xls.js",
-    "dev": "npx serve . -l 8000",
-    "start": "npx serve . -l 8000"
+    "dev": "node scripts/serve-dev.js",
+    "start": "node scripts/serve-dev.js"
   },
   "dependencies": {
     "xlsx": "^0.18.5"
