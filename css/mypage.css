@@ -275,6 +275,7 @@
     border: 1px solid #e0e0e0;
     border-bottom: none;
     padding: 20px;
+    flex-shrink: 0;
 }
 
 .support-row {
@@ -315,6 +316,62 @@
 }
 .btn-token-action:hover { opacity: 0.9; }
 .btn-token-action:last-of-type { margin-bottom: 0; margin-top: 12px; }
+
+.store-badges {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 4px;
+    visibility: visible !important;
+    min-height: 46px;
+    opacity: 1;
+}
+/* 사이드바: 세로 배치, 가운데 정렬 */
+.support-info-section .store-badges {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.support-info-section .store-badge {
+    display: block;
+    line-height: 0;
+    flex-shrink: 0;
+}
+.support-info-section .store-badge img {
+    display: block;
+    height: 44px;
+    width: auto;
+    min-width: 120px;
+    max-width: 100%;
+    border-radius: 8px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-left: auto;
+    margin-right: auto;
+}
+/* 본문(토큰 출금하기 섹션) 안의 스토어 배지 - 가운데 정렬 */
+.token-withdraw-panel .store-badges {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+    justify-content: center;
+    align-items: center;
+}
+.token-withdraw-panel .store-badge {
+    display: inline-block;
+}
+.token-withdraw-panel .store-badge img {
+    height: 44px;
+    width: auto;
+    min-width: 120px;
+    max-width: 160px;
+    border-radius: 8px;
+    object-fit: contain;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
 
 .token-modal .token-modal-content { max-width: 400px; }
 .token-form-row {

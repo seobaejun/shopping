@@ -181,7 +181,37 @@ function runMypageInit() {
     })();
 }
 
+function setupStoreBadgesForMobile() {
+    var playLinks = document.querySelectorAll('.store-badge-play');
+    var appleLinks = document.querySelectorAll('.store-badge-apple');
+    var ua = navigator.userAgent || '';
+    var isAndroid = /Android/i.test(ua);
+    var isIOS = /iPhone|iPad|iPod/i.test(ua);
+    var isMobile = isAndroid || isIOS || (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0);
+    if (!isMobile) return;
+
+    if (isAndroid) {
+        var playId = (playLinks[0] && playLinks[0].getAttribute('data-play-store-id')) || '';
+        if (playId) {
+            playLinks.forEach(function (el) {
+                el.href = 'market://details?id=' + encodeURIComponent(playId);
+                el.removeAttribute('target');
+            });
+        }
+    }
+    if (isIOS) {
+        var appId = (appleLinks[0] && appleLinks[0].getAttribute('data-app-store-id')) || '';
+        if (appId) {
+            appleLinks.forEach(function (el) {
+                el.href = 'itms-apps://itunes.apple.com/app/id' + appId;
+                el.removeAttribute('target');
+            });
+        }
+    }
+}
+
 function initMypageOnLoad() {
+    setupStoreBadgesForMobile();
     bindReviewModalMypage();
     bindReviewWriteSection();
     bindTokenModals();
