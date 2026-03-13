@@ -587,11 +587,11 @@ function sortProducts() {
             break;
         case 'price-low':
         case 'price-high':
-            // 가격순 (지원금 기준)
+            // 가격순 (실제 상품 가격 기준)
             currentProducts.sort((a, b) => {
-                const aSupport = parseInt(a.support.replace(/[^0-9]/g, ''));
-                const bSupport = parseInt(b.support.replace(/[^0-9]/g, ''));
-                return currentSort === 'price-low' ? aSupport - bSupport : bSupport - aSupport;
+                const aPrice = Number(a.price) || 0;
+                const bPrice = Number(b.price) || 0;
+                return currentSort === 'price-low' ? aPrice - bPrice : bPrice - aPrice;
             });
             break;
         case 'review':
