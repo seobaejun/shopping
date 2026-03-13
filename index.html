@@ -79,12 +79,14 @@
     <!-- 네비게이션 -->
     <nav class="navbar">
         <div class="container">
-            <button class="category-btn" id="categoryBtn">
-                <i class="fas fa-bars"></i>
-                <span>전체카테고리</span>
-            </button>
-
-            <ul class="main-nav main-nav-categories" id="mainNavCategories"></ul>
+            <div class="navbar-row">
+                <button class="category-btn" id="categoryBtn">
+                    <i class="fas fa-bars"></i>
+                    <span>전체카테고리</span>
+                </button>
+                <ul class="main-nav main-nav-categories" id="mainNavCategories"></ul>
+            </div>
+            <div class="navbar-dropdown" id="navbarDropdown" aria-hidden="true"></div>
         </div>
     </nav>
 

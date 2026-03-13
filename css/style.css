@@ -404,8 +404,141 @@ img {
 
 .navbar .container {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+}
+.navbar-row {
+    display: flex;
     align-items: center;
     gap: 20px;
+}
+.navbar-dropdown {
+    display: none;
+    width: 100%;
+    background: var(--bg-white);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    padding: 12px 16px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+.navbar-dropdown.is-open {
+    display: block;
+}
+.navbar-dropdown .navbar-dropdown-inner {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: block;
+}
+.navbar-dropdown .navbar-dropdown-inner > li {
+    margin: 0;
+    position: relative;
+    border-bottom: 1px solid var(--border-color);
+}
+.navbar-dropdown .navbar-dropdown-inner > li:last-child {
+    border-bottom: none;
+}
+.navbar-dropdown .navbar-dropdown-inner a,
+.navbar-dropdown .navbar-dropdown-inner .submenu-trigger-2 {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+    color: var(--text-dark);
+    font-size: 14px;
+    border-radius: 4px;
+    text-decoration: none;
+    background: none;
+    border: none;
+    font: inherit;
+    cursor: pointer;
+    width: 100%;
+}
+.navbar-dropdown .navbar-dropdown-inner a:hover,
+.navbar-dropdown .navbar-dropdown-inner .submenu-trigger-2:hover {
+    background: transparent;
+    color: var(--secondary-color);
+}
+.navbar-dropdown .submenu-level3 {
+    display: none;
+    position: static;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    padding-left: 12px;
+    margin-top: 4px;
+    border-left: 2px solid var(--border-color);
+}
+.navbar-dropdown li.has-submenu.submenu-open .submenu-level3 {
+    display: block;
+}
+.navbar-dropdown .submenu-level3 a {
+    padding: 4px 0;
+    font-size: 13px;
+}
+
+/* PC·모바일 공통: 클릭한 메뉴 바로 밑에 뜨는 포탈 패널 */
+.main-nav-submenu-portal {
+    list-style: none;
+    margin: 0;
+    padding: 6px 0;
+    min-width: 11rem;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.main-nav-submenu-portal li {
+    margin: 0;
+    position: relative;
+}
+.main-nav-submenu-portal a {
+    display: block;
+    padding: 8px 12px;
+    color: var(--text-dark);
+    font-size: 13px;
+}
+.main-nav-submenu-portal a:hover {
+    background: var(--secondary-color);
+    color: var(--bg-white);
+}
+.main-nav-submenu-portal .submenu-trigger-2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 12px;
+    color: var(--text-dark);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font: inherit;
+    text-align: left;
+}
+.main-nav-submenu-portal .submenu-trigger-2:hover {
+    background: var(--secondary-color);
+    color: var(--bg-white);
+}
+.main-nav-submenu-portal .submenu-level3 {
+    display: none;
+    position: static;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    padding-left: 10px;
+    margin-top: 2px;
+    border-left: 2px solid var(--border-color);
+    background: var(--bg-light);
+}
+.main-nav-submenu-portal li.has-submenu.submenu-open .submenu-level3 {
+    display: block;
+}
+.main-nav-submenu-portal .submenu-level3 a {
+    padding: 6px 10px;
+    font-size: 12px;
 }
 
 .category-btn {
@@ -442,7 +575,7 @@ img {
     color: var(--bg-white);
 }
 
-/* 네비게이션 카테고리 (호버 시 하위 카테고리 표시) */
+/* 네비게이션 카테고리: 1차 클릭 → 바로 밑에 2차, 2차 클릭 → 바로 밑에 3차 (드롭다운 하나로 통일) */
 .main-nav-categories {
     flex-wrap: wrap;
 }
@@ -473,63 +606,9 @@ img {
 .main-nav-categories li {
     position: relative;
 }
+/* 1차 메뉴 안의 2차 ul은 화면에 안 보임. 클릭 시 .navbar-dropdown 에만 표시 */
 .main-nav-categories li .submenu {
     display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    min-width: 180px;
-    background: var(--bg-white);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    padding: 8px 0;
-    z-index: 1000;
-    list-style: none;
-    margin: 0;
-}
-.main-nav-categories li:hover .submenu,
-.main-nav-categories li.submenu-open .submenu {
-    display: block;
-}
-.main-nav-categories li .submenu li {
-    margin: 0;
-}
-.main-nav-categories li .submenu a {
-    display: block;
-    padding: 10px 16px;
-    color: var(--text-dark);
-    font-size: 14px;
-}
-.main-nav-categories li .submenu a:hover {
-    background: var(--secondary-color);
-    color: var(--bg-white);
-}
-
-.main-nav-submenu-portal {
-    position: fixed;
-    z-index: 1100;
-    list-style: none;
-    margin: 0;
-    padding: 8px 0;
-    background: var(--bg-white);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-.main-nav-submenu-portal li {
-    margin: 0;
-    position: static;
-}
-.main-nav-submenu-portal a {
-    display: block;
-    padding: 10px 16px;
-    color: var(--text-dark);
-    font-size: 14px;
-}
-.main-nav-submenu-portal a:hover {
-    background: var(--secondary-color);
-    color: var(--bg-white);
 }
 
 .popular-search {
@@ -2547,19 +2626,27 @@ body.show-admin-link li .admin-link {
 
     .navbar .container {
         flex-wrap: nowrap;
+        gap: 0;
+    }
+
+    .navbar-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
         overflow-x: auto;
         overflow-y: visible;
         -webkit-overflow-scrolling: touch;
         gap: 0;
         padding-left: 0;
         padding-right: 16px;
+        min-width: 0;
     }
 
-    .navbar .container::-webkit-scrollbar {
+    .navbar-row::-webkit-scrollbar {
         height: 4px;
     }
 
-    .navbar .container::-webkit-scrollbar-thumb {
+    .navbar-row::-webkit-scrollbar-thumb {
         background: #ccc;
         border-radius: 2px;
     }
@@ -2588,23 +2675,28 @@ body.show-admin-link li .admin-link {
         font-size: 13px;
     }
 
-    .main-nav-categories li:hover .submenu {
-        display: none;
-    }
-
-    .main-nav-categories li.submenu-open .submenu {
-        display: block;
-        z-index: 1100;
-    }
-
-    .main-nav-categories li .submenu {
-        min-width: 160px;
-        font-size: 13px;
-    }
-
-    .main-nav-categories li .submenu a {
+    .main-nav-categories li .submenu a,
+    .main-nav-categories li .submenu-trigger-2 {
         padding: 10px 14px;
         font-size: 13px;
+    }
+
+    /* 모바일: 포탈 2·3차 글씨·박스 더 줄임 */
+    .main-nav-submenu-portal {
+        padding: 4px 0;
+        min-width: 9rem;
+    }
+    .main-nav-submenu-portal a,
+    .main-nav-submenu-portal .submenu-trigger-2 {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    .main-nav-submenu-portal .submenu-level3 {
+        padding-left: 8px;
+    }
+    .main-nav-submenu-portal .submenu-level3 a {
+        padding: 4px 8px;
+        font-size: 11px;
     }
 
     .main-slider {
