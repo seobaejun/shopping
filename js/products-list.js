@@ -1,3 +1,16 @@
+// 이 시점 이후 등록 = 새 상품(등록순 최신순). 이 시점 이전 = 기존 상품(키워드별 묶음 유지). 필요 시 날짜만 수정.
+const NEW_PRODUCT_CUTOFF_MS = new Date('2025-03-13T00:00:00+09:00').getTime();
+
+// Firestore createdAt → 밀리초 (메인과 동일한 최신순 정렬용)
+function getCreatedAtMs(createdAt) {
+    if (!createdAt) return 0;
+    if (typeof createdAt.toMillis === 'function') return createdAt.toMillis();
+    if (createdAt.seconds != null) return createdAt.seconds * 1000;
+    if (typeof createdAt.toDate === 'function') return createdAt.toDate().getTime();
+    if (typeof createdAt.getTime === 'function') return createdAt.getTime();
+    return 0;
+}
+
 // 소수점 8자리까지 표시, 9번째부터 버림
 function formatTrix(value) {
     var num = Number(value) || 0;
@@ -443,10 +456,10 @@ async function loadProducts() {
                     }
                 });
                 
-                // createdAt으로 정렬 (최신순)
+                // createdAt으로 정렬 (최신순, 메인과 동일)
                 allProducts.sort((a, b) => {
-                    const aTime = a.createdAt?.toMillis() || 0;
-                    const bTime = b.createdAt?.toMillis() || 0;
+                    const aTime = getCreatedAtMs(a.createdAt);
+                    const bTime = getCreatedAtMs(b.createdAt);
                     return bTime - aTime;
                 });
                 
@@ -459,13 +472,14 @@ async function loadProducts() {
                         if (!productBelongsToCategory(product, catId)) return;
                         firestoreProducts.push({
                             id: product.id,
-                            title: product.name,
+                            title: (product.name || product.productName || product.title || '').toString().trim(),
                             option: product.shortDesc || '',
                             price: product.price != null ? product.price : 0,
                             support: (product.supportAmount != null && product.supportAmount > 0) ? (formatTrix(product.supportAmount) + ' trix') : '0 trix',
                             rating: 0,
                             image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
-                            description: product.description || product.shortDesc || ''
+                            description: product.description || product.shortDesc || '',
+                            createdAtMs: getCreatedAtMs(product.createdAt)
                         });
                     });
                     console.log('[카테고리] URL category=' + catId + ', 전체 ' + allProducts.length + '개 중 ' + firestoreProducts.length + '개만 표시');
@@ -474,13 +488,14 @@ async function loadProducts() {
                     allProducts.forEach(product => {
                         firestoreProducts.push({
                             id: product.id,
-                            title: product.name,
+                            title: (product.name || product.productName || product.title || '').toString().trim(),
                             option: product.shortDesc || '',
                             price: product.price != null ? product.price : 0,
                             support: (product.supportAmount != null && product.supportAmount > 0) ? (formatTrix(product.supportAmount) + ' trix') : '0 trix',
                             rating: 0,
                             image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
-                            description: product.description || product.shortDesc || ''
+                            description: product.description || product.shortDesc || '',
+                            createdAtMs: getCreatedAtMs(product.createdAt)
                         });
                     });
                 }
@@ -536,10 +551,32 @@ async function loadProducts() {
 // 상품 정렬
 function sortProducts() {
     switch (currentSort) {
-        case 'recent':
-            // 최신순 (ID 역순)
-            currentProducts.sort((a, b) => b.id.localeCompare(a.id));
+        case 'recent': {
+            // 새 상품(기준 시점 이후): 등록순(최신순). 기존 상품(이미 있던 것): 키워드별 묶음 순서 유지.
+            const newProducts = currentProducts.filter(function (p) {
+                return (p.createdAtMs || 0) >= NEW_PRODUCT_CUTOFF_MS;
+            });
+            const existingProducts = currentProducts.filter(function (p) {
+                return (p.createdAtMs || 0) < NEW_PRODUCT_CUTOFF_MS;
+            });
+            newProducts.sort(function (a, b) {
+                return (b.createdAtMs || 0) - (a.createdAtMs || 0);
+            });
+            existingProducts.sort(function (a, b) {
+                const ta = (a.title != null ? String(a.title) : '').trim();
+                const tb = (b.title != null ? String(b.title) : '').trim();
+                const keyA = ta.split(/\s+/)[0] || ta;
+                const keyB = tb.split(/\s+/)[0] || tb;
+                const keyCmp = keyA.localeCompare(keyB, 'ko');
+                if (keyCmp !== 0) return keyCmp;
+                const titleCmp = ta.localeCompare(tb, 'ko');
+                if (titleCmp !== 0) return titleCmp;
+                return (b.createdAtMs || 0) - (a.createdAtMs || 0);
+            });
+            currentProducts.length = 0;
+            currentProducts.push.apply(currentProducts, newProducts.concat(existingProducts));
             break;
+        }
         case 'popular':
             // 인기순 (지원금 높은순)
             currentProducts.sort((a, b) => {
