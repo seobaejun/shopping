@@ -423,7 +423,15 @@
     <script src="js/nav-categories.js?v=1"></script>
     <script src="js/bottom-nav.js?v=1"></script>
     <script src="js/today-viewed.js?v=1"></script>
-    <script src="js/script.js?v=32"></script>
+    <script>
+      (function(){
+        var isDev = /localhost|127\.0\.0\.1/i.test(window.location.hostname || '');
+        var s = document.createElement('script');
+        s.src = 'js/script.js?v=' + (isDev ? Date.now() : '101');
+        s.async = false;
+        document.currentScript.parentNode.appendChild(s);
+      })();
+    </script>
     
     <!-- 서비스 이용약관 모달 -->
     <div id="termsOfServiceModal" class="terms-modal" style="display: none;">

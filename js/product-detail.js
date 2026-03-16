@@ -53,12 +53,14 @@ function _parseProductDoc(doc) {
     };
 }
 
-// URL에서 상품 ID 가져오기 및 Firestore에서 로드
+// URL에서 상품 ID 가져오기 (없으면 메인에서 클릭 시 저장한 sessionStorage 사용) → Firestore에서 로드
 async function getProductFromUrl() {
     var urlParams = new URLSearchParams(window.location.search);
     var productId = urlParams.get('id');
-    
-    console.log('📌 URL 상품 ID:', productId);
+    if (!productId || (typeof productId === 'string' && productId.trim() === '')) {
+        try { productId = sessionStorage.getItem('selectedProductId') || ''; } catch (e) {}
+    }
+    console.log('📌 상품 ID (URL 또는 저장값):', productId || '(없음)');
     
     if (typeof firebase === 'undefined' || !firebase.firestore) {
         console.warn('⏳ Firestore 미준비, 대기 후 재시도');
@@ -85,6 +87,8 @@ async function getProductFromUrl() {
             
             if (doc.exists) {
                 console.log('✅ Firestore에서 상품 로드:', doc.id);
+                try { sessionStorage.removeItem('selectedProductId'); } catch (e) {}
+                if (!urlParams.get('id')) { window.history.replaceState({}, '', 'product-detail.html?id=' + encodeURIComponent(doc.id)); }
                 return _parseProductDoc(doc);
             }
             console.warn('⚠️ Firestore에 해당 상품이 없습니다:', productId);
@@ -93,27 +97,32 @@ async function getProductFromUrl() {
         }
     }
     
-    // URL에 id가 없거나 문서가 없을 때: 첫 번째 상품으로 폴백 시도
-    if (typeof firebase !== 'undefined' && firebase.firestore) {
-        try {
-            var db = firebase.firestore();
-            var snapshot = await db.collection('products').limit(1).get();
-            if (!snapshot.empty) {
-                var firstDoc = snapshot.docs[0];
-                console.log('✅ 첫 번째 상품으로 표시:', firstDoc.id);
-                if (!productId) {
-                    window.history.replaceState({}, '', 'product-detail.html?id=' + firstDoc.id);
-                }
-                return _parseProductDoc(firstDoc);
-            }
-        } catch (e) {
-            console.warn('첫 상품 폴백 실패:', e);
-        }
+    // URL·저장값 둘 다 없을 때만 안내 화면
+    if (!productId || (typeof productId === 'string' && productId.trim() === '')) {
+        console.warn('⚠️ 상품 ID가 없습니다. 메인/상품목록에서 상품을 클릭해 주세요.');
+        return {
+            id: null,
+            name: '상품을 선택해 주세요',
+            option: '주소에 상품 ID가 없습니다. 메인 또는 상품목록에서 상품을 클릭해 들어와 주세요.',
+            price: 0,
+            originalPrice: 0,
+            image: 'https://placehold.co/600x600/E0E0E0/999?text=Select+Product',
+            detailImages: [],
+            description: '',
+            descriptionHtml: '',
+            details: [],
+            category: '',
+            brand: '',
+            stock: 0,
+            supportAmount: null,
+            supportRate: 0,
+            options: []
+        };
     }
     
     return {
         id: null,
-        name: '상품을 불러올 수 없습니다',
+        name: '상품을 찾을 수 없습니다',
         option: '',
         price: 0,
         originalPrice: 0,

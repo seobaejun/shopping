@@ -298,27 +298,28 @@ function handleSearch(event) {
 // 슬라이더 관련 코드 삭제됨 (단일 슬라이드 사용)
 
 // 상품 카드 생성 (히트/추천/최신/인기 배지 표시 안 함)
-function createProductCard(product, index, type) {
+function createProductCard(product, index, type, linkIdOverride) {
     const hideBadges = ['hit', 'recommend', 'new', 'popular'];
     const badges = (product.badge || []).filter(b => !hideBadges.includes(b)).map(badge =>
         `<span class="badge ${badge}">${badgeLabels[badge] || badge}</span>`
     ).join('');
-    const productId = product.id;
+    const productId = (linkIdOverride != null && linkIdOverride !== '') ? String(linkIdOverride) : (product && product.id != null && product.id !== '') ? String(product.id) : '';
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const priceHtml = isLoggedIn
         ? ((product.price != null && product.price !== '') ? Number(product.price).toLocaleString() + '원' : '0원')
         : '';
 
+    var cardIndex = (typeof index === 'number') ? index : '';
     return `
-        <div class="product-card" data-product-id="${productId}">
-            <a href="product-detail.html?id=${productId}" class="product-link">
+        <div class="product-card" data-product-id="${productId}" data-card-index="${cardIndex}">
+            <a href="product-detail.html" class="product-link" data-product-link="1">
                 <div class="product-image">
                     <img src="${product.image}" alt="${product.title}">
                     ${badges ? `<div class="product-badge">${badges}</div>` : ''}
                 </div>
             </a>
             <div class="product-info">
-                <a href="product-detail.html?id=${productId}" class="product-title">${product.title}</a>
+                <a href="product-detail.html" class="product-title" data-product-link="1">${product.title}</a>
                 <div class="product-option">${product.option || ''}</div>
                 <div class="product-price">${priceHtml}</div>
                 <div class="product-support">쇼핑지원금 ${product.support}</div>
@@ -361,9 +362,13 @@ function renderProducts() {
     if (mainProductCurrentPage > totalPages) mainProductCurrentPage = totalPages;
     var start = (mainProductCurrentPage - 1) * MAIN_ITEMS_PER_PAGE;
     var slice = list.slice(start, start + MAIN_ITEMS_PER_PAGE);
+    var docIds = window.__mainProductDocIds || [];
     grid.innerHTML = slice.map(function (product, index) {
-        return createProductCard(product, start + index, '');
+        var linkId = (docIds[start + index] != null && docIds[start + index] !== '') ? String(docIds[start + index]) : (product && product.id != null && product.id !== '') ? String(product.id) : '';
+        return createProductCard(product, start + index, '', linkId);
     }).join('');
+    grid.dataset.docIds = JSON.stringify(docIds);
+    grid.dataset.sliceStart = String(start);
     updateProductRatings(slice);
     renderMainPagination(list.length);
 }
@@ -725,6 +730,29 @@ function initScrollToTop() {
     });
 }
 
+function initMainProductGridClick() {
+    var grid = document.getElementById('mainProductGrid');
+    if (!grid) return;
+    grid.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-product-link="1"]')) return;
+        var card = e.target.closest('.product-card');
+        if (!card) return;
+        var idx = card.getAttribute('data-card-index');
+        if (idx === null || idx === '') return;
+        var docIdsJson = grid.getAttribute('data-doc-ids');
+        if (!docIdsJson) return;
+        var docIds = [];
+        try { docIds = JSON.parse(docIdsJson); } catch (err) { return; }
+        var id = docIds[parseInt(idx, 10)];
+        if (id) {
+            e.preventDefault();
+            e.stopPropagation();
+            try { sessionStorage.setItem('selectedProductId', id); } catch (err) {}
+            window.location.href = 'product-detail.html?id=' + encodeURIComponent(id);
+        }
+    });
+}
+
 function init() {
     initNoticeBanner();
     if (typeof window.initCategorySidebar === 'function') window.initCategorySidebar();
@@ -732,6 +760,7 @@ function init() {
     initScrollDown();
     initTermsModal();
     initPrivacyModal();
+    initMainProductGridClick();
     renderProducts();
     initScrollHeader();
     initShareButtons();
@@ -759,50 +788,50 @@ async function loadProductsFromFirestore() {
             return;
         }
         
-        // 클라이언트에서 필터링 및 정렬
-        const allProducts = [];
+        // 스냅샷에서 바로 doc.id 사용 (캐시/덮어쓰기 방지)
+        const docsWithData = [];
         productsSnapshot.forEach(doc => {
             const data = doc.data();
             if (data.status === 'sale') {
-                allProducts.push({
-                    id: doc.id,
-                    ...data
-                });
+                docsWithData.push({ docId: doc.id, data: data });
             }
         });
-        
-        // createdAt으로 정렬 (최신순)
-        allProducts.sort((a, b) => {
-            const aTime = a.createdAt?.toMillis() || 0;
-            const bTime = b.createdAt?.toMillis() || 0;
+        docsWithData.sort((a, b) => {
+            const aTime = a.data.createdAt?.toMillis() || 0;
+            const bTime = b.data.createdAt?.toMillis() || 0;
             return bTime - aTime;
         });
 
         const allList = [];
-        allProducts.forEach(function (productDoc) {
-            var product = productDoc;
+        docsWithData.forEach(function (item) {
+            var d = item.data;
             allList.push({
-                id: product.id,
-                title: product.name,
-                option: product.shortDesc || '',
-                price: product.price || 0,
-                support: (product.supportAmount != null && product.supportAmount > 0) ? (formatTrix(product.supportAmount) + ' trix') : '0 trix',
-                badge: Array.isArray(product.displayCategory) ? product.displayCategory : [],
-                image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image'
+                id: item.docId,
+                title: d.name,
+                option: d.shortDesc || '',
+                price: d.price || 0,
+                support: (d.supportAmount != null && d.supportAmount > 0) ? (formatTrix(d.supportAmount) + ' trix') : '0 trix',
+                badge: Array.isArray(d.displayCategory) ? d.displayCategory : [],
+                image: (window.resolveProductImageUrl && window.resolveProductImageUrl(d.mainImageUrl || d.imageUrl)) || d.mainImageUrl || d.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image'
             });
         });
         productsData.all = allList;
+        window.__mainProductDocIds = allList.map(function (p) { return p.id; });
         productsData.hit = [];
         productsData.recommend = [];
         productsData.new = [];
         productsData.popular = [];
         console.log('✅ Firestore에서 상품 데이터 불러옴:', allList.length, '개');
+        if (allList.length > 0) {
+            console.log('📌 상품 ID 샘플(첫 5개):', window.__mainProductDocIds.slice(0, 5));
+        }
 
         // 상품 렌더링 다시 실행
         renderProducts();
 
     } catch (error) {
         console.error('❌ Firestore 상품 로드 오류:', error);
+        window.__mainProductDocIds = [];
         console.log('기본 데이터를 사용합니다.');
     }
 }

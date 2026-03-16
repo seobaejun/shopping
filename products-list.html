@@ -291,7 +291,15 @@
     <script src="js/nav-categories.js?v=1"></script>
     <script src="js/login-required-nav.js?v=1"></script>
     <script src="js/bottom-nav.js?v=1"></script>
-    <script src="js/products-list.js?v=23"></script>
+    <script>
+      (function(){
+        var isDev = /localhost|127\.0\.0\.1/i.test(window.location.hostname || '');
+        var s = document.createElement('script');
+        s.src = 'js/products-list.js?v=' + (isDev ? Date.now() : '101');
+        s.async = false;
+        document.currentScript.parentNode.appendChild(s);
+      })();
+    </script>
 </body>
 </html>
 

@@ -444,6 +444,11 @@
     border-color: #E4405F;
 }
 
+/* 상품 상세 탭: 가로 860px 제한 (이미지·구매 영역은 그대로, 탭만 제한) */
+section.product-tabs .container {
+    max-width: 860px;
+}
+
 /* 상품 상세 탭 */
 .product-tabs {
     padding: 60px 0;

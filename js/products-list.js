@@ -444,58 +444,52 @@ async function loadProducts() {
             const productsSnapshot = await Promise.race([fetchPromise, timeoutPromise]);
 
             if (!productsSnapshot.empty) {
-                // 클라이언트에서 필터링 및 정렬
-                const allProducts = [];
+                // doc.id를 별도 보관해 링크에 항상 문서 ID 사용 (개발환경 캐시/덮어쓰기 방지)
+                const docsWithData = [];
                 productsSnapshot.forEach(doc => {
                     const data = doc.data();
                     if (data.status === 'sale') {
-                        allProducts.push({
-                            id: doc.id,
-                            ...data
-                        });
+                        docsWithData.push({ docId: doc.id, data: data });
                     }
                 });
-                
-                // createdAt으로 정렬 (최신순, 메인과 동일)
-                allProducts.sort((a, b) => {
-                    const aTime = getCreatedAtMs(a.createdAt);
-                    const bTime = getCreatedAtMs(b.createdAt);
+                docsWithData.sort((a, b) => {
+                    const aTime = getCreatedAtMs(a.data.createdAt);
+                    const bTime = getCreatedAtMs(b.data.createdAt);
                     return bTime - aTime;
                 });
-                
-                // Firestore 데이터를 기존 형식으로 변환
+
                 const firestoreProducts = [];
-                
                 if (isCategoryPage) {
                     const catId = String(urlCategory).trim();
-                    allProducts.forEach(product => {
-                        if (!productBelongsToCategory(product, catId)) return;
+                    docsWithData.forEach(item => {
+                        if (!productBelongsToCategory(item.data, catId)) return;
+                        var d = item.data;
                         firestoreProducts.push({
-                            id: product.id,
-                            title: (product.name || product.productName || product.title || '').toString().trim(),
-                            option: product.shortDesc || '',
-                            price: product.price != null ? product.price : 0,
-                            support: (product.supportAmount != null && product.supportAmount > 0) ? (formatTrix(product.supportAmount) + ' trix') : '0 trix',
+                            id: item.docId,
+                            title: (d.name || d.productName || d.title || '').toString().trim(),
+                            option: d.shortDesc || '',
+                            price: d.price != null ? d.price : 0,
+                            support: (d.supportAmount != null && d.supportAmount > 0) ? (formatTrix(d.supportAmount) + ' trix') : '0 trix',
                             rating: 0,
-                            image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
-                            description: product.description || product.shortDesc || '',
-                            createdAtMs: getCreatedAtMs(product.createdAt)
+                            image: (window.resolveProductImageUrl && window.resolveProductImageUrl(d.mainImageUrl || d.imageUrl)) || d.mainImageUrl || d.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                            description: d.description || d.shortDesc || '',
+                            createdAtMs: getCreatedAtMs(d.createdAt)
                         });
                     });
-                    console.log('[카테고리] URL category=' + catId + ', 전체 ' + allProducts.length + '개 중 ' + firestoreProducts.length + '개만 표시');
+                    console.log('[카테고리] URL category=' + catId + ', 전체 ' + docsWithData.length + '개 중 ' + firestoreProducts.length + '개만 표시');
                 } else {
-                    // 카테고리 파라미터 없음: 전체 상품 표시. displayCategory는 사용하지 않음(관리자 카테고리만 기준).
-                    allProducts.forEach(product => {
+                    docsWithData.forEach(item => {
+                        var d = item.data;
                         firestoreProducts.push({
-                            id: product.id,
-                            title: (product.name || product.productName || product.title || '').toString().trim(),
-                            option: product.shortDesc || '',
-                            price: product.price != null ? product.price : 0,
-                            support: (product.supportAmount != null && product.supportAmount > 0) ? (formatTrix(product.supportAmount) + ' trix') : '0 trix',
+                            id: item.docId,
+                            title: (d.name || d.productName || d.title || '').toString().trim(),
+                            option: d.shortDesc || '',
+                            price: d.price != null ? d.price : 0,
+                            support: (d.supportAmount != null && d.supportAmount > 0) ? (formatTrix(d.supportAmount) + ' trix') : '0 trix',
                             rating: 0,
-                            image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
-                            description: product.description || product.shortDesc || '',
-                            createdAtMs: getCreatedAtMs(product.createdAt)
+                            image: (window.resolveProductImageUrl && window.resolveProductImageUrl(d.mainImageUrl || d.imageUrl)) || d.mainImageUrl || d.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
+                            description: d.description || d.shortDesc || '',
+                            createdAtMs: getCreatedAtMs(d.createdAt)
                         });
                     });
                 }
@@ -622,19 +616,19 @@ function renderProducts() {
 
 // 상품 카드 생성 (히트/추천/최신/인기 배지 없음)
 function createProductCard(product, index) {
-    const productId = product.id;
+    const productId = (product && product.id != null && product.id !== '') ? String(product.id) : '';
     const ratingVal = (product.rating != null && product.rating !== undefined) ? product.rating : 0;
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const priceHtml = isLoggedIn && product.price != null && product.price !== '' ? (Number(product.price).toLocaleString() + '원') : '';
     return `
         <div class="product-card" data-product-id="${productId}">
-            <a href="product-detail.html?id=${productId}" class="product-link">
+            <a href="${productId ? 'product-detail.html?id=' + encodeURIComponent(productId) : '#'}" class="product-link">
                 <div class="product-image">
                     <img src="${product.image}" alt="${product.title}">
                 </div>
             </a>
             <div class="product-info">
-                <a href="product-detail.html?id=${productId}" class="product-title">${product.title}</a>
+                <a href="${productId ? 'product-detail.html?id=' + encodeURIComponent(productId) : '#'}" class="product-title">${product.title}</a>
                 <div class="product-option">${product.option || ''}</div>
                 <div class="product-price">${priceHtml}</div>
                 <div class="product-description">${product.description}</div>

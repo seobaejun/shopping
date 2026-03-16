@@ -413,16 +413,16 @@ const productService = {
             try {
                 const snapshot = await query.orderBy('createdAt', 'desc').get();
                 return snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
+                    ...doc.data(),
+                    id: doc.id
                 }));
             } catch (orderError) {
                 // createdAt으로 정렬 실패 시 그냥 가져오기
                 console.warn('createdAt 정렬 실패, 기본 정렬 사용:', orderError);
                 const snapshot = await query.get();
                 return snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
+                    ...doc.data(),
+                    id: doc.id
                 }));
             }
         } catch (error) {
