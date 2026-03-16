@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>10쇼핑게임 관리자</title>
     <script src="../js/image-config.js"></script>
-    <link rel="stylesheet" href="css/admin.css?v=20260219-25">
+    <link rel="stylesheet" href="/admin/css/admin.css?v=20260219-25">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 </head>
@@ -72,6 +72,11 @@
         </div>
     </header>
 
+    <div id="adminLoadError" style="display: none; padding: 24px; margin: 20px; background: #fff3f3; border: 1px solid #f5c6cb; border-radius: 8px; color: #721c24;">
+        <h3>로드 오류</h3>
+        <p id="adminLoadErrorMsg">스크립트를 불러오는 중 문제가 발생했습니다.</p>
+        <p style="margin-top: 12px;"><button type="button" onclick="location.reload()">새로고침</button></p>
+    </div>
     <div class="admin-container">
         <!-- 사이드바 -->
         <aside class="admin-sidebar" id="adminSidebar">
@@ -703,8 +708,8 @@
                     <p class="page-description">등록된 상품을 조회하고 관리합니다.</p>
                 </div>
 
-                <!-- 검색 필터 -->
-                <div class="search-panel">
+                <!-- 검색 필터 (폼 submit으로 검색 실행 - 인라인 스크립트/CSP 무관) -->
+                <form id="productSearchForm" class="search-panel" onsubmit="return false;">
                     <div class="search-row">
                         <div class="form-group">
                             <label>상품명</label>
@@ -728,10 +733,10 @@
                         </div>
                     </div>
                     <div class="search-actions">
-                        <button class="btn btn-primary" id="searchProductsBtn">검색</button>
-                        <button class="btn btn-default" id="resetProductSearchBtn">초기화</button>
+                        <button type="submit" class="btn btn-primary" id="searchProductsBtn">검색</button>
+                        <button type="button" class="btn btn-default" id="resetProductSearchBtn">초기화</button>
                     </div>
-                </div>
+                </form>
 
                 <!-- 검색 결과 영역 (검색 후에만 표시) -->
                 <div id="productSearchResultsContainer" class="search-results-container" style="display: block; margin-top: 20px; margin-bottom: 30px;">
@@ -1121,13 +1126,11 @@
                             <thead>
                                 <tr>
                                     <th>번호</th>
-                                    <th>아이디</th>
+                                    <th>이메일</th>
                                     <th>이름</th>
                                     <th>전화번호</th>
                                     <th>가입날짜</th>
                                     <th>주소</th>
-                                    <th>은행</th>
-                                    <th>계좌번호</th>
                                     <th>추천인</th>
                                     <th>구매금액</th>
                                     <th>지원금</th>
@@ -1136,7 +1139,7 @@
                                 </tr>
                             </thead>
                             <tbody id="searchResultsBody">
-                                <tr><td colspan="13" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
+                                <tr><td colspan="11" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1157,13 +1160,11 @@
                         <thead>
                             <tr>
                                 <th>번호</th>
-                                <th>아이디</th>
+                                <th>이메일</th>
                                 <th>이름</th>
                                 <th>전화번호</th>
                                 <th>가입날짜</th>
                                 <th>주소</th>
-                                <th>은행</th>
-                                <th>계좌번호</th>
                                 <th>추천인</th>
                                 <th>구매금액</th>
                                 <th>지원금</th>
@@ -2140,8 +2141,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
-    
     <script>
+        function showAdminLoadError(msg) {
+            var el = document.getElementById('adminLoadError');
+            var msgEl = document.getElementById('adminLoadErrorMsg');
+            if (el) { el.style.display = 'block'; }
+            if (msgEl) { msgEl.textContent = msg || '스크립트를 불러오는 중 문제가 발생했습니다.'; }
+            console.error('[Admin]', msg);
+        }
         // Firebase SDK 로드 확인
         function waitForFirebase() {
             return new Promise((resolve, reject) => {
@@ -2163,15 +2170,22 @@
             });
         }
         
-        // Firebase SDK 로드 후 스크립트 실행
+        // Firebase SDK 로드 후 스크립트 실행 (개발/배포 모두 동일하게 동작하도록 절대 경로 사용)
         waitForFirebase().then(() => {
-            // Firebase Admin 연동
+            var pathname = window.location.pathname || '';
+            var scriptDir;
+            if (pathname.indexOf('/admin') !== -1) {
+                scriptDir = pathname.replace(/(\/admin).*$/, '$1/');
+            } else {
+                scriptDir = pathname.endsWith('/') ? pathname : (/\.(html?|php|aspx?)$/i.test(pathname) ? pathname.replace(/\/[^/]*$/, '/') : pathname + '/');
+            }
+            var baseUrl = window.location.origin + scriptDir;
             const script1 = document.createElement('script');
-            script1.src = 'js/firebase-admin.js';
+            script1.src = baseUrl + 'js/firebase-admin.js';
+            script1.onerror = function() { showAdminLoadError('firebase-admin.js 로드 실패. 경로: ' + script1.src); };
             document.body.appendChild(script1);
             
-            script1.onload = () => {
-                // Firestore 초기화가 끝날 때까지 기다린 뒤 다음 스크립트 로드
+            script1.onload = function() {
                 var initDone = window.firebaseAdmin && typeof window.firebaseAdmin.getInitPromise === 'function'
                     ? window.firebaseAdmin.getInitPromise()
                     : Promise.resolve();
@@ -2181,63 +2195,55 @@
                     }
                 }).catch(function(e) { console.warn('Firestore init:', e); }).finally(function() {
                 const script2 = document.createElement('script');
-                script2.src = 'js/delete-firebase-data.js';
+                script2.src = baseUrl + 'js/delete-firebase-data.js';
                 document.body.appendChild(script2);
                 
                 script2.onload = () => {
                     const script3 = document.createElement('script');
-                    script3.src = 'js/dashboard.js';
+                    script3.src = baseUrl + 'js/dashboard.js';
                     document.body.appendChild(script3);
                     
                     script3.onload = () => {
                         const script4 = document.createElement('script');
-                        script4.src = 'js/settings.js';
+                        script4.src = baseUrl + 'js/settings.js';
                         document.body.appendChild(script4);
                         
                         script4.onload = () => {
                             const script4_5 = document.createElement('script');
-                            script4_5.src = `js/member-search.js?v=${new Date().getTime()}`;
+                            script4_5.src = baseUrl + `js/member-search.js?v=${new Date().getTime()}`;
                             document.body.appendChild(script4_5);
                             
                             script4_5.onload = () => {
-                                // member-purchase.js 로드
                                 const script4_6 = document.createElement('script');
-                                script4_6.src = `js/member-purchase.js?v=${new Date().getTime()}`;
+                                script4_6.src = baseUrl + `js/member-purchase.js?v=${new Date().getTime()}`;
                                 document.body.appendChild(script4_6);
                                 
                                 script4_6.onload = () => {
                                     console.log('✅ member-purchase.js 로드 완료');
-                                    
-                                    // product-list.js 로드
                                     const script4_7 = document.createElement('script');
-                                    script4_7.src = `js/product-list.js?v=${new Date().getTime()}`;
+                                    script4_7.src = baseUrl + `js/product-list.js?v=${new Date().getTime()}`;
                                     document.body.appendChild(script4_7);
                                     
                                     script4_7.onload = () => {
                                         console.log('✅ product-list.js 로드 완료');
-                                        
-                                        // category-manage.js 로드
                                         const script4_7_1 = document.createElement('script');
-                                        script4_7_1.src = `js/category-manage.js?v=${new Date().getTime()}`;
+                                        script4_7_1.src = baseUrl + `js/category-manage.js?v=${new Date().getTime()}`;
                                         document.body.appendChild(script4_7_1);
                                         
                                         script4_7_1.onload = () => {
                                             console.log('✅ category-manage.js 로드 완료');
                                             const scriptToken = document.createElement('script');
-                                            scriptToken.src = 'js/token-manage.js?v=' + Date.now();
+                                            scriptToken.src = baseUrl + 'js/token-manage.js?v=' + Date.now();
                                             scriptToken.onload = () => { console.log('✅ token-manage.js 로드 완료'); };
                                             document.body.appendChild(scriptToken);
                                         };
                                         
-                                        // auto-lottery.js 로드
                                         const script4_8 = document.createElement('script');
-                                        script4_8.src = 'js/auto-lottery.js';
+                                        script4_8.src = baseUrl + 'js/auto-lottery.js';
                                         script4_8.onload = () => {
                                             console.log('✅ auto-lottery.js 로드 완료');
-                                            
-                                            // auto-lottery.js 로드 후 admin.js 로드
                                             const script5 = document.createElement('script');
-                                            script5.src = 'js/admin.js?v=' + Date.now();
+                                            script5.src = baseUrl + 'js/admin.js?v=' + Date.now();
                                             script5.onload = () => {
                                                 console.log('✅ admin.js 로드 완료 - 네비게이션 초기화 실행');
                                                 // admin.js가 로드된 후 초기화 함수 호출
@@ -2259,8 +2265,7 @@
                 });
             };
         }).catch(error => {
-            console.error('Firebase 초기화 실패:', error);
-            alert('Firebase SDK를 로드할 수 없습니다. 네트워크 연결을 확인하세요.');
+            showAdminLoadError('Firebase SDK 로드 실패: ' + (error && error.message ? error.message : String(error)));
         });
     </script>
     
@@ -2521,6 +2526,10 @@
                     <div class="form-group">
                         <label>계좌번호 (마이페이지에서 입력)</label>
                         <input type="text" class="form-control" id="editMemberAccountNumber" readonly style="background: #f0f0f0;">
+                    </div>
+                    <div class="form-group">
+                        <label>토큰 지갑주소</label>
+                        <input type="text" class="form-control" id="editMemberWalletAddress" readonly style="background: #f0f0f0;" placeholder="등록된 지갑주소가 없습니다">
                     </div>
                     
                     <div class="form-group">

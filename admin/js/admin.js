@@ -456,7 +456,7 @@ async function loadPageData(pageId) {
             // 테이블 초기화
             const memberTableBody = document.getElementById('memberTableBody');
             if (memberTableBody) {
-                memberTableBody.innerHTML = '<tr><td colspan="13" class="empty-message">데이터를 불러오는 중...</td></tr>';
+                memberTableBody.innerHTML = '<tr><td colspan="11" class="empty-message">데이터를 불러오는 중...</td></tr>';
                 console.log('✅ 테이블 초기화 완료');
             } else {
                 console.error('❌ memberTableBody를 찾을 수 없습니다!');
@@ -485,14 +485,14 @@ async function loadPageData(pageId) {
                     console.error('❌❌❌ 회원조회 페이지 로드 오류:', error);
                     console.error('오류 스택:', error.stack);
                     if (memberTableBody) {
-                        memberTableBody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+                        memberTableBody.innerHTML = `<tr><td colspan="11" class="empty-message">오류 발생: ${error.message}</td></tr>`;
                     }
                 }
             } else {
                 console.error('❌❌❌ loadAllMembers 함수를 찾을 수 없습니다! (대기 후에도 없음)');
                 console.error('window 객체 확인:', Object.keys(window).filter(k => k.includes('load') || k.includes('member')));
                 if (memberTableBody) {
-                    memberTableBody.innerHTML = '<tr><td colspan="13" class="empty-message">loadAllMembers 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.</td></tr>';
+                    memberTableBody.innerHTML = '<tr><td colspan="11" class="empty-message">loadAllMembers 함수를 찾을 수 없습니다. 페이지를 새로고침해주세요.</td></tr>';
                 }
             }
             break;
@@ -1631,6 +1631,79 @@ function applyPurchaseRequestSearch() {
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// 상품목록 검색: 구매요청 검색과 동일 방식 — Firebase에서 데이터 가져와 필터 후 검색 결과 테이블에만 그리기
+async function applyProductListSearch() {
+    var container = document.getElementById('productSearchResultsContainer');
+    var tbody = document.getElementById('productSearchResultsBody');
+    var countEl = document.getElementById('searchProductCount');
+    if (!container || !tbody) return;
+    container.style.display = 'block';
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 중...</td></tr>';
+    if (countEl) countEl.textContent = '0';
+
+    var nameEl = document.getElementById('productSearchName');
+    var catEl = document.getElementById('productSearchCategory');
+    var statusEl = document.getElementById('productSearchStatus');
+    var searchName = (nameEl && nameEl.value) ? nameEl.value.trim().toLowerCase() : '';
+    var searchCategory = (catEl && catEl.value) ? catEl.value : '';
+    var searchStatus = (statusEl && statusEl.value) ? statusEl.value : '';
+
+    if (!window.firebaseAdmin || !window.firebaseAdmin.productService) {
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">Firebase를 불러올 수 없습니다. 새로고침 후 시도하세요.</td></tr>';
+        return;
+    }
+    try {
+        var products = await window.firebaseAdmin.productService.getProducts();
+        if (!products || !Array.isArray(products)) products = [];
+    } catch (e) {
+        console.error('상품 목록 조회 오류:', e);
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">상품 목록을 불러오지 못했습니다. 새로고침 후 시도하세요.</td></tr>';
+        return;
+    }
+
+    var filtered = products.filter(function (p) {
+        var pName = (p.name != null ? p.name : (p.productName != null ? p.productName : (p.title != null ? p.title : ''))).toString().toLowerCase();
+        var pCat = (p.category != null && typeof p.category === 'object') ? (p.category.id || p.category.name || p.category.categoryId || '') : (p.category != null ? String(p.category) : '');
+        var pStatus = (p.status || '').toString();
+        var nameOk = !searchName || pName.indexOf(searchName) !== -1;
+        var catOk = !searchCategory || pCat === searchCategory;
+        var statusOk = !searchStatus || pStatus === searchStatus;
+        return nameOk && catOk && statusOk;
+    });
+
+    if (countEl) countEl.textContent = filtered.length;
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 조건에 맞는 상품이 없습니다.</td></tr>';
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
+
+    var categoryMap = {};
+    try {
+        var cats = await loadCategoriesForProduct();
+        if (cats && Array.isArray(cats)) cats.forEach(function (c) { categoryMap[c.id] = c.name || c.id; });
+    } catch (e) { }
+
+    var rows = filtered.map(function (p, i) {
+        var pid = (p.id != null ? String(p.id) : '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        var imgUrl = p.mainImageUrl || p.imageUrl || p.image || '';
+        var imgHtml = imgUrl ? '<img src="' + _orderEscapeHtml(imgUrl) + '" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:4px;">' : '<div style="width:60px;height:60px;background:#e0e0e0;border-radius:4px;"></div>';
+        var catId = (p.category != null && typeof p.category === 'object') ? (p.category.id || '') : (p.category != null ? String(p.category) : '');
+        var catName = categoryMap[catId] || catId || '-';
+        var price = (p.price != null && !isNaN(p.price)) ? Number(p.price).toLocaleString() : '0';
+        var support = (p.supportAmount != null && p.supportAmount > 0) ? Number(p.supportAmount).toLocaleString() : '0';
+        var stock = p.stock != null ? p.stock : 0;
+        var dateStr = '';
+        if (p.createdAt) {
+            if (p.createdAt.seconds != null) dateStr = new Date(p.createdAt.seconds * 1000).toISOString().split('T')[0];
+            else if (p.createdAt.toDate) dateStr = p.createdAt.toDate().toISOString().split('T')[0];
+        }
+        return '<tr><td>' + (i + 1) + '</td><td>' + imgHtml + '</td><td style="text-align:center">' + _orderEscapeHtml(p.name || '') + '</td><td>' + _orderEscapeHtml(p.manufacturer || '') + '</td><td>' + _orderEscapeHtml(catName) + '</td><td>' + price + '원</td><td>' + support + ' trix</td><td>' + stock + '</td><td><select class="status-select" onchange="typeof window.changeProductStatus===\'function\'&&window.changeProductStatus(\'' + pid + '\', this.value)"><option value="sale"' + (p.status === 'sale' ? ' selected' : '') + '>판매중</option><option value="soldout"' + (p.status === 'soldout' ? ' selected' : '') + '>품절</option><option value="hidden"' + (p.status === 'hidden' ? ' selected' : '') + '>숨김</option></select></td><td>' + dateStr + '</td><td><button type="button" class="btn-icon btn-edit" onclick="typeof window.openEditProductModal===\'function\'&&window.openEditProductModal(\'' + pid + '\')" title="수정"><i class="fas fa-edit"></i></button> <button type="button" class="btn-icon btn-delete" onclick="typeof window.deleteProduct===\'function\'&&window.deleteProduct(\'' + pid + '\')" title="삭제"><i class="fas fa-trash"></i></button></td></tr>';
+    });
+    tbody.innerHTML = rows.join('');
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 // 구매요청 페이지 검색/취소 버튼 직접 연결 (페이지 로드 시마다 호출)
 function bindPurchaseRequestSearchButtons() {
     const searchBtn = document.getElementById('purchaseRequestSearchBtn');
@@ -1661,6 +1734,24 @@ function bindPurchaseRequestSearchButtons() {
 }
 
 // 회원조회 검색/엑셀/취소는 member-search.js에서 구현, initAdminPage에서 memberSearchBtn/memberResetBtn/memberExportBtn에 연결됨
+
+// 상품목록 검색: 구매요청 검색과 동일 — admin.js의 applyProductListSearch만 사용 (product-list.js 미의존)
+document.addEventListener('submit', async function (e) {
+    if (e.target && e.target.id === 'productSearchForm') {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            await applyProductListSearch();
+        } catch (err) {
+            console.error('[admin.js] 상품 검색 예외:', err);
+            var tbody = document.getElementById('productSearchResultsBody');
+            var countEl = document.getElementById('searchProductCount');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 오류: ' + (err && err.message ? err.message : String(err)) + '</td></tr>';
+            if (countEl) countEl.textContent = '0';
+        }
+        return false;
+    }
+}, true);
 
 // 테이블 편집/삭제 버튼 (구매요청 검색/취소는 위임으로 항상 동작)
 document.addEventListener('click', (e) => {
@@ -1983,7 +2074,7 @@ async function loadAllMembers() {
             console.error('❌ Firebase Admin을 찾을 수 없습니다.');
             const tbody = document.getElementById('memberTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">Firebase가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="empty-message">Firebase가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.</td></tr>';
             }
             return;
         }
@@ -1997,7 +2088,7 @@ async function loadAllMembers() {
             console.error('❌ DB 초기화 실패!');
             const tbody = document.getElementById('memberTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">Firebase DB 초기화에 실패했습니다. 콘솔에서 testFirestoreMembers()를 실행해보세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="empty-message">Firebase DB 초기화에 실패했습니다. 콘솔에서 testFirestoreMembers()를 실행해보세요.</td></tr>';
             }
             return;
         }
@@ -2009,7 +2100,7 @@ async function loadAllMembers() {
             console.log('window.firebaseAdmin:', window.firebaseAdmin);
             const tbody = document.getElementById('memberTableBody');
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="13" class="empty-message">memberService를 찾을 수 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="empty-message">memberService를 찾을 수 없습니다.</td></tr>';
             }
             return;
         }
@@ -2124,7 +2215,7 @@ async function loadAllMembers() {
         
         const tbody = document.getElementById('memberTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="11" class="empty-message">오류 발생: ${error.message}</td></tr>`;
         }
     }
 }
@@ -2250,7 +2341,7 @@ function renderMemberInfoTable(data = null) {
         console.log('membersToRender 값:', membersToRender);
         console.log('membersToRender 타입:', typeof membersToRender);
         console.log('Firestore Console에서 members 컬렉션에 데이터가 있는지 확인하세요.');
-        tbody.innerHTML = '<tr><td colspan="13" class="empty-message">등록된 회원이 없습니다. Firestore Console에서 members 컬렉션을 확인하세요.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-message">등록된 회원이 없습니다. Firestore Console에서 members 컬렉션을 확인하세요.</td></tr>';
         renderMemberPagination(0);
         return;
     }
@@ -2268,12 +2359,11 @@ function renderMemberInfoTable(data = null) {
     
     try {
         const tableHTML = pageMembers.map((member, index) => {
-        // Firestore 데이터 형식에 맞게 변환
         const memberId = member.userId || member.id || '';
         const name = member.name || '';
         const phone = member.phone || '';
+        const emailDisplay = (member.email || '').toString().trim();
         
-        // 가입일 처리
         let joinDate = '';
         if (member.joinDate) {
             joinDate = member.joinDate;
@@ -2287,27 +2377,14 @@ function renderMemberInfoTable(data = null) {
             }
         }
         
-        // 주소 (postcode + address + detailAddress)
         const address = [member.postcode, member.address, member.detailAddress]
             .filter(Boolean)
             .join(' ') || '';
         
-        // 은행 / 계좌번호 (마이페이지에서 입력)
-        const bank = member.bank || '';
-        const accountNumber = member.accountNumber || '';
-        
-        // 추천인 코드 (referralCode 우선)
         const referralCode = member.referralCode || member.recommender || '';
-        
-        // 구매금액 (현재는 없음, 추후 추가 가능)
         const purchaseAmount = member.purchaseAmount || 0;
-        
-        // 지원금 (조별추첨 지급완료 기준)
         const supportAmount = member.supportAmount || 0;
-        
-        // 상태 (withdrawn → 탈퇴 표시)
         const status = member.status || '정상';
-        const statusDisplay = status === 'withdrawn' ? '탈퇴' : status;
         const statusCell = status === 'withdrawn'
             ? `<span class="badge badge-secondary">탈퇴</span>`
             : `<select class="status-select" onchange="changeMemberStatus('${member.id || memberId}', this.value)">
@@ -2319,13 +2396,11 @@ function renderMemberInfoTable(data = null) {
         return `
             <tr>
                 <td>${startIndex + index + 1}</td>
-                <td>${escapeHtml(memberId)}</td>
+                <td>${escapeHtml(emailDisplay)}</td>
                 <td>${escapeHtml(name)}</td>
                 <td>${escapeHtml(phone)}</td>
                 <td>${escapeHtml(joinDate)}</td>
                 <td>${escapeHtml(address)}</td>
-                <td>${escapeHtml(bank)}</td>
-                <td>${escapeHtml(accountNumber)}</td>
                 <td>${escapeHtml(referralCode)}</td>
                 <td>${purchaseAmount.toLocaleString()}</td>
                 <td>${formatTrix(supportAmount)} trix</td>
@@ -2351,7 +2426,7 @@ function renderMemberInfoTable(data = null) {
     } catch (error) {
         console.error('❌ 테이블 렌더링 중 오류:', error);
         console.error('오류 상세:', error.message, error.stack);
-        tbody.innerHTML = `<tr><td colspan="13" class="empty-message">테이블 렌더링 오류: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="empty-message">테이블 렌더링 오류: ${error.message}</td></tr>`;
     }
 }
 
@@ -5645,7 +5720,7 @@ async function initAdminPage() {
         navLinks: navLinks.length,
         contentPages: contentPages.length
     });
-    
+
     // 사이드바 토글 초기화
     if (menuToggle && adminSidebar) {
         menuToggle.addEventListener('click', () => {

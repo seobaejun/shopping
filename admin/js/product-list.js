@@ -107,27 +107,59 @@ async function loadAllProducts() {
     }
 }
 
-// 상품 검색 함수
-async function searchProducts() {
-    console.log('🔵🔵🔵 searchProducts 함수 호출됨');
-    const searchName = document.getElementById('productSearchName')?.value.trim().toLowerCase() || '';
-    const searchCategory = document.getElementById('productSearchCategory')?.value || '';
-    const searchStatus = document.getElementById('productSearchStatus')?.value || '';
+// 상품 검색 함수 (동기 처리만 사용, Firebase 대기 없음 → 멈춤 없음)
+function searchProducts() {
+    var tbody = document.getElementById('productSearchResultsBody');
+    var container = document.getElementById('productSearchResultsContainer');
+    var countEl = document.getElementById('searchProductCount');
 
-    searchResultsData = allProductsData.filter(product => {
-        const productName = product.name?.toLowerCase() || '';
-        const productCategory = product.category || '';
-        const productStatus = product.status || '';
+    if (container) container.style.display = 'block';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 중...</td></tr>';
+    if (countEl) countEl.textContent = '0';
 
-        const nameMatch = !searchName || productName.includes(searchName);
-        const categoryMatch = !searchCategory || productCategory === searchCategory;
-        const statusMatch = !searchStatus || productStatus === searchStatus;
+    try {
+        var sourceList = window.allProductsData || allProductsData || [];
+        if (!sourceList.length) {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="empty-message">상품 목록이 아직 없습니다. 위 "전체 상품 목록: N개"가 보일 때까지 2~3초 기다린 뒤 다시 검색해 주세요.</td></tr>';
+            if (countEl) countEl.textContent = '0';
+            return;
+        }
 
-        return nameMatch && categoryMatch && statusMatch;
-    });
+        var searchNameRaw = (document.getElementById('productSearchName') && document.getElementById('productSearchName').value) ? document.getElementById('productSearchName').value.trim() : '';
+        var searchName = searchNameRaw ? searchNameRaw.normalize('NFC').toLowerCase() : '';
+        var searchCategory = (document.getElementById('productSearchCategory') && document.getElementById('productSearchCategory').value) ? document.getElementById('productSearchCategory').value : '';
+        var searchStatus = (document.getElementById('productSearchStatus') && document.getElementById('productSearchStatus').value) ? document.getElementById('productSearchStatus').value : '';
 
-    document.getElementById('searchProductCount').textContent = searchResultsData.length;
-    renderSearchResultsTable(searchResultsData);
+        var totalCount = sourceList.length;
+        searchResultsData = sourceList.filter(function (product) {
+            try {
+                var rawName = (product.name != null ? product.name : (product.productName != null ? product.productName : (product.title != null ? product.title : ''))).toString();
+                var productName = rawName ? rawName.normalize('NFC').toLowerCase() : '';
+                var cat = product.category;
+                var productCategory = (cat != null && typeof cat === 'object')
+                    ? (cat.id || cat.name || cat.categoryId || '')
+                    : (cat != null ? String(cat) : '');
+                var productStatus = (product.status || '').toString();
+                var nameMatch = !searchName || productName.indexOf(searchName) !== -1;
+                var categoryMatch = !searchCategory || productCategory === searchCategory;
+                var statusMatch = !searchStatus || productStatus === searchStatus;
+
+                return nameMatch && categoryMatch && statusMatch;
+            } catch (err) {
+                console.error('[상품검색] 필터 오류 - 상품 id:', product?.id, err);
+                return false;
+            }
+        });
+
+        if (countEl) countEl.textContent = searchResultsData.length;
+        renderSearchResultsTable(searchResultsData);
+
+        if (container) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (error) {
+        console.error('❌ searchProducts 오류:', error);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 오류: ' + (error && error.message ? error.message : String(error)) + '</td></tr>';
+        if (countEl) countEl.textContent = '0';
+    }
 }
 
 // 전체 상품 목록 페이지 갱신 (현재 페이지 기준 슬라이스 렌더 + 페이징)
@@ -175,14 +207,18 @@ function renderProductListPagination(totalItems) {
 
 // 검색 초기화 함수
 function resetProductSearch() {
-    console.log('🔵🔵🔵 resetProductSearch 함수 호출됨');
-    document.getElementById('productSearchName').value = '';
-    document.getElementById('productSearchCategory').value = '';
-    document.getElementById('productSearchStatus').value = '';
+    console.log('🔵 resetProductSearch 호출됨');
+    const nameEl = document.getElementById('productSearchName');
+    const catEl = document.getElementById('productSearchCategory');
+    const statusEl = document.getElementById('productSearchStatus');
+    if (nameEl) nameEl.value = '';
+    if (catEl) catEl.value = '';
+    if (statusEl) statusEl.value = '';
     
     // 검색 결과 초기화 (빈 메시지 표시)
     searchResultsData = [];
-    document.getElementById('searchProductCount').textContent = '0';
+    const countElReset = document.getElementById('searchProductCount');
+    if (countElReset) countElReset.textContent = '0';
     const tbody = document.getElementById('productSearchResultsBody');
     if (tbody) {
         tbody.innerHTML = '<tr><td colspan="11" class="empty-message">검색 결과가 여기에 표시됩니다.</td></tr>';
@@ -248,6 +284,7 @@ function renderSearchResultsTable(products) {
     const rows = [];
     for (let i = 0; i < products.length; i++) {
         const product = products[i];
+        const pid = (product.id != null ? String(product.id) : '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         const categoryName = getCategoryName(product.category);
         const supportAmount = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : 0;
 
@@ -259,12 +296,12 @@ function renderSearchResultsTable(products) {
                 </td>
                 <td style="text-align: center;">${escapeHtml(product.name)}</td>
                 <td>${escapeHtml(product.manufacturer || '')}</td>
-                <td>${categoryName}</td>
+                <td>${escapeHtml(categoryName)}</td>
                 <td>${formatPrice(product.price)}원</td>
                 <td>${formatPrice(supportAmount)} trix</td>
                 <td>${product.stock || 0}</td>
                 <td>
-                    <select class="status-select" onchange="changeProductStatus('${product.id}', this.value)">
+                    <select class="status-select" onchange="changeProductStatus('${pid}', this.value)">
                         <option value="sale" ${product.status === 'sale' ? 'selected' : ''}>판매중</option>
                         <option value="soldout" ${product.status === 'soldout' ? 'selected' : ''}>품절</option>
                         <option value="hidden" ${product.status === 'hidden' ? 'selected' : ''}>숨김</option>
@@ -272,10 +309,10 @@ function renderSearchResultsTable(products) {
                 </td>
                 <td>${formatDate(product.createdAt)}</td>
                 <td>
-                    <button class="btn-icon btn-edit" onclick="openEditProductModal('${product.id}')" title="수정">
+                    <button type="button" class="btn-icon btn-edit" onclick="openEditProductModal('${pid}')" title="수정">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon btn-delete" onclick="deleteProduct('${product.id}')" title="삭제">
+                    <button type="button" class="btn-icon btn-delete" onclick="deleteProduct('${pid}')" title="삭제">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -979,8 +1016,9 @@ function getStatusText(status) {
 }
 
 function getCategoryName(category) {
-    if (!category) return '-';
-    return _productListCategoryMap[category] || category;
+    if (category == null) return '-';
+    const key = (typeof category === 'object') ? (category.id || category.name || category.categoryId || '') : String(category);
+    return _productListCategoryMap[key] || (typeof category === 'object' ? (category.name || category.categoryName || key) : category) || '-';
 }
 
 function formatPrice(price) {
@@ -988,17 +1026,18 @@ function formatPrice(price) {
 }
 
 function formatDate(timestamp) {
-    if (!timestamp) return '-';
-    
+    if (timestamp == null) return '-';
     let date;
-    if (timestamp.toDate) {
+    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
         date = timestamp.toDate();
     } else if (timestamp instanceof Date) {
         date = timestamp;
+    } else if (timestamp.seconds != null) {
+        date = new Date(timestamp.seconds * 1000);
     } else {
         date = new Date(timestamp);
     }
-    
+    if (isNaN(date.getTime())) return '-';
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -1436,10 +1475,14 @@ function initBulkProductUpload() {
     }
 
     function initProductListPage() {
-        // 검색 버튼 이벤트 리스너
-        const searchBtn = document.getElementById('searchProductsBtn');
-        if (searchBtn) {
-            searchBtn.addEventListener('click', searchProducts);
+        // 검색: 폼 submit으로 실행 (인라인/CSP 무관, 버튼 클릭 시 submit 이벤트로 동작)
+        const searchForm = document.getElementById('productSearchForm');
+        if (searchForm) {
+            searchForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (typeof searchProducts === 'function') searchProducts();
+            });
+            console.log('[상품목록] 검색 폼 submit 리스너 등록됨');
         }
 
         // 초기화 버튼 이벤트 리스너
