@@ -449,6 +449,34 @@ section.product-tabs .container {
     max-width: 860px;
 }
 
+/* 탭 영역 텍스트가 860px 안에서 줄바꿈되도록 (긴 유의사항·매장명 등) */
+section.product-tabs .tabs-content,
+section.product-tabs .tab-content,
+section.product-tabs .product-description,
+section.product-tabs .product-description-html,
+section.product-tabs .product-specification {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+}
+section.product-tabs .product-description-html p,
+section.product-tabs .product-description-html li {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+.spec-table {
+    table-layout: fixed;
+    width: 100%;
+}
+.spec-table th,
+.spec-table td {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+.spec-table td {
+    max-width: 0;
+}
+
 /* 상품 상세 탭 */
 .product-tabs {
     padding: 60px 0;
@@ -527,12 +555,33 @@ section.product-tabs .container {
 /* 상품정보 탭 */
 .product-description {
     margin-bottom: 40px;
+    max-width: 100%;
+    min-width: 0;
 }
 
+/* 상세이미지(텍스트) 영역: 860px 안에서 줄바꿈 (유의사항·매장명 등 긴 문장) */
 .product-description-html {
     margin-bottom: 24px;
     line-height: 1.6;
     word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+}
+.product-description-html * {
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+}
+/* 저장된 HTML에 white-space가 있어도 줄바꿈되도록 (긴 한 줄 텍스트) */
+.product-description-html,
+.product-description-html p,
+.product-description-html div,
+.product-description-html li,
+.product-description-html span {
+    white-space: normal;
 }
 .product-description-html p { margin: 0 0 12px; }
 .product-description-html h1, .product-description-html h2, .product-description-html h3 {
