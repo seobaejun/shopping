@@ -2011,12 +2011,34 @@ document.addEventListener('click', (e) => {
     }
     
     if (e.target.closest('.btn-delete')) {
-        const row = e.target.closest('tr');
-        const userId = row.cells[1].textContent;
-        if (confirm(`${userId} 회원을 삭제하시겠습니까?`)) {
-            // 삭제 로직
-            alert('삭제되었습니다.');
-        }
+        const btn = e.target.closest('.btn-delete');
+        const memberId = btn && btn.getAttribute('data-member-id');
+        const source = (btn && btn.getAttribute('data-member-source')) || 'members';
+        if (!memberId) return;
+        if (!confirm('정말로 이 회원을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        (async () => {
+            try {
+                var fa = window.firebaseAdmin;
+                if (source === 'admins' && fa && fa.db) {
+                    await fa.db.collection('admins').doc(memberId).delete();
+                } else if (source === 'mdManagers' && fa && fa.db) {
+                    await fa.db.collection('mdManagers').doc(memberId).delete();
+                } else if (fa && fa.memberService) {
+                    await fa.memberService.deleteMember(memberId);
+                } else {
+                    if (typeof window.deleteMemberInfo === 'function') window.deleteMemberInfo(memberId);
+                    else alert('회원 삭제 서비스를 사용할 수 없습니다.');
+                }
+                alert('회원이 삭제되었습니다.');
+                if (typeof window.loadAllMembers === 'function') await window.loadAllMembers();
+            } catch (err) {
+                console.error('회원 삭제 오류:', err);
+                alert('회원 삭제 중 오류가 발생했습니다: ' + (err.message || '알 수 없음'));
+            }
+        })();
+        return;
     }
 });
 
@@ -2360,7 +2382,8 @@ function renderMemberInfoTable(data = null) {
     try {
         const tableHTML = pageMembers.map((member, index) => {
         const memberId = member.userId || member.id || '';
-        const name = member.name || '';
+        const nameRaw = (member.name || member.userName || '').toString().trim();
+        const name = (!nameRaw || nameRaw.indexOf('@') !== -1) ? '이름 없음' : nameRaw;
         const phone = member.phone || '';
         const emailDisplay = (member.email || '').toString().trim();
         
@@ -2406,10 +2429,10 @@ function renderMemberInfoTable(data = null) {
                 <td>${formatTrix(supportAmount)} trix</td>
                 <td>${statusCell}</td>
                 <td>
-                    <button class="btn-icon btn-edit" onclick="editMemberInfo('${member.id || memberId}')" title="수정">
+                    <button class="btn-icon btn-edit" data-member-id="${String(member.id || memberId).replace(/"/g, '&quot;')}" data-member-source="${String(member._source || 'members').replace(/"/g, '&quot;')}" onclick="editMemberInfo(this.dataset.memberId)" title="수정">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon btn-delete" onclick="deleteMemberInfo('${member.id || memberId}')" title="삭제">
+                    <button class="btn-icon btn-delete" data-member-id="${String(member.id || memberId).replace(/"/g, '&quot;')}" data-member-source="${String(member._source || 'members').replace(/"/g, '&quot;')}" title="삭제">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -5582,6 +5605,7 @@ async function loadProductSales() {
             return t >= startTs && t <= endTs;
         });
         var byProduct = {};
+        var orderProductNameMap = {};
         orders.forEach(function (o) {
             var pid = o.productId || 'unknown';
             if (!byProduct[pid]) byProduct[pid] = { productId: pid, count: 0, totalSales: 0, supportTotal: 0 };
@@ -5590,12 +5614,46 @@ async function loadProductSales() {
             byProduct[pid].count += 1;
             byProduct[pid].totalSales += price * qty;
             byProduct[pid].supportTotal += (o.supportAmount || 0);
+            var orderName = (o.productName != null && String(o.productName).trim() !== '') ? o.productName : (o.product_name != null && String(o.product_name).trim() !== '') ? o.product_name : '';
+            if (orderName) orderProductNameMap[pid] = orderName;
         });
         var products = await productService.getProducts();
         var productMap = {};
         (products || []).forEach(function (p) {
-            productMap[p.id] = { name: p.name || p.title || p.id, categoryId: p.categoryId || p.category || '' };
+            var displayName = (p.name != null && String(p.name).trim() !== '') ? p.name
+                : (p.productName != null && String(p.productName).trim() !== '') ? p.productName
+                : (p.title != null && String(p.title).trim() !== '') ? p.title
+                : (p.productTitle != null && String(p.productTitle).trim() !== '') ? p.productTitle
+                : p.id;
+            var cat = p.category;
+            var categoryId = (cat != null && typeof cat === 'object') ? (cat.id || cat.name || cat.categoryId || '') : (cat != null ? String(cat) : (p.categoryId || ''));
+            productMap[p.id] = { name: displayName, categoryId: categoryId };
         });
+        var missingPids = Object.keys(byProduct).filter(function (pid) { return !productMap[pid]; });
+        if (db && missingPids.length > 0) {
+            try {
+                var fetchResults = await Promise.all(missingPids.map(function (pid) {
+                    return db.collection('products').doc(pid).get().then(function (snap) {
+                        return { pid: pid, snap: snap };
+                    });
+                }));
+                fetchResults.forEach(function (r) {
+                    if (r.snap && r.snap.exists) {
+                        var d = r.snap.data();
+                        var displayName = (d.name != null && String(d.name).trim() !== '') ? d.name
+                            : (d.productName != null && String(d.productName).trim() !== '') ? d.productName
+                            : (d.title != null && String(d.title).trim() !== '') ? d.title
+                            : (d.productTitle != null && String(d.productTitle).trim() !== '') ? d.productTitle
+                            : r.pid;
+                        var cat = d.category;
+                        var categoryId = (cat != null && typeof cat === 'object') ? (cat.id || cat.name || cat.categoryId || '') : (cat != null ? String(cat) : (d.categoryId || ''));
+                        productMap[r.pid] = { name: displayName, categoryId: categoryId };
+                    }
+                });
+            } catch (e) {
+                console.warn('상품 문서 개별 조회 실패:', e);
+            }
+        }
         var categoryMap = {};
         if (db) {
             try {
@@ -5619,7 +5677,7 @@ async function loadProductSales() {
         var rows = [];
         Object.keys(byProduct).forEach(function (pid) {
             var agg = byProduct[pid];
-            var prod = productMap[pid] || { name: pid, categoryId: '' };
+            var prod = productMap[pid] || (orderProductNameMap[pid] ? { name: orderProductNameMap[pid], categoryId: '' } : { name: pid, categoryId: '' });
             if (categoryFilter && prod.categoryId !== categoryFilter) return;
             var categoryName = categoryMap[prod.categoryId] || prod.categoryId || '-';
             var netProfit = Math.round(agg.totalSales * 0.30) - agg.supportTotal;

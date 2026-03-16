@@ -28,9 +28,13 @@ function _parseProductDoc(doc) {
             });
         });
     }
+    var displayName = (product.name != null && String(product.name).trim() !== '') ? product.name
+        : (product.productName != null && String(product.productName).trim() !== '') ? product.productName
+        : (product.title != null && String(product.title).trim() !== '') ? product.title
+        : '';
     return {
         id: doc.id,
-        name: product.name || '',
+        name: displayName,
         option: product.shortDesc || '',
         price: product.price != null ? Number(product.price) : 0,
         originalPrice: product.originalPrice != null ? Number(product.originalPrice) : 0,
@@ -441,10 +445,8 @@ function openBuyNowDeliveryModal(member, loginUser) {
     document.querySelector('input[name="deliverySource"][value="profile"]').checked = true;
     document.getElementById('deliveryNewForm').style.display = 'none';
     fillDeliveryRecipientAndPhone();
-    var newPost = document.getElementById('deliveryNewPostcode');
     var newAddr = document.getElementById('deliveryNewAddress');
     var newDetail = document.getElementById('deliveryNewDetailAddress');
-    if (newPost) newPost.value = '';
     if (newAddr) newAddr.value = '';
     if (newDetail) newDetail.value = '';
     if (productDetailElements.buyNowDeliveryModal) {
@@ -483,10 +485,8 @@ function getSelectedDelivery() {
             detailAddress = def.detailAddress || '';
         }
     } else if (sourceVal === 'new') {
-        var np = document.getElementById('deliveryNewPostcode');
         var na = document.getElementById('deliveryNewAddress');
         var nd = document.getElementById('deliveryNewDetailAddress');
-        postcode = (np && np.value) ? np.value.trim() : '';
         address = (na && na.value) ? na.value.trim() : '';
         detailAddress = (nd && nd.value) ? nd.value.trim() : '';
     }
@@ -505,6 +505,10 @@ function submitBuyNowOrder(delivery) {
     var optionsForOrder = selectedOptionsData.map(function (opt) {
         return { label: opt.label || '', value: opt.value || '', price: opt.price || 0, quantity: opt.quantity || 1 };
     });
+    var orderProductName = (PRODUCT_INFO.name != null && String(PRODUCT_INFO.name).trim() !== '') ? PRODUCT_INFO.name
+        : (PRODUCT_INFO.productName != null && String(PRODUCT_INFO.productName).trim() !== '') ? PRODUCT_INFO.productName
+        : (PRODUCT_INFO.title != null && String(PRODUCT_INFO.title).trim() !== '') ? PRODUCT_INFO.title
+        : '';
     var orderData = {
         status: 'pending',
         userId: loginUser.userId,
@@ -513,7 +517,7 @@ function submitBuyNowOrder(delivery) {
         accountNumber: loginUser.accountNumber || '',
         memberId: loginUser.docId || loginUser.userId,
         productId: PRODUCT_INFO.id,
-        productName: PRODUCT_INFO.name,
+        productName: orderProductName || String(PRODUCT_INFO.id),
         productPrice: totalPrice,
         supportAmount: supportAmount,
         quantity: totalQuantity,
@@ -622,8 +626,8 @@ function initBuyNowDeliveryModal() {
             }
             var source = document.querySelector('input[name="deliverySource"]:checked');
             var sourceVal = source ? source.value : 'profile';
-            if (sourceVal === 'new' && (!delivery.postcode || !delivery.address)) {
-                alert('우편번호와 주소를 입력해주세요.');
+            if (sourceVal === 'new' && !delivery.address) {
+                alert('주소를 입력해주세요.');
                 return;
             }
             _buyNowPendingDelivery = delivery;

@@ -211,3 +211,67 @@ exports.verifyVerificationCode = onCall(
     }
   }
 );
+
+/**
+ * Callable: Firebase Auth 사용자 삭제 (관리자 회원 삭제 시 Firestore와 함께 호출)
+ * @param {Object} data - { uid: string } Firebase Auth UID (members 문서 ID와 동일)
+ * @returns {Object} - { success: true } 또는 user-not-found 시에도 성공 처리
+ */
+exports.deleteAuthUser = onCall(
+  { region: "asia-northeast3" },
+  async (request) => {
+    const uid = request.data && request.data.uid;
+    const uidTrimmed = typeof uid === "string" ? uid.trim() : "";
+    if (!uidTrimmed) {
+      throw new HttpsError("invalid-argument", "uid가 필요합니다.");
+    }
+    try {
+      await admin.auth().deleteUser(uidTrimmed);
+      return { success: true };
+    } catch (err) {
+      if (err.code === "auth/user-not-found") {
+        return { success: true };
+      }
+      console.error("deleteAuthUser 예외:", err);
+      throw new HttpsError("internal", err.message || "Auth 사용자 삭제에 실패했습니다.");
+    }
+  }
+);
+
+/**
+ * Callable: Auth에는 있으나 members에 없는 사용자를 members 문서로 복구
+ * @returns {Object} - { restored: number }
+ */
+exports.restoreAuthUsersToMembers = onCall(
+  { region: "asia-northeast3" },
+  async (request) => {
+    let restored = 0;
+    let pageToken;
+    const membersRef = db.collection("members");
+    do {
+      const listResult = await admin.auth().listUsers(1000, pageToken);
+      for (const user of listResult.users) {
+        const uid = user.uid;
+        const doc = await membersRef.doc(uid).get();
+        if (!doc.exists) {
+          const email = user.email || "";
+          const displayName = (user.displayName || "").trim();
+          const phone = (user.phoneNumber || "").trim();
+          await membersRef.doc(uid).set({
+            uid,
+            userId: email || uid,
+            email,
+            name: displayName || email || uid,
+            phone,
+            status: "정상",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          restored++;
+        }
+      }
+      pageToken = listResult.pageToken;
+    } while (pageToken);
+    return { restored };
+  }
+);

@@ -572,7 +572,8 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
 
     const tableHTML = pageMembers.map((member, index) => {
         const memberId = member.userId || member.id || '';
-        const name = member.name || '';
+        const nameRaw = (member.name || member.userName || '').toString().trim();
+        const name = (!nameRaw || nameRaw.indexOf('@') !== -1) ? '이름 없음' : nameRaw;
         let joinDate = '';
         if (member.joinDate) joinDate = member.joinDate;
         else if (member.createdAt) {

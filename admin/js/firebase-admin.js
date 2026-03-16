@@ -363,9 +363,25 @@ const memberService = {
         }
     },
     
-    // 회원 삭제
+    // 회원 삭제 (Firebase Auth 사용자 + Firestore 문서 둘 다 삭제)
     async deleteMember(memberId) {
+        if (!memberId) throw new Error('회원 ID가 없습니다.');
+        var authUid = memberId;
         try {
+            var docRef = collections.members().doc(memberId);
+            var docSnap = await docRef.get();
+            if (docSnap.exists && docSnap.data().uid) authUid = docSnap.data().uid;
+        } catch (e) { /* 문서 내 uid 없으면 memberId 사용 */ }
+        try {
+            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+                try {
+                    var functions = firebase.app().functions('asia-northeast3');
+                    var deleteAuthUserFn = functions.httpsCallable('deleteAuthUser');
+                    await deleteAuthUserFn({ uid: authUid });
+                } catch (authErr) {
+                    console.warn('Auth 사용자 삭제 실패(계속 진행):', authErr.message || authErr);
+                }
+            }
             await collections.members().doc(memberId).delete();
         } catch (error) {
             console.error('회원 삭제 오류:', error);
