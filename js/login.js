@@ -247,7 +247,8 @@ function handleSearch(e) {
     e.preventDefault();
     const searchInput = document.getElementById('searchInput');
     if (searchInput && searchInput.value.trim()) {
-        window.location.href = `search-results.html?keyword=${encodeURIComponent(searchInput.value.trim())}`;
+        try { sessionStorage.setItem('searchKeyword', searchInput.value.trim()); } catch (e) {}
+        window.location.href = '/search-results.html?q=' + encodeURIComponent(searchInput.value.trim());
     }
     return false;
 }

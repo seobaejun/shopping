@@ -58,15 +58,15 @@
 
                 <!-- 검색창 -->
                 <div class="search-bar">
-                    <form id="searchForm" onsubmit="return handleSearch(event)">
-                        <input type="text" id="searchInput" placeholder="검색어를 입력해주세요" required>
+                    <form id="searchForm" action="/search-results.html" method="get">
+                        <input type="text" id="searchInput" name="q" placeholder="검색어를 입력해주세요" required autocomplete="off">
                         <button type="submit"><i class="fas fa-search"></i> 검색</button>
                     </form>
                 </div>
 
-                <!-- 사용자 메뉴 -->
+                <!-- 사용자 메뉴: 검색 링크 클릭 시 검색창 값으로 search-results.html?q= 로 이동 -->
                 <div class="user-menu">
-                    <a href="#" class="search-btn"><i class="fas fa-search"></i> 검색</a>
+                    <a href="#" class="search-btn" id="headerSearchBtn" aria-label="검색"><i class="fas fa-search"></i> 검색</a>
                     <a href="login.html"><i class="fas fa-user"></i> 로그인</a>
                     <a href="signup.html" class="signup-btn">
                         <i class="fas fa-user-plus"></i> 회원가입
@@ -420,7 +420,29 @@
     <script src="js/admin-link-visibility.js"></script>
     <script src="js/nav-categories.js?v=2"></script>
     <script src="js/bottom-nav.js?v=1"></script>
+    <script src="js/search-form.js"></script>
     <script src="js/today-viewed.js?v=1"></script>
+    <!-- 헤더 검색 링크: 클릭 시 search-results.html?q=검색어 로 이동 (form submit과 동일) -->
+    <script>
+      (function(){
+        function initSearchLink() {
+          var input = document.getElementById('searchInput');
+          var link = document.querySelector('.search-btn, #headerSearchBtn');
+          if (link && input) {
+            link.addEventListener('click', function(e) {
+              e.preventDefault();
+              var q = (input.value || '').trim();
+              if (q) {
+              try { sessionStorage.setItem('searchKeyword', q); } catch (e) {}
+              window.location.href = '/search-results.html?q=' + encodeURIComponent(q);
+            }
+            });
+          }
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSearchLink);
+        else initSearchLink();
+      })();
+    </script>
     <script>
       (function(){
         var isDev = /localhost|127\.0\.0\.1/i.test(window.location.hostname || '');

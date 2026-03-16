@@ -35,8 +35,8 @@
                     </a>
                 </div>
                 <div class="search-bar">
-                    <form id="searchForm" onsubmit="return handleSearch(event)">
-                        <input type="text" id="searchInput" placeholder="검색어를 입력해주세요" required>
+<form id="searchForm" action="/search-results.html" method="get">
+                    <input type="text" id="searchInput" name="q" placeholder="검색어를 입력해주세요" required autocomplete="off">
                         <button type="submit"><i class="fas fa-search"></i> 검색</button>
                     </form>
                 </div>
@@ -626,6 +626,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="js/firebase-config.js?v=2"></script>
+    <script src="js/search-form.js?v=1"></script>
     <script src="js/nav-categories.js?v=2"></script>
     <script src="js/login-required-nav.js?v=1"></script>
     <script src="js/product-detail.js?v=28"></script>

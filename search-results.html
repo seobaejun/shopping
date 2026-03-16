@@ -49,8 +49,8 @@
 
                 <!-- 검색창 -->
                 <div class="search-bar">
-                    <form id="searchForm" onsubmit="return handleSearch(event)">
-                        <input type="text" id="searchInput" placeholder="검색어를 입력해주세요" required>
+                    <form id="searchForm" action="/search-results.html" method="get">
+                        <input type="text" id="searchInput" name="q" placeholder="검색어를 입력해주세요" required autocomplete="off">
                         <button type="submit"><i class="fas fa-search"></i></button>
                     </form>
                 </div>
@@ -160,7 +160,7 @@
                     <button class="filter-toggle" id="filterToggle">
                         <i class="fas fa-filter"></i> 필터
                     </button>
-                    <span class="total-count">총 <strong id="totalCount">1</strong>개 상품</span>
+                    <span class="total-count">총 <strong id="totalCount">0</strong>개 상품</span>
                 </div>
                 <div class="filter-right">
                     <select id="sortSelect">
@@ -210,8 +210,7 @@
                     <div class="filter-group">
                         <h3>카테고리</h3>
                         <div class="category-list">
-                            <a href="#">전체보도 (1)</a>
-                            <a href="#">식품 (1)</a>
+                            <a href="#">전체 (0)</a>
                         </div>
                     </div>
                 </aside>
@@ -304,6 +303,7 @@
     <script src="js/share-utils.js?v=4"></script>
     
     <script src="js/admin-link-visibility.js"></script>
+    <script src="js/header-login.js"></script>
     <script src="js/nav-categories.js?v=2"></script>
     <script src="js/login-required-nav.js?v=1"></script>
     <script src="js/today-viewed.js?v=1"></script>

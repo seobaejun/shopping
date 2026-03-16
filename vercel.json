@@ -5,6 +5,7 @@
     { "source": "/products-list", "destination": "/products-list.html" },
     { "source": "/product-detail", "destination": "/product-detail.html" },
     { "source": "/search-results", "destination": "/search-results.html" },
+    { "source": "/search", "destination": "/search-results.html" },
     { "source": "/admin", "destination": "/admin/index.html" },
     { "source": "/md-admin", "destination": "/md-admin/index.html" },
     { "source": "/item/:path*", "destination": "http://1.228.243.28/item/:path*" }

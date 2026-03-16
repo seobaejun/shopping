@@ -8,10 +8,46 @@ function formatTrix(value) {
     return str;
 }
 
-// URL에서 검색어 가져오기
+// URL에서 검색어 가져오기. 서버가 쿼리를 제거해도 sessionStorage 폴백으로 검색 유지.
 function getSearchKeyword() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('q') || '';
+    var search = window.location.search;
+    if (!search && window.location.href && window.location.href.indexOf('?') !== -1) {
+        search = window.location.href.slice(window.location.href.indexOf('?'));
+    }
+    var urlParams = new URLSearchParams(search || '');
+    var q = urlParams.get('q');
+    if (q != null && String(q).trim() !== '') return String(q).trim();
+    var keyword = urlParams.get('keyword');
+    if (keyword != null && String(keyword).trim() !== '') return String(keyword).trim();
+    var searchParam = urlParams.get('search');
+    if (searchParam != null && String(searchParam).trim() !== '') return String(searchParam).trim();
+    try {
+        var fromStorage = sessionStorage.getItem('searchKeyword');
+        if (fromStorage != null && String(fromStorage).trim() !== '') {
+            sessionStorage.removeItem('searchKeyword');
+            return String(fromStorage).trim();
+        }
+    } catch (e) {}
+    var searchInput = document.getElementById('searchInput');
+    if (searchInput && searchInput.value) return String(searchInput.value).trim();
+    return '';
+}
+
+// 상품의 카테고리 ID 추출 (Firestore Reference/문자열/배열 모두 처리)
+function getProductCategoryId(product) {
+    const raw = product.category != null ? product.category : product.categoryId;
+    if (raw == null || raw === '') return '';
+    if (Array.isArray(raw) && raw.length > 0) {
+        const c = raw[0];
+        if (c && typeof c === 'object' && (c.id != null || c.path)) return (c.id != null ? c.id : (c.path || '').split('/').pop()) || '';
+        return String(c).trim();
+    }
+    if (typeof raw === 'object') {
+        if (raw.id != null) return String(raw.id).trim();
+        if (raw.path) return String((raw.path || '').split('/').pop()).trim();
+        return '';
+    }
+    return String(raw).trim();
 }
 
 // Firestore에서 상품 검색
@@ -19,47 +55,70 @@ async function searchProductsFromFirestore(keyword) {
     console.log('🔍 Firestore에서 검색 시작:', keyword);
     
     try {
-        if (typeof firebase === 'undefined' || !firebase.firestore) {
-            console.error('❌ Firebase가 초기화되지 않았습니다.');
+        if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.apps || firebase.apps.length === 0) {
+            console.warn('[search-results] Firebase 미준비');
             return [];
         }
-        
         const db = firebase.firestore();
         const lowerKeyword = keyword.toLowerCase();
         
-        // 모든 판매 중인 상품 가져오기
-        const productsSnapshot = await db.collection('products')
-            .where('status', '==', 'sale')
-            .get();
+        const categoryNameMap = {};
+        try {
+            const catSnap = await db.collection('categories').get();
+            catSnap.forEach(doc => {
+                const data = doc.data();
+                const name = (data.name != null && String(data.name).trim() !== '') ? String(data.name).trim()
+                    : (data.categoryName != null && String(data.categoryName).trim() !== '') ? String(data.categoryName).trim()
+                    : (data.title != null && String(data.title).trim() !== '') ? String(data.title).trim()
+                    : doc.id;
+                categoryNameMap[doc.id] = name;
+            });
+        } catch (e) {
+            console.warn('[search-results] 카테고리 맵 로드 실패:', e);
+        }
+        
+        const productsSnapshot = await db.collection('products').get();
+        const totalDocs = productsSnapshot.size;
+        console.log('[search-results] products 컬렉션 조회:', totalDocs, '건 (status=sale만 검색 대상)');
         
         const results = [];
         
         productsSnapshot.forEach(doc => {
             const product = doc.data();
-            const productName = (product.name || '').toLowerCase();
-            const productDesc = (product.shortDesc || '').toLowerCase();
-            const productCategory = (product.category || '').toLowerCase();
+            const status = (product.status || '').toString().toLowerCase();
+            if (status !== 'sale') return;
+            // 상품명: 관리자/ Firestore 저장 필드 name (productName, title 호환)
+            const titleRaw = product.name || product.productName || product.title || '';
+            const productName = String(titleRaw).toLowerCase();
+            const productDesc = (product.shortDesc || product.description || product.desc || '').toLowerCase();
+            let categoryId = '';
+            let categoryName = '';
+            try {
+                categoryId = getProductCategoryId(product);
+                categoryName = (categoryNameMap[categoryId] || '').toLowerCase();
+            } catch (e) {
+                console.warn('[search-results] 카테고리 추출 실패 docId=', doc.id, e);
+            }
             
-            // 이름, 설명, 카테고리에서 검색
-            if (productName.includes(lowerKeyword) || 
-                productDesc.includes(lowerKeyword) || 
-                productCategory.includes(lowerKeyword)) {
+            if (productName.includes(lowerKeyword) ||
+                productDesc.includes(lowerKeyword) ||
+                categoryName.includes(lowerKeyword)) {
                 
                 const support = (product.supportAmount != null && product.supportAmount > 0) ? product.supportAmount : 0;
                 results.push({
                     id: doc.id,
-                    title: product.name,
-                    option: product.shortDesc || '',
+                    title: titleRaw,
+                    option: product.shortDesc || product.description || product.desc || '',
                     support: formatTrix(support) + ' trix',
                     image: (window.resolveProductImageUrl && window.resolveProductImageUrl(product.mainImageUrl || product.imageUrl)) || product.mainImageUrl || product.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
-                    category: product.category || '',
+                    category: categoryId,
                     price: product.price,
                     badge: product.displayCategory || []
                 });
             }
         });
         
-        console.log('✅ 검색 완료:', results.length, '개');
+        console.log('✅ 검색 완료: 매칭', results.length, '개 (전체', totalDocs, '건 중)');
         return results;
         
     } catch (error) {
@@ -151,7 +210,10 @@ async function updateSearchResultRatings(results, productGrid) {
 // 검색 결과 렌더링
 async function renderSearchResults() {
     console.log('[search-results] renderSearchResults 시작');
+    console.log('[search-results] location.href:', window.location.href);
+    console.log('[search-results] location.search:', window.location.search);
     var keyword = getSearchKeyword();
+    console.log('[search-results] getSearchKeyword() 반환값:', JSON.stringify(keyword), '| length:', (keyword || '').length);
     const keywordElement = document.getElementById('searchKeyword');
     const totalCountElement = document.getElementById('totalCount');
     const productGrid = document.getElementById('searchProductGrid');
@@ -159,15 +221,16 @@ async function renderSearchResults() {
     const searchInput = document.getElementById('searchInput');
     
     console.log('=== 검색 결과 렌더링 시작 ===');
-    console.log('검색어:', keyword);
+    console.log('검색어(query):', JSON.stringify(keyword), '| length:', (keyword || '').length);
     
-    // 검색어가 없으면 기본 메시지
+    // 검색어가 없으면 '검색 결과 없음'만 표시 (메인으로 리다이렉트하지 않음)
     if (!keyword) {
-        if (keywordElement) {
-            keywordElement.textContent = '전체상품';
-        }
-        noResults.style.display = 'block';
-        productGrid.style.display = 'none';
+        if (keywordElement) keywordElement.textContent = '전체상품';
+        if (totalCountElement) totalCountElement.textContent = '0';
+        if (productGrid) productGrid.style.display = 'none';
+        if (noResults) noResults.style.display = 'block';
+        const categoryList = document.querySelector('.filter-sidebar .category-list') || document.querySelector('#filterSidebar .category-list');
+        if (categoryList) categoryList.innerHTML = '<a href="#">전체 (0)</a>';
         return;
     }
     
@@ -276,29 +339,18 @@ async function updateCategoryListWithElement(results, categoryList) {
     const categoryMap = {};
     
     results.forEach(product => {
-        const catId = product.category || '';
-        let catName = '기타';
-        
-        if (catId) {
-            // 카테고리 이름 맵에서 찾기
-            if (_categoryNameMapCache && _categoryNameMapCache[catId]) {
-                catName = _categoryNameMapCache[catId];
-            } else {
-                // 맵에 없으면 ID처럼 보이는지 확인 (Firestore 문서 ID는 보통 20자 이상의 랜덤 문자열)
-                if (catId.length >= 15 && /^[a-zA-Z0-9]+$/.test(catId)) {
-                    // ID처럼 보이는 경우 - 카테고리 이름 맵을 다시 로드 시도
-                    console.warn('카테고리 ID를 찾을 수 없음:', catId, '맵:', _categoryNameMapCache);
-                    catName = '기타';
-                } else {
-                    // 이름처럼 보이는 경우 그대로 사용
-                    catName = catId;
-                }
-            }
+        const catId = typeof product.category === 'string'
+            ? product.category
+            : getProductCategoryId({ category: product.category, categoryId: product.category });
+        const catName = (catId && _categoryNameMapCache && _categoryNameMapCache[catId])
+            ? _categoryNameMapCache[catId]
+            : (catId && typeof catId === 'string' && catId.length < 15 ? catId : '기타');
+        if (!catId) {
+            if (!categoryMap['기타']) categoryMap['기타'] = 0;
+            categoryMap['기타']++;
+            return;
         }
-        
-        if (!categoryMap[catName]) {
-            categoryMap[catName] = 0;
-        }
+        if (!categoryMap[catName]) categoryMap[catName] = 0;
         categoryMap[catName]++;
     });
     
@@ -389,72 +441,60 @@ function handleSearch(event) {
     const keyword = searchInput.value.trim();
     
     if (keyword) {
-        window.location.href = `search-results.html?q=${encodeURIComponent(keyword)}`;
+        try { sessionStorage.setItem('searchKeyword', keyword); } catch (e) {}
+        window.location.href = '/search-results.html?q=' + encodeURIComponent(keyword);
     }
     
     return false;
+}
+
+// Firebase 준비 대기 (검색 JS가 Firebase 로딩보다 먼저 실행되지 않도록)
+function waitForFirebaseReady() {
+    if (typeof window.whenFirebaseReady === 'function') {
+        return window.whenFirebaseReady();
+    }
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+        return Promise.resolve();
+    }
+    return new Promise(function (resolve) {
+        var check = setInterval(function () {
+            if (typeof firebase !== 'undefined' && firebase.firestore) {
+                clearInterval(check);
+                resolve();
+            }
+        }, 100);
+    });
 }
 
 // 초기화
 async function init() {
     console.log('[search-results] init 시작');
     try {
-        if (typeof window.whenFirebaseReady === 'function') {
-            console.log('[search-results] whenFirebaseReady 대기 중...');
-            await window.whenFirebaseReady();
-            console.log('[search-results] whenFirebaseReady 완료');
-        } else {
-            console.warn('[search-results] whenFirebaseReady 없음');
+        console.log('[search-results] whenFirebaseReady 대기 중...');
+        await waitForFirebaseReady();
+        console.log('[search-results] whenFirebaseReady 완료');
+
+        // 로그인 상태 업데이트
+        setTimeout(function () {
+            if (typeof window.updateHeaderForLoginStatus === 'function') {
+                window.updateHeaderForLoginStatus();
+            }
+        }, 100);
+
+        console.log('✅ Firebase SDK 로드 완료');
+
+        // script.js의 함수들 초기화
+        if (typeof initNoticeBanner === 'function') {
+            try { initNoticeBanner(); } catch (e) { console.warn('⚠️ 공지 배너 초기화 실패:', e); }
         }
-    // 로그인 상태 업데이트 (script.js 로드 대기)
-    setTimeout(() => {
-        if (typeof updateHeaderForLoginStatus === 'function') {
-            updateHeaderForLoginStatus();
-        } else {
-            console.warn('updateHeaderForLoginStatus 함수를 찾을 수 없습니다.');
+        if (typeof initSearchToggle === 'function') {
+            try { initSearchToggle(); } catch (e) { console.warn('⚠️ 검색 토글 초기화 실패:', e); }
         }
-    }, 100);
-    
-    // Firebase 대기
-    if (typeof firebase === 'undefined') {
-        console.log('⏳ Firebase SDK 로딩 대기...');
-        await new Promise(resolve => {
-            const checkFirebase = setInterval(() => {
-                if (typeof firebase !== 'undefined' && firebase.firestore) {
-                    clearInterval(checkFirebase);
-                    resolve();
-                }
-            }, 100);
-        });
-    }
-    
-    console.log('✅ Firebase SDK 로드 완료');
-    
-    // script.js의 함수들 초기화
-    if (typeof initNoticeBanner === 'function') {
-        try {
-            initNoticeBanner();
-        } catch (e) {
-            console.warn('⚠️ 공지 배너 초기화 실패:', e);
+        if (typeof initCategorySidebar === 'function') {
+            try { initCategorySidebar(); } catch (e) { console.warn('⚠️ 카테고리 사이드바 초기화 실패:', e); }
         }
-    }
-    
-    if (typeof initSearchToggle === 'function') {
-        try {
-            initSearchToggle();
-        } catch (e) {
-            console.warn('⚠️ 검색 토글 초기화 실패:', e);
-        }
-    }
-    
-    if (typeof initCategorySidebar === 'function') {
-        try {
-            initCategorySidebar();
-        } catch (e) {
-            console.warn('⚠️ 카테고리 사이드바 초기화 실패:', e);
-        }
-    }
-    
+
+        // Firebase 준비 후에만 검색 결과 렌더링 (순서 보장)
         console.log('[search-results] renderSearchResults 호출');
         await renderSearchResults();
         console.log('[search-results] renderSearchResults 완료');

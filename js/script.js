@@ -281,7 +281,8 @@ const elements = {
 // 검색 실행
 function performSearch(keyword) {
     if (!keyword || !keyword.trim()) return;
-    window.location.href = `search-results.html?q=${encodeURIComponent(keyword.trim())}`;
+    try { sessionStorage.setItem('searchKeyword', keyword.trim()); } catch (e) {}
+    window.location.href = '/search-results.html?q=' + encodeURIComponent(keyword.trim());
 }
 
 // 검색 폼 제출
@@ -290,7 +291,8 @@ function handleSearch(event) {
     const searchInput = document.getElementById('searchInput');
     const keyword = searchInput && searchInput.value ? searchInput.value.trim() : '';
     if (keyword) {
-        window.location.href = `search-results.html?q=${encodeURIComponent(keyword)}`;
+        try { sessionStorage.setItem('searchKeyword', keyword); } catch (e) {}
+        window.location.href = '/search-results.html?q=' + encodeURIComponent(keyword);
     }
     return false;
 }

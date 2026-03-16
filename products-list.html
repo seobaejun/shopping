@@ -34,8 +34,8 @@
                     </a>
                 </div>
                 <div class="search-bar">
-                    <form action="#" method="get">
-                        <input type="text" placeholder="검색어를 입력해주세요" required>
+                    <form id="searchForm" action="/search-results.html" method="get">
+                        <input type="text" id="searchInput" name="q" placeholder="검색어를 입력해주세요" required autocomplete="off">
                         <button type="submit"><i class="fas fa-search"></i> 검색</button>
                     </form>
                 </div>
@@ -288,6 +288,7 @@
     <script src="js/today-viewed.js?v=1"></script>
     <script src="js/nav-categories.js?v=2"></script>
     <script src="js/login-required-nav.js?v=1"></script>
+    <script src="js/search-form.js"></script>
     <script src="js/bottom-nav.js?v=1"></script>
     <script>
       (function(){
