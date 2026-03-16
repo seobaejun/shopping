@@ -420,6 +420,17 @@
                 <button type="button" class="buy-now-modal-close" id="buyNowDeliveryModalClose" aria-label="닫기">&times;</button>
             </div>
             <div class="buy-now-modal-body">
+                <div class="delivery-recipient-fields delivery-recipient-fields-top">
+                    <p class="delivery-recipient-desc">받는사람과 연락처를 입력하거나 기본값을 수정할 수 있습니다.</p>
+                    <div class="form-row">
+                        <label for="deliveryRecipient">받는사람</label>
+                        <input type="text" id="deliveryRecipient" placeholder="받는사람 이름" maxlength="30">
+                    </div>
+                    <div class="form-row">
+                        <label for="deliveryPhone">연락처</label>
+                        <input type="text" id="deliveryPhone" placeholder="연락처" maxlength="20">
+                    </div>
+                </div>
                 <div class="delivery-option-list">
                     <label class="delivery-option-item">
                         <input type="radio" name="deliverySource" value="profile" checked>
@@ -433,24 +444,9 @@
                     </label>
                     <label class="delivery-option-item">
                         <input type="radio" name="deliverySource" value="new">
-                        <span class="delivery-option-label">새로 입력</span>
+                        <span class="delivery-option-label">신규배송지</span>
                         <p class="delivery-option-summary" id="deliveryOptionNewHint">선택 시 아래에 주소를 입력합니다.</p>
                     </label>
-                </div>
-                <div class="delivery-recipient-fields">
-                    <p class="delivery-recipient-desc">받는사람과 연락처는 기본값을 그대로 쓰거나 수정할 수 있습니다.</p>
-                    <div class="form-row">
-                        <label for="deliveryRecipient">받는사람</label>
-                        <input type="text" id="deliveryRecipient" placeholder="받는사람 이름" maxlength="30">
-                    </div>
-                    <div class="form-row">
-                        <label for="deliveryPhone">연락처</label>
-                        <input type="text" id="deliveryPhone" placeholder="연락처" maxlength="20">
-                    </div>
-                    <div class="deposit-info-box">
-                        <p class="deposit-bank">하나은행 670-910020-22804 (주)딩펫씨큐리티</p>
-                        <p class="deposit-guide">입금완료 후 구매하기 버튼을 눌러주세요</p>
-                    </div>
                 </div>
                 <div class="delivery-new-form" id="deliveryNewForm" style="display: none;">
                     <div class="form-row">
@@ -470,6 +466,43 @@
             <div class="buy-now-modal-footer">
                 <button type="button" class="btn-buy-now-cancel" id="buyNowDeliveryCancel">취소</button>
                 <button type="button" class="btn-buy-now-submit" id="buyNowDeliverySubmit">구매하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 바로구매 결제 확인 모달 (상품/금액/배송지/입금정보·계좌 복사) -->
+    <div class="buy-now-delivery-modal" id="buyNowPaymentModal">
+        <div class="buy-now-modal-content">
+            <div class="buy-now-modal-header">
+                <h3>결제 안내</h3>
+                <button type="button" class="buy-now-modal-close" id="buyNowPaymentModalClose" aria-label="닫기">&times;</button>
+            </div>
+            <div class="buy-now-modal-body" id="buyNowPaymentModalBody">
+                <div class="payment-summary-section">
+                    <h4 class="payment-section-title">상품 정보</h4>
+                    <p id="paymentProductInfo" class="payment-info-line">-</p>
+                    <p id="paymentAmountInfo" class="payment-info-line">-</p>
+                </div>
+                <div class="payment-summary-section">
+                    <h4 class="payment-section-title">배송지</h4>
+                    <p id="paymentDeliveryRecipient" class="payment-info-line">-</p>
+                    <p id="paymentDeliveryAddress" class="payment-info-line payment-address">-</p>
+                </div>
+                <div class="payment-summary-section payment-bank-section">
+                    <h4 class="payment-section-title">입금 정보</h4>
+                    <p class="payment-info-line">하나은행 (주)딩펫씨큐리티</p>
+                    <div class="payment-account-row">
+                        <span id="paymentAccountNumber" class="payment-account-number">670-910020-22804</span>
+                        <button type="button" class="btn-copy-account" id="btnCopyPaymentAccount">복사하기</button>
+                    </div>
+                </div>
+            </div>
+            <div class="buy-now-modal-footer" id="buyNowPaymentModalFooter">
+                <button type="button" class="btn-buy-now-submit" id="buyNowPaymentConfirm">확인</button>
+            </div>
+            <div class="buy-now-modal-footer" id="buyNowPaymentDoneFooter" style="display: none;">
+                <button type="button" class="btn-buy-now-cancel" id="btnOrderHistory">주문내역 가기</button>
+                <button type="button" class="btn-buy-now-submit" id="btnContinueShopping">쇼핑 계속하기</button>
             </div>
         </div>
     </div>

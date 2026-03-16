@@ -181,7 +181,12 @@ const productDetailElements = {
     buyNowDeliverySubmit: document.getElementById('buyNowDeliverySubmit'),
     deliveryOptionProfileSummary: document.getElementById('deliveryOptionProfileSummary'),
     deliveryOptionDefaultSummary: document.getElementById('deliveryOptionDefaultSummary'),
-    deliveryNewForm: document.getElementById('deliveryNewForm')
+    deliveryNewForm: document.getElementById('deliveryNewForm'),
+    buyNowPaymentModal: document.getElementById('buyNowPaymentModal'),
+    buyNowPaymentModalClose: document.getElementById('buyNowPaymentModalClose'),
+    buyNowPaymentModalBody: document.getElementById('buyNowPaymentModalBody'),
+    buyNowPaymentModalFooter: document.getElementById('buyNowPaymentModalFooter'),
+    buyNowPaymentDoneFooter: document.getElementById('buyNowPaymentDoneFooter')
 };
 
 // 썸네일 이미지 클릭 이벤트 (제거됨 - 더이상 썸네일 없음)
@@ -364,15 +369,17 @@ function initCartActions() {
 // 바로구매 시 사용할 회원/로그인 정보 (배송지 모달에서 설정)
 var _buyNowMember = null;
 var _buyNowLoginUser = null;
+var _buyNowPendingDelivery = null;
 
-// 배송지 요약 텍스트 생성
+// 배송지 요약: 위에 받는사람·연락처, 아래에 주소 (줄바꿈으로 구분)
 function _deliverySummary(rec, phone, postcode, address, detail) {
-    var parts = [];
-    if (rec) parts.push(rec);
-    if (phone) parts.push(phone);
+    var topParts = [];
+    if (rec) topParts.push(rec);
+    if (phone) topParts.push(phone);
+    var topLine = topParts.length ? topParts.join(' / ') : '-';
     var addr = [postcode, address, detail].filter(Boolean).join(' ');
-    if (addr) parts.push(addr);
-    return parts.length ? parts.join(' / ') : '-';
+    var bottomLine = addr || '-';
+    return topLine + '\n' + bottomLine;
 }
 
 // 받는사람/연락처 입력란에 선택한 옵션 기본값 채우기
@@ -607,7 +614,7 @@ function initBuyNowDeliveryModal() {
     }
 
     if (submitBtn) {
-        submitBtn.addEventListener('click', async function () {
+        submitBtn.addEventListener('click', function () {
             var delivery = getSelectedDelivery();
             if (!delivery.recipientName || !delivery.phone) {
                 alert('받는사람과 연락처를 입력해주세요.');
@@ -619,19 +626,140 @@ function initBuyNowDeliveryModal() {
                 alert('우편번호와 주소를 입력해주세요.');
                 return;
             }
-            submitBtn.disabled = true;
+            _buyNowPendingDelivery = delivery;
+            closeBuyNowDeliveryModal();
+            openBuyNowPaymentModal(delivery);
+        });
+    }
+}
+
+function openBuyNowPaymentModal(delivery) {
+    var totalQuantity = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.quantity || 1); }, 0);
+    var totalPrice = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.price || 0) * (opt.quantity || 1); }, 0);
+    var supportAmount = (PRODUCT_INFO && PRODUCT_INFO.supportAmount != null && PRODUCT_INFO.supportAmount > 0)
+        ? PRODUCT_INFO.supportAmount * totalQuantity : 0;
+    var productLine = (PRODUCT_INFO && PRODUCT_INFO.name) ? PRODUCT_INFO.name : '-';
+    if (selectedOptionsData.length > 0) {
+        productLine += ' ' + selectedOptionsData.map(function (o) {
+            return (o.label || '') + (o.quantity > 1 ? ' x' + o.quantity : '');
+        }).join(', ');
+    }
+    var amountLine = totalPrice.toLocaleString() + '원' + (supportAmount > 0 ? ' (지원금 ' + supportAmount.toLocaleString() + ' trix)' : '');
+    var recipientLine = (delivery.recipientName || '-') + ' / ' + (delivery.phone || '-');
+    var addressLine = [delivery.postcode, delivery.address, delivery.detailAddress].filter(Boolean).join(' ');
+
+    var productEl = document.getElementById('paymentProductInfo');
+    var amountEl = document.getElementById('paymentAmountInfo');
+    var recipientEl = document.getElementById('paymentDeliveryRecipient');
+    var addressEl = document.getElementById('paymentDeliveryAddress');
+    if (productEl) productEl.textContent = productLine;
+    if (amountEl) amountEl.textContent = amountLine;
+    if (recipientEl) recipientEl.textContent = recipientLine;
+    if (addressEl) addressEl.textContent = addressLine || '-';
+
+    var footer = document.getElementById('buyNowPaymentModalFooter');
+    var doneFooter = document.getElementById('buyNowPaymentDoneFooter');
+    var body = document.getElementById('buyNowPaymentModalBody');
+    if (footer) footer.style.display = 'flex';
+    if (doneFooter) doneFooter.style.display = 'none';
+    if (body) body.style.display = 'block';
+
+    if (productDetailElements.buyNowPaymentModal) {
+        productDetailElements.buyNowPaymentModal.classList.add('active');
+    }
+}
+
+function closeBuyNowPaymentModal() {
+    _buyNowPendingDelivery = null;
+    if (productDetailElements.buyNowPaymentModal) {
+        productDetailElements.buyNowPaymentModal.classList.remove('active');
+    }
+}
+
+function initBuyNowPaymentModal() {
+    var modal = productDetailElements.buyNowPaymentModal;
+    var closeBtn = document.getElementById('buyNowPaymentModalClose');
+    var copyBtn = document.getElementById('btnCopyPaymentAccount');
+    var accountEl = document.getElementById('paymentAccountNumber');
+    var confirmBtn = document.getElementById('buyNowPaymentConfirm');
+    var orderHistoryBtn = document.getElementById('btnOrderHistory');
+    var continueBtn = document.getElementById('btnContinueShopping');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeBuyNowPaymentModal);
+    }
+    if (modal) {
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) closeBuyNowPaymentModal();
+        });
+    }
+    if (copyBtn && accountEl) {
+        copyBtn.addEventListener('click', function () {
+            var account = (accountEl && accountEl.textContent) ? accountEl.textContent.trim() : '670-910020-22804';
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(account).then(function () {
+                    alert('계좌번호가 복사되었습니다.');
+                }).catch(function () {
+                    fallbackCopy(account);
+                });
+            } else {
+                fallbackCopy(account);
+            }
+        });
+    }
+    function fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            alert('계좌번호가 복사되었습니다.');
+        } catch (e) {
+            alert('복사에 실패했습니다. 계좌번호: ' + text);
+        }
+        document.body.removeChild(ta);
+    }
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async function () {
+            var delivery = _buyNowPendingDelivery;
+            if (!delivery) return;
+            confirmBtn.disabled = true;
             try {
                 await submitBuyNowOrder(delivery);
-                closeBuyNowDeliveryModal();
-                alert('구매 요청이 접수되었습니다. 관리자 승인 후 진행됩니다.');
-                selectedOptionsData = [];
-                renderSelectedOptions();
-                updateTotalPrice();
+                var body = document.getElementById('buyNowPaymentModalBody');
+                var footer = document.getElementById('buyNowPaymentModalFooter');
+                var doneFooter = document.getElementById('buyNowPaymentDoneFooter');
+                if (body) {
+                    body.innerHTML = '<p class="payment-info-line" style="text-align:center; font-size:16px; margin:20px 0;">주문이 접수되었습니다.</p>';
+                    body.style.display = 'block';
+                }
+                if (footer) footer.style.display = 'none';
+                if (doneFooter) doneFooter.style.display = 'flex';
             } catch (error) {
                 console.error('구매 요청 오류:', error);
                 alert('구매 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
             }
-            submitBtn.disabled = false;
+            confirmBtn.disabled = false;
+        });
+    }
+    if (orderHistoryBtn) {
+        orderHistoryBtn.addEventListener('click', function () {
+            closeBuyNowPaymentModal();
+            selectedOptionsData = [];
+            renderSelectedOptions();
+            updateTotalPrice();
+            window.location.href = 'mypage.html?section=orders';
+        });
+    }
+    if (continueBtn) {
+        continueBtn.addEventListener('click', function () {
+            closeBuyNowPaymentModal();
+            selectedOptionsData = [];
+            renderSelectedOptions();
+            updateTotalPrice();
         });
     }
 }
@@ -1207,6 +1335,7 @@ async function initProductDetail() {
     initCartActions();
     initBuyActions();
     initBuyNowDeliveryModal();
+    initBuyNowPaymentModal();
     initWishlistActions();
     initCartModal();
     initProductInquiry();

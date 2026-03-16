@@ -1006,12 +1006,22 @@
     font-size: 13px;
     color: #666;
     line-height: 1.5;
+    white-space: pre-line;
 }
 
 .delivery-recipient-fields {
     margin-top: 20px;
     padding-top: 16px;
     border-top: 1px solid var(--border-color);
+}
+
+.delivery-recipient-fields-top {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .delivery-recipient-desc {
@@ -1141,6 +1151,80 @@
 .btn-buy-now-submit:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+/* 바로구매 결제 확인 모달 */
+#buyNowPaymentModal .buy-now-modal-content {
+    max-width: 420px;
+}
+
+.payment-summary-section {
+    margin-bottom: 18px;
+}
+
+.payment-summary-section:last-child {
+    margin-bottom: 0;
+}
+
+.payment-section-title {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #555;
+}
+
+.payment-info-line {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    color: #333;
+    line-height: 1.5;
+}
+
+.payment-info-line.payment-address {
+    color: #666;
+    white-space: pre-line;
+}
+
+.payment-bank-section {
+    padding: 14px;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+}
+
+.payment-account-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.payment-account-number {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #333;
+}
+
+.btn-copy-account {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--primary-color);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--primary-color);
+    cursor: pointer;
+}
+
+.btn-copy-account:hover {
+    background: rgba(255, 193, 7, 0.15);
+}
+
+#buyNowPaymentDoneFooter {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
 }
 
 /* 최근 본 상품 개선 */
