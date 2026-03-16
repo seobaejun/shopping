@@ -227,6 +227,39 @@ async function getAllowedMembers() {
             });
         }
         
+        // 본인(MD)이 회원으로 등록돼 있지만 mdCode가 비어있거나 달라서 목록에 없을 수 있음 → 본인 회원 추가
+        const mdAdminData = localStorage.getItem('mdAdminData');
+        if (mdAdminData) {
+            const mdData = JSON.parse(mdAdminData);
+            const currentUserId = (mdData.userId || mdData.email || '').toString().trim();
+            const currentEmail = (mdData.email || '').toString().trim();
+            const alreadyInList = members.some(function (m) {
+                const uid = (m.userId || m.id || '').toString().trim();
+                const em = (m.email || '').toString().trim();
+                return (currentUserId && uid === currentUserId) || (currentEmail && em === currentEmail);
+            });
+            if (!alreadyInList && (currentUserId || currentEmail)) {
+                let selfSnap;
+                if (currentEmail) {
+                    selfSnap = await window.db.collection('members').where('email', '==', currentEmail).limit(1).get();
+                }
+                if ((!selfSnap || selfSnap.empty) && currentUserId) {
+                    selfSnap = await window.db.collection('members').where('userId', '==', currentUserId).limit(1).get();
+                }
+                if (selfSnap && !selfSnap.empty) {
+                    const doc = selfSnap.docs[0];
+                    const data = doc.data();
+                    members.push({
+                        id: doc.id,
+                        ...data,
+                        docId: doc.id,
+                        mdCode: data.mdCode || mdData.mdCode || ''
+                    });
+                    console.log('본인(MD) 회원 1명 목록에 추가');
+                }
+            }
+        }
+        
         console.log(`허용된 회원 수:`, members.length);
         return members;
         

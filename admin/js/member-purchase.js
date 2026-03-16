@@ -43,6 +43,22 @@ async function waitForFirebaseAdminPurchase(maxWait = 10000) {
     return window.firebaseAdmin;
 }
 
+/** MD 관리자 전용: Firebase Admin 대기 (타임아웃 시 null 반환, 예외 없음) */
+async function waitForFirebaseAdminPurchaseMdOptional(maxWait = 3000) {
+    const startTime = Date.now();
+    while (!window.firebaseAdmin) {
+        if (Date.now() - startTime > maxWait) {
+            console.warn('MD 관리자: 구매정보 Firebase Admin 대기 타임아웃, window.db로 진행');
+            return null;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    if (!window.firebaseAdmin.db && window.firebaseAdmin.initFirebase) {
+        await window.firebaseAdmin.initFirebase();
+    }
+    return window.firebaseAdmin;
+}
+
 // 구매 정보 검색 함수
 window.searchMemberPurchase = async function() {
     try {
@@ -55,10 +71,15 @@ window.searchMemberPurchase = async function() {
         
         console.log('🔵 구매 정보 검색 시작:', keyword);
         
-        // Firebase Admin 초기화 대기
-        const firebaseAdmin = await waitForFirebaseAdminPurchase();
+        var firebaseAdmin = null;
+        if (window.isMdAdmin && window.mdFirebase && typeof window.mdFirebase.getAllowedMembers === 'function') {
+            firebaseAdmin = await waitForFirebaseAdminPurchaseMdOptional(3000);
+        }
+        if (!firebaseAdmin && !window.isMdAdmin) {
+            firebaseAdmin = await waitForFirebaseAdminPurchase();
+        }
         
-        // 회원 목록 (MD일 때 getAllowedMembers 사용 → 관리자에서 MD 바로가기로 들어와도 동일 목록으로 검색)
+        // 회원 목록 (MD일 때 getAllowedMembers 사용; firebaseAdmin이 null이어도 window.db로 구매 내역 조회) → 관리자에서 MD 바로가기로 들어와도 동일 목록으로 검색)
         var members;
         if (window.isMdAdmin && window.mdFirebase && typeof window.mdFirebase.getAllowedMembers === 'function') {
             members = await window.mdFirebase.getAllowedMembers();
@@ -83,14 +104,16 @@ window.searchMemberPurchase = async function() {
         const startDate = document.getElementById('purchaseStartDate')?.value;
         const endDate = document.getElementById('purchaseEndDate')?.value;
         
-        // 구매 내역 가져오기 (Firestore에서)
-        // TODO: purchases 컬렉션에서 데이터 가져오기
-        // 현재는 더미 데이터 사용
         const searchId = member.userId || member.id;
-        const purchases = await getMemberPurchases(searchId, startDate, endDate);
+        const purchases = await getMemberPurchases(searchId, startDate, endDate, firebaseAdmin);
         var paidSupport = 0;
         var paidSupportByOrderId = {};
-        if (firebaseAdmin.lotteryConfirmedService) {
+        if (window.isMdAdmin) {
+            var mdSupport = await getPaidSupportMdFallback(member.userId, member.id, member.email);
+            paidSupport = mdSupport.totalSupport;
+            paidSupportByOrderId = mdSupport.byOrderId || {};
+        }
+        if ((paidSupport === 0 && Object.keys(paidSupportByOrderId).length === 0) && firebaseAdmin && firebaseAdmin.lotteryConfirmedService) {
             if (typeof firebaseAdmin.lotteryConfirmedService.getPaidSupportByMember === 'function') {
                 var byMember = await firebaseAdmin.lotteryConfirmedService.getPaidSupportByMember();
                 paidSupport = byMember[member.userId] ?? byMember[member.id] ?? 0;
@@ -99,7 +122,7 @@ window.searchMemberPurchase = async function() {
                 paidSupportByOrderId = await firebaseAdmin.lotteryConfirmedService.getPaidSupportByOrderId(member.userId, member.id);
             }
         }
-        console.log('✅ 구매 내역:', purchases.length, '건, 지급완료 지원금:', paidSupport);
+        console.log('✅ 구매 내역:', purchases.length, '건, 지급완료 지원금:', paidSupport, 'byOrderId 키 수:', Object.keys(paidSupportByOrderId).length);
         displayPurchaseResults(member, purchases, paidSupport, paidSupportByOrderId);
         
     } catch (error) {
@@ -108,12 +131,50 @@ window.searchMemberPurchase = async function() {
     }
 };
 
-// 회원의 구매 내역 가져오기 (orders 컬렉션에서 조회)
-async function getMemberPurchases(memberId, startDate, endDate) {
+/** MD 관리자 전용: window.db로 지급완료 지원금 합계·orderId별 맵 조회 */
+async function getPaidSupportMdFallback(memberUserId, memberId, memberEmail) {
+    var db = window.db || (window.firebaseAdmin && window.firebaseAdmin.db);
+    if (!db && typeof firebase !== 'undefined' && firebase.firestore) db = firebase.firestore();
+    if (!db) {
+        console.warn('getPaidSupportMdFallback: db 없음');
+        return { totalSupport: 0, byOrderId: {} };
+    }
     try {
-        const firebaseAdmin = window.firebaseAdmin;
-        
-        const snapshot = await firebaseAdmin.db.collection('orders').get();
+        var snap = await db.collection('lotteryConfirmedResults').get();
+        var total = 0;
+        var byOrderId = {};
+        var uid = (memberUserId || '').toString().trim();
+        var mid = (memberId != null && memberId !== '') ? String(memberId).trim() : '';
+        var uEmail = (memberEmail || '').toString().trim();
+        snap.docs.forEach(function (doc) {
+            var d = doc.data();
+            if ((d.paymentStatus || '').toString().toLowerCase() !== 'paid') return;
+            var dUid = (d.userId || '').toString().trim();
+            var dMid = (d.memberId != null && d.memberId !== '') ? String(d.memberId).trim() : '';
+            var match = (uid && (dUid === uid || dMid === uid)) || (mid && (dMid === mid || dUid === mid)) || (uEmail && (dUid === uEmail || dUid.toLowerCase() === uEmail.toLowerCase()));
+            if (!match) return;
+            var support = Number(d.support != null ? d.support : d.supportAmount) || 0;
+            total += support;
+            var oid = (d.orderId != null ? d.orderId : '').toString().trim();
+            if (oid) byOrderId[oid] = (byOrderId[oid] || 0) + support;
+        });
+        console.log('🔵 getPaidSupportMdFallback:', total, 'trix, orderId 수:', Object.keys(byOrderId).length);
+        return { totalSupport: total, byOrderId: byOrderId };
+    } catch (e) {
+        console.warn('getPaidSupportMdFallback 오류:', e);
+        return { totalSupport: 0, byOrderId: {} };
+    }
+}
+
+// 회원의 구매 내역 가져오기 (orders 컬렉션에서 조회). firebaseAdmin이 null이면 window.db 사용(MD 폴백)
+async function getMemberPurchases(memberId, startDate, endDate, firebaseAdminArg) {
+    try {
+        const db = (firebaseAdminArg && firebaseAdminArg.db) ? firebaseAdminArg.db : (window.db || (window.firebaseAdmin && window.firebaseAdmin.db));
+        if (!db) {
+            console.error('구매 내역 조회: DB를 사용할 수 없습니다.');
+            return [];
+        }
+        const snapshot = await db.collection('orders').get();
         
         const startMs = startDate ? new Date(startDate + 'T00:00:00').getTime() : null;
         const endMs = endDate ? new Date(endDate + 'T23:59:59.999').getTime() : null;
@@ -221,7 +282,7 @@ function renderPurchaseDetailTable(purchases, paidSupportByOrderId) {
             }
         }
         
-        var paidSupport = paidSupportByOrderId[purchase.id] != null ? Number(paidSupportByOrderId[purchase.id]) : 0;
+        var paidSupport = (paidSupportByOrderId[purchase.id] != null ? Number(paidSupportByOrderId[purchase.id]) : (paidSupportByOrderId[purchase.orderId] != null ? Number(paidSupportByOrderId[purchase.orderId]) : 0));
         var isPaid = paidSupport > 0;
         
         var statusDisplay, statusClass;

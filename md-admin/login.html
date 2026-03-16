@@ -231,7 +231,7 @@
         });
     </script>
     <script>
-        // MD 로그인 처리 (이메일 + 비밀번호 @@7799)
+        // MD 로그인: 쇼핑몰 가입 시 사용한 이메일+비밀번호(Firebase Auth)로 로그인 후, MD 등록 여부만 확인
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -246,16 +246,21 @@
                 return;
             }
             
-            if (password !== '@@7799') {
-                showError('비밀번호가 올바르지 않습니다.');
-                return;
-            }
-            
             loginBtn.disabled = true;
             loginBtn.innerHTML = '<div class="loading"></div> 로그인 중...';
             hideError();
             
             try {
+                if (typeof firebase === 'undefined' || !firebase.auth) {
+                    showError('Firebase Auth를 사용할 수 없습니다. 페이지를 새로고침해주세요.');
+                    return;
+                }
+                
+                // 1) 쇼핑몰 가입 계정(Firebase Auth)으로 로그인
+                const userCred = await firebase.auth().signInWithEmailAndPassword(email, password);
+                const authUser = userCred.user;
+                const loginEmail = (authUser.email || email).trim();
+                
                 let retryCount = 0;
                 const maxRetries = 50;
                 while (!window.db && retryCount < maxRetries) {
@@ -268,23 +273,28 @@
                     return;
                 }
                 
-                // mdManagers에서 이메일로 조회
-                const mdSnap = await window.db.collection('mdManagers').where('email', '==', email).get();
+                // 2) 해당 계정이 MD로 등록되어 있는지 확인
+                let mdSnap = await window.db.collection('mdManagers').where('email', '==', loginEmail).get();
                 if (mdSnap.empty) {
+                    mdSnap = await window.db.collection('mdManagers').where('userId', '==', loginEmail).get();
+                }
+                if (mdSnap.empty) {
+                    firebase.auth().signOut();
                     showError('등록된 MD가 아니거나 이메일이 일치하지 않습니다. 관리자에게 문의하세요.');
                     return;
                 }
                 
                 const mdData = mdSnap.docs[0].data();
                 if ((mdData.status || 'active') !== 'active') {
+                    firebase.auth().signOut();
                     showError('비활성화된 MD 계정입니다. 관리자에게 문의하세요.');
                     return;
                 }
                 
                 // members에서 이메일 또는 userId로 회원 조회
-                let memberSnap = await window.db.collection('members').where('email', '==', email).limit(1).get();
+                let memberSnap = await window.db.collection('members').where('email', '==', loginEmail).limit(1).get();
                 if (memberSnap.empty && (mdData.userId || mdData.email)) {
-                    memberSnap = await window.db.collection('members').where('userId', '==', mdData.userId || email).limit(1).get();
+                    memberSnap = await window.db.collection('members').where('userId', '==', mdData.userId || loginEmail).limit(1).get();
                 }
                 
                 const memberDoc = memberSnap.empty ? null : memberSnap.docs[0];
@@ -293,10 +303,10 @@
                 
                 const loginData = {
                     id: memberId,
-                    userId: memberData.userId || mdData.userId || email,
+                    userId: memberData.userId || mdData.userId || loginEmail,
                     userName: memberData.name || memberData.userName || mdData.name || 'MD관리자',
                     mdCode: memberData.mdCode || mdData.mdCode || '',
-                    email: memberData.email || mdData.email || email,
+                    email: memberData.email || mdData.email || loginEmail,
                     phone: memberData.mobile || memberData.phone || mdData.phone || '',
                     loginTime: new Date().toISOString()
                 };
@@ -309,7 +319,17 @@
                 
             } catch (error) {
                 console.error('로그인 오류:', error);
-                showError('로그인 중 오류가 발생했습니다: ' + error.message);
+                var msg = '로그인 중 오류가 발생했습니다.';
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                    msg = '등록되지 않은 이메일이거나 비밀번호가 일치하지 않습니다.';
+                } else if (error.code === 'auth/wrong-password') {
+                    msg = '비밀번호가 일치하지 않습니다.';
+                } else if (error.code === 'auth/invalid-email') {
+                    msg = '올바른 이메일 형식을 입력해주세요.';
+                } else if (error.code && error.message) {
+                    msg = error.message;
+                }
+                showError(msg);
             } finally {
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 로그인';

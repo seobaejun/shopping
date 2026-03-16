@@ -56,6 +56,11 @@
         </aside>
 
         <main class="admin-content">
+            <div id="mdAdminLoadError" class="content-page" style="display: none; padding: 24px; background: #fff3f3; border: 1px solid #f5c6cb; border-radius: 8px; margin: 20px; color: #721c24;">
+                <h3>로드 오류</h3>
+                <p id="mdAdminLoadErrorMsg">스크립트를 불러오는 중 문제가 발생했습니다.</p>
+                <p style="margin-top: 12px; font-size: 14px;"><button type="button" onclick="location.reload();">새로고침</button></p>
+            </div>
             <div id="dashboard" class="content-page" style="display: none;">
                 <div class="page-header">
                     <h2>대시보드</h2>
@@ -250,26 +255,41 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
     <script>
     (function(){
+        function showLoadError(msg){
+            var el=document.getElementById('mdAdminLoadError');
+            var msgEl=document.getElementById('mdAdminLoadErrorMsg');
+            if(el) el.style.display='block';
+            if(msgEl) msgEl.textContent=msg||'스크립트를 불러오는 중 문제가 발생했습니다.';
+            console.error('[MD Admin]', msg);
+        }
         function waitFirebase(){ return new Promise(function(resolve,reject){ var a=0; var t=setInterval(function(){ if(typeof firebase!=='undefined'&&firebase.apps){ clearInterval(t); resolve(); } else if(++a>=50){ clearInterval(t); reject(new Error('Firebase timeout')); } },100); }); }
         waitFirebase().then(function(){
             var s1=document.createElement('script'); s1.src='../admin/js/firebase-admin.js'; document.body.appendChild(s1);
+            s1.onerror=function(){ showLoadError('firebase-admin.js 로드 실패. 경로: ../admin/js/firebase-admin.js'); };
             s1.onload=function(){
                 var initP = (window.firebaseAdmin&&window.firebaseAdmin.getInitPromise) ? window.firebaseAdmin.getInitPromise() : Promise.resolve();
                 initP.then(function(){
                     if (!window.db && typeof firebase !== 'undefined') window.db = firebase.firestore();
-                    var sMd=document.createElement('script'); sMd.src='js/md-firebase.js'; document.body.appendChild(sMd);
+                    var pathname = window.location.pathname || '';
+                    var scriptDir = pathname.endsWith('/') ? pathname : (/\.(html?|php|aspx?)$/i.test(pathname) ? pathname.replace(/\/[^/]*$/, '/') : pathname + '/');
+                    var sMd=document.createElement('script'); sMd.src=scriptDir+'js/md-firebase.js'; document.body.appendChild(sMd);
+                    sMd.onerror=function(){ showLoadError('md-firebase.js 로드 실패. 경로: '+sMd.src); };
                     sMd.onload=function(){
                         window.isMdAdmin = true;
                         var s2=document.createElement('script'); s2.src='../admin/js/member-search.js?v='+Date.now(); document.body.appendChild(s2);
+                        s2.onerror=function(){ showLoadError('member-search.js 로드 실패.'); };
                         s2.onload=function(){
                             if (sessionStorage.getItem('mdAdminFromAdmin') !== 'true' && window.mdFirebase && window.firebaseAdmin && window.firebaseAdmin.memberService) {
                                 var origGetMembers = window.firebaseAdmin.memberService.getMembers;
                                 window.firebaseAdmin.memberService.getMembers = function() { return window.mdFirebase.getAllowedMembers(); };
                             }
                             var s3=document.createElement('script'); s3.src='../admin/js/member-purchase.js'; document.body.appendChild(s3);
+                            s3.onerror=function(){ showLoadError('member-purchase.js 로드 실패.'); };
                             s3.onload=function(){
+                                try {
                                 window.loadMdDashboard=function(){
                                     var countEl=document.getElementById('dashboardMemberCount');
                                     var paymentEl=document.getElementById('dashboardTotalPayment');
@@ -283,6 +303,10 @@
                                             var members=window.mdFirebase&&typeof window.mdFirebase.getAllowedMembers==='function'?await window.mdFirebase.getAllowedMembers():[];
                                             if(window.firebaseAdmin&&typeof window.firebaseAdmin.enrichMembersWithOrderStats==='function'){
                                                 members=await window.firebaseAdmin.enrichMembersWithOrderStats(members)||members;
+                                            }
+                                            if(window.isMdAdmin&&members.length>0&&window.enrichMembersWithOrderStatsMdFallback&&window.db){
+                                                var allZerosDash=members.every(function(m){ return (Number(m.purchaseAmount||0)===0&&Number(m.supportAmount||0)===0); });
+                                                if(allZerosDash) members=await window.enrichMembersWithOrderStatsMdFallback(members);
                                             }
                                             var totalPayment=0,totalSupport=0;
                                             members.forEach(function(m){
@@ -315,12 +339,13 @@
                                 var tbody=document.getElementById('memberTableBody');
                                 if(tbody) tbody.innerHTML='<tr><td colspan="7" class="empty-message">회원 정보를 불러오는 중...</td></tr>';
                                 if(window.searchMemberInfo) setTimeout(function(){ window.searchMemberInfo(); }, 2000);
+                                } catch(e) { showLoadError('UI 연결 중 오류: ' + (e&&e.message ? e.message : String(e))); }
                             };
                         };
                     };
-                }).catch(function(err){ console.error('Firebase init:', err); });
+                }).catch(function(err){ showLoadError('Firebase 초기화 실패: ' + (err&&err.message ? err.message : String(err))); });
             };
-        }).catch(function(err){ console.error(err); });
+        }).catch(function(err){ showLoadError('Firebase 대기 실패: ' + (err&&err.message ? err.message : String(err))); });
     })();
     </script>
 </body>

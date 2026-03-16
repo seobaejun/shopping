@@ -71,12 +71,103 @@ async function waitForFirebaseAdmin(maxWait = 10000) {
     return window.firebaseAdmin;
 }
 
+/** MD 관리자 전용: firebaseAdmin 대기 (타임아웃 시 null 반환, 예외 없음) */
+async function waitForFirebaseAdminMdOptional(maxWait = 3000) {
+    const startTime = Date.now();
+    while (!window.firebaseAdmin) {
+        if (Date.now() - startTime > maxWait) {
+            console.warn('MD 관리자: Firebase Admin 대기 타임아웃, mdFirebase로 진행');
+            return null;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    if (!window.firebaseAdmin.db && window.firebaseAdmin.initFirebase) {
+        await window.firebaseAdmin.initFirebase();
+    }
+    return window.firebaseAdmin.memberService ? window.firebaseAdmin : null;
+}
+
 // trix 지원금 표시: 실제 값을 소수점 8자리까지 그대로 표시 (9번째 자리 버림)
 function formatTrix(value) {
     var num = Number(value) || 0;
     var truncated = Math.floor(num * 1e8) / 1e8;
     return truncated.toFixed(8);
 }
+
+/** MD 관리자 전용: firebaseAdmin 없이 window.db로 구매총액·지원토큰 집계 후 회원에 병합 */
+async function enrichMembersWithOrderStatsMdFallback(members) {
+    if (!members || members.length === 0) return members;
+    var db = window.db || (window.firebaseAdmin && window.firebaseAdmin.db);
+    if (!db) {
+        console.warn('enrichMembersWithOrderStatsMdFallback: db 없음');
+        return members;
+    }
+    try {
+        var orderAgg = {};
+        var snapOrders = await db.collection('orders').get();
+        snapOrders.docs.forEach(function (doc) {
+            var d = doc.data();
+            var uid1 = (d.userId || '').toString().trim();
+            var uid2 = (d.memberId != null && d.memberId !== '') ? String(d.memberId).trim() : '';
+            var orderTotal = Number(d.totalPrice != null ? d.totalPrice : d.productPrice != null ? d.productPrice : d.amount) || (Number(d.price || 0) * Number(d.quantity || 1));
+            var support = Number(d.supportAmount != null ? d.supportAmount : d.support != null ? d.support : d.productSupport) || 0;
+            function addTo(key) {
+                if (!key) return;
+                if (!orderAgg[key]) orderAgg[key] = { purchaseAmount: 0, supportAmount: 0 };
+                orderAgg[key].purchaseAmount += orderTotal;
+                orderAgg[key].supportAmount += support;
+            }
+            addTo(uid1);
+            if (uid2 && uid2 !== uid1) addTo(uid2);
+        });
+        var paidSupport = {};
+        try {
+            var snapPaid = await db.collection('lotteryConfirmedResults').get();
+            snapPaid.docs.forEach(function (doc) {
+                var d = doc.data();
+                if ((d.paymentStatus || '').toString().toLowerCase() !== 'paid') return;
+                var support = Number(d.support != null ? d.support : d.supportAmount) || 0;
+                var uid1 = (d.userId || '').toString().trim();
+                var uid2 = (d.memberId != null && d.memberId !== '') ? String(d.memberId).trim() : '';
+                function addTo(key) {
+                    if (!key) return;
+                    paidSupport[key] = (paidSupport[key] || 0) + support;
+                }
+                addTo(uid1);
+                if (uid2 && uid2 !== uid1) addTo(uid2);
+            });
+        } catch (e) {
+            console.warn('MD 폴백: lotteryConfirmedResults 조회 실패', e);
+        }
+        for (var i = 0; i < members.length; i++) {
+            var m = members[i];
+            var k1 = (m.userId || '').toString().trim();
+            var k2 = (m.id != null && m.id !== '') ? String(m.id).trim() : '';
+            var kEm = (m.email || '').toString().trim();
+            var v = paidSupport[k1] != null ? paidSupport[k1] : (paidSupport[k2] != null ? paidSupport[k2] : null);
+            if (v != null && kEm && paidSupport[kEm] == null) paidSupport[kEm] = v;
+        }
+        var out = members.map(function (m) {
+            var key1 = (m.userId || '').toString().trim();
+            var key2 = (m.id != null && m.id !== '') ? String(m.id).trim() : '';
+            var keyEmail = (m.email || '').toString().trim();
+            var o = orderAgg[key1] || orderAgg[key2] || orderAgg[keyEmail] || { purchaseAmount: 0, supportAmount: 0 };
+            var support = paidSupport[key1] != null ? paidSupport[key1] : (paidSupport[key2] != null ? paidSupport[key2] : (paidSupport[keyEmail] != null ? paidSupport[keyEmail] : 0));
+            support = Number(support) || 0;
+            return Object.assign({}, m, {
+                purchaseAmount: Number(m.purchaseAmount) || Number(o.purchaseAmount) || 0,
+                supportAmount: support || Number(m.supportAmount) || 0,
+                accumulatedSupport: support || Number(m.accumulatedSupport) || 0
+            });
+        });
+        console.log('✅ MD 폴백: 구매총액·지원토큰 집계 반영 완료');
+        return out;
+    } catch (e) {
+        console.warn('enrichMembersWithOrderStatsMdFallback 오류:', e);
+        return members;
+    }
+}
+if (typeof window !== 'undefined') window.enrichMembersWithOrderStatsMdFallback = enrichMembersWithOrderStatsMdFallback;
 
 /** 구매금액은 orders 기준, 지원금/누적은 조별추첨 확정 후 지급완료(paid)된 추첨 지원금 기준으로 회원에 병합 */
 async function enrichMembersWithOrderStats(firebaseAdmin, members) {
@@ -131,16 +222,27 @@ async function loadAllMembers() {
     console.log('🔵🔵🔵 loadAllMembers 함수 호출됨');
     
     try {
-        const firebaseAdmin = await waitForFirebaseAdmin();
-        if (typeof firebaseAdmin.getInitPromise === 'function') {
-            await firebaseAdmin.getInitPromise();
+        let firebaseAdmin = null;
+        let members = [];
+        if (window.isMdAdmin && window.mdFirebase && typeof window.mdFirebase.getAllowedMembers === 'function') {
+            firebaseAdmin = await waitForFirebaseAdminMdOptional(3000);
+            if (firebaseAdmin && typeof firebaseAdmin.getInitPromise === 'function') {
+                await firebaseAdmin.getInitPromise();
+            }
+            console.log('🔵 회원조회: MD 관리자 모드, 회원 데이터 가져오기...');
+            members = await window.mdFirebase.getAllowedMembers();
+            console.log('✅ 회원조회: MD 권한 내 회원:', members.length, '명');
+        } else {
+            firebaseAdmin = await waitForFirebaseAdmin();
+            if (typeof firebaseAdmin.getInitPromise === 'function') {
+                await firebaseAdmin.getInitPromise();
+            }
+            console.log('✅ 회원조회: Firebase Admin 초기화 완료');
+            await new Promise(function(r){ setTimeout(r, 500); });
+            console.log('🔵 회원조회: Firestore에서 회원 데이터 가져오기 시작...');
+            members = await firebaseAdmin.memberService.getMembers();
+            console.log('✅ 회원조회: Firestore에서 데이터 가져오기 완료:', members.length, '명');
         }
-        console.log('✅ 회원조회: Firebase Admin 초기화 완료');
-        await new Promise(function(r){ setTimeout(r, 500); });
-        
-        console.log('🔵 회원조회: Firestore에서 회원 데이터 가져오기 시작...');
-        let members = await firebaseAdmin.memberService.getMembers();
-        console.log('✅ 회원조회: Firestore에서 데이터 가져오기 완료:', members.length, '명');
         
         if (members && members.length > 0) {
             console.log('✅ 회원조회: 첫 번째 회원 샘플:', members[0]);
@@ -149,7 +251,7 @@ async function loadAllMembers() {
         }
         
         var membersArr = Array.isArray(members) ? members : [];
-        if (membersArr.length > 0 && firebaseAdmin.enrichMembersWithOrderStats) {
+        if (membersArr.length > 0 && firebaseAdmin && firebaseAdmin.enrichMembersWithOrderStats) {
             try {
                 members = await firebaseAdmin.enrichMembersWithOrderStats(membersArr);
                 console.log('✅ 회원조회: 구매금액·지원금 집계 반영 완료');
@@ -158,6 +260,12 @@ async function loadAllMembers() {
             }
         }
         members = members.map(function(m){ return Object.assign({}, m, { purchaseAmount: Number(m.purchaseAmount || 0), supportAmount: Number(m.supportAmount || 0) }); });
+        if (window.isMdAdmin && members.length > 0) {
+            var allZeros = members.every(function(m){ return (m.purchaseAmount || 0) === 0 && (m.supportAmount || 0) === 0; });
+            if (allZeros && window.db) {
+                members = await enrichMembersWithOrderStatsMdFallback(members);
+            }
+        }
         if (members.length) console.log('회원조회 렌더 직전 첫 회원 구매금액/지원금:', members[0].purchaseAmount, members[0].supportAmount);
         
         window.allMembersData = members;
@@ -171,7 +279,7 @@ async function loadAllMembers() {
         
         // 첫 화면에서 집계가 전부 0이면 Firestore 준비 지연으로 간주 → 1.2초 후 구매/지원금만 다시 불러와 갱신
         var allZeros = members.length > 0 && members.every(function(m){ return (m.purchaseAmount || 0) === 0 && (m.supportAmount || 0) === 0; });
-        if (allZeros && firebaseAdmin.orderService && firebaseAdmin.lotteryConfirmedService) {
+        if (allZeros && firebaseAdmin && firebaseAdmin.orderService && firebaseAdmin.lotteryConfirmedService) {
             setTimeout(function(){
                 (async function(){
                     try {
@@ -242,15 +350,26 @@ async function searchMemberInfo() {
     console.log('검색 조건:', { searchId, searchName, searchReferrer, searchStatus });
     
     try {
-        const firebaseAdmin = await waitForFirebaseAdmin();
-        if (typeof firebaseAdmin.getInitPromise === 'function') {
-            await firebaseAdmin.getInitPromise();
+        let firebaseAdmin = null;
+        let members = [];
+        if (window.isMdAdmin && window.mdFirebase && typeof window.mdFirebase.getAllowedMembers === 'function') {
+            firebaseAdmin = await waitForFirebaseAdminMdOptional(3000);
+            if (firebaseAdmin && typeof firebaseAdmin.getInitPromise === 'function') {
+                await firebaseAdmin.getInitPromise();
+            }
+            console.log('🔵 회원검색: MD 관리자 모드, 회원 데이터 가져오기...');
+            members = await window.mdFirebase.getAllowedMembers();
+            console.log('✅ 회원검색: MD 권한 내 회원:', members.length, '명');
+        } else {
+            firebaseAdmin = await waitForFirebaseAdmin();
+            if (typeof firebaseAdmin.getInitPromise === 'function') {
+                await firebaseAdmin.getInitPromise();
+            }
+            console.log('✅ 회원검색: Firebase Admin 초기화 완료');
+            console.log('🔵 회원검색: Firestore에서 회원 데이터 가져오기 시작...');
+            members = await firebaseAdmin.memberService.getMembers();
+            console.log('✅ 회원검색: Firestore에서 데이터 가져오기 완료:', members.length, '명');
         }
-        console.log('✅ 회원검색: Firebase Admin 초기화 완료');
-        
-        console.log('🔵 회원검색: Firestore에서 회원 데이터 가져오기 시작...');
-        let members = await firebaseAdmin.memberService.getMembers();
-        console.log('✅ 회원검색: Firestore에서 데이터 가져오기 완료:', members.length, '명');
         
         if (members && members.length > 0) {
             console.log('✅ 회원검색: 첫 번째 회원 샘플:', members[0]);
@@ -259,7 +378,7 @@ async function searchMemberInfo() {
         }
         
         var membersArrSearch = Array.isArray(members) ? members : [];
-        if (membersArrSearch.length > 0 && firebaseAdmin.enrichMembersWithOrderStats) {
+        if (membersArrSearch.length > 0 && firebaseAdmin && firebaseAdmin.enrichMembersWithOrderStats) {
             try {
                 members = await firebaseAdmin.enrichMembersWithOrderStats(membersArrSearch);
                 console.log('✅ 회원검색: 구매금액·지원금 집계 반영 완료');
@@ -268,6 +387,12 @@ async function searchMemberInfo() {
             }
         }
         members = members.map(function(m){ return Object.assign({}, m, { purchaseAmount: Number(m.purchaseAmount || 0), supportAmount: Number(m.supportAmount || 0) }); });
+        if (window.isMdAdmin && members.length > 0 && window.db) {
+            var allZerosSearch = members.every(function(m){ return (m.purchaseAmount || 0) === 0 && (m.supportAmount || 0) === 0; });
+            if (allZerosSearch) {
+                members = await enrichMembersWithOrderStatsMdFallback(members);
+            }
+        }
         
         window.allMembersData = members;
         window.currentMemberPage = 1;
@@ -417,7 +542,7 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
 
     if (!tbody) return;
     var isMdAdmin = window.isMdAdmin === true;
-    var emptyColspan = isMdAdmin ? 7 : 13;
+    var emptyColspan = isMdAdmin ? 7 : 11;
     if (!membersToRender || membersToRender.length === 0) {
         tbody.innerHTML = '<tr><td colspan="' + emptyColspan + '" class="empty-message">검색 결과가 없습니다.</td></tr>';
         if (paginationElId) {
@@ -459,13 +584,14 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
             return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td></tr>';
         }
         const phone = member.phone || '';
+        const emailDisplay = (member.email || '').toString().trim();
         const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
         const status = member.status || '정상';
         const safeId = String(member.id || memberId).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         const statusCell = status === 'withdrawn'
             ? '<span class="badge badge-secondary">탈퇴</span>'
             : '<select class="status-select" data-member-id="' + safeId + '" onchange="changeMemberStatus(this.dataset.memberId, this.value)"><option value="정상" ' + (status === '정상' ? 'selected' : '') + '>정상</option><option value="대기" ' + (status === '대기' ? 'selected' : '') + '>대기</option><option value="정지" ' + (status === '정지' ? 'selected' : '') + '>정지</option></select>';
-        return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(phone) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(address) + '</td><td>' + escapeHtml(member.bank || '') + '</td><td>' + escapeHtml(member.accountNumber || '') + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td><td>' + statusCell + '</td><td><button class="btn-icon btn-edit" data-member-id="' + safeId + '" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button><button class="btn-icon btn-delete" data-member-id="' + safeId + '" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(emailDisplay) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(phone) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(address) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td><td>' + statusCell + '</td><td><button class="btn-icon btn-edit" data-member-id="' + safeId + '" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button><button class="btn-icon btn-delete" data-member-id="' + safeId + '" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button></td></tr>';
     }).join('');
 
     tbody.innerHTML = tableHTML;
@@ -730,6 +856,26 @@ window.editMemberInfo = async function(memberId) {
             return;
         }
         
+        var walletDisplay = (member.walletAddress || '').toString().trim();
+        if (!walletDisplay && firebaseAdmin.collections && typeof firebaseAdmin.collections.tokenWithdrawals === 'function') {
+            try {
+                var withdrawalsSnap = await firebaseAdmin.collections.tokenWithdrawals()
+                    .where('memberId', '==', member.id || memberId)
+                    .get();
+                if (!withdrawalsSnap.empty) {
+                    var list = withdrawalsSnap.docs.map(function(d) { return d.data(); });
+                    list.sort(function(a, b) {
+                        var at = (a.createdAt && a.createdAt.seconds) ? a.createdAt.seconds : 0;
+                        var bt = (b.createdAt && b.createdAt.seconds) ? b.createdAt.seconds : 0;
+                        return bt - at;
+                    });
+                    if (list[0] && list[0].walletAddress) walletDisplay = list[0].walletAddress;
+                }
+            } catch (e) {
+                console.warn('토큰 출금 지갑주소 조회 실패:', e);
+            }
+        }
+        
         // 모달 폼에 데이터 채우기
         document.getElementById('editMemberId').value = member.id || member.userId || '';
         document.getElementById('editMemberUserId').value = member.userId || member.id || '';
@@ -740,6 +886,7 @@ window.editMemberInfo = async function(memberId) {
         document.getElementById('editMemberDetailAddress').value = member.detailAddress || '';
         document.getElementById('editMemberBank').value = member.bank || '';
         document.getElementById('editMemberAccountNumber').value = member.accountNumber || '';
+        document.getElementById('editMemberWalletAddress').value = walletDisplay;
         document.getElementById('editMemberReferralCode').value = member.referralCode || member.recommender || '';
         document.getElementById('editMemberStatus').value = member.status || '정상';
         
