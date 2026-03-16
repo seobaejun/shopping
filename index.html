@@ -406,13 +406,11 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
+    <!-- 1) 스크립트 로드 순서: Firebase SDK → firebase-config.js 반드시 먼저. 아래 스크립트는 이 둘 다음에만 로드됨. -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    
-    <!-- Firebase 설정 -->
-    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-config.js?v=2"></script>
     <script src="js/image-config.js"></script>
     <script src="js/visitor-logger.js"></script>
     
@@ -420,7 +418,7 @@
     <script src="js/share-utils.js?v=4"></script>
     
     <script src="js/admin-link-visibility.js"></script>
-    <script src="js/nav-categories.js?v=1"></script>
+    <script src="js/nav-categories.js?v=2"></script>
     <script src="js/bottom-nav.js?v=1"></script>
     <script src="js/today-viewed.js?v=1"></script>
     <script>

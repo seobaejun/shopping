@@ -53,17 +53,17 @@ function _parseProductDoc(doc) {
     };
 }
 
-// URL에서 상품 ID 가져오기 (없으면 메인에서 클릭 시 저장한 sessionStorage 사용) → Firestore에서 로드
+// URL에서 상품 ID 가져오기 (메인/카테고리 클릭 시 sessionStorage 사용) → Firestore products 컬렉션에서 메인과 동일하게 로드
 async function getProductFromUrl() {
     var urlParams = new URLSearchParams(window.location.search);
-    var productId = urlParams.get('id');
-    if (!productId || (typeof productId === 'string' && productId.trim() === '')) {
-        try { productId = sessionStorage.getItem('selectedProductId') || ''; } catch (e) {}
-    }
-    console.log('📌 상품 ID (URL 또는 저장값):', productId || '(없음)');
+    var productId = urlParams.get('id') || '';
+    try { if (!productId.trim()) productId = sessionStorage.getItem('selectedProductId') || ''; } catch (e) {}
+    if (productId && typeof productId === 'string') productId = productId.trim();
+    console.log('📌 상품 ID (URL 또는 sessionStorage):', productId || '(없음)');
     
-    if (typeof firebase === 'undefined' || !firebase.firestore) {
-        console.warn('⏳ Firestore 미준비, 대기 후 재시도');
+    var firebaseReady = typeof firebase !== 'undefined' && firebase.firestore && firebase.apps && firebase.apps.length > 0;
+    if (!firebaseReady) {
+        console.warn('⏳ Firestore 앱 미준비, 대기 후 재시도');
         await new Promise(function (resolve) {
             var attempts = 0;
             var t = setInterval(function () {
@@ -72,7 +72,7 @@ async function getProductFromUrl() {
                     clearInterval(t);
                     resolve();
                 }
-                if (attempts > 50) {
+                if (attempts > 80) {
                     clearInterval(t);
                     resolve();
                 }
@@ -80,7 +80,7 @@ async function getProductFromUrl() {
         });
     }
     
-    if (productId && typeof firebase !== 'undefined' && firebase.firestore) {
+    if (productId && typeof firebase !== 'undefined' && firebase.firestore && firebase.apps && firebase.apps.length > 0) {
         try {
             var db = firebase.firestore();
             var doc = await db.collection('products').doc(productId).get();
@@ -91,7 +91,7 @@ async function getProductFromUrl() {
                 if (!urlParams.get('id')) { window.history.replaceState({}, '', 'product-detail.html?id=' + encodeURIComponent(doc.id)); }
                 return _parseProductDoc(doc);
             }
-            console.warn('⚠️ Firestore에 해당 상품이 없습니다:', productId);
+            console.warn('⚠️ Firestore에 해당 상품이 없습니다. docId=', productId);
         } catch (error) {
             console.error('❌ Firestore에서 상품 로드 오류:', error);
         }
@@ -1316,25 +1316,24 @@ async function loadRelatedProducts() {
 async function initProductDetail() {
     console.log('🚀 상품 상세 페이지 초기화 시작');
     
-    // Firebase가 로드·초기화될 때까지 대기
-    if (typeof firebase === 'undefined' || !firebase.apps || firebase.apps.length === 0) {
-        console.log('⏳ Firebase 로딩·초기화 대기...');
+    if (typeof window.whenFirebaseReady === 'function') {
+        await window.whenFirebaseReady();
+    } else if (typeof firebase === 'undefined' || !firebase.firestore) {
+        var attempts = 0;
         await new Promise(function (resolve) {
-            var attempts = 0;
-            var checkFirebase = setInterval(function () {
+            var t = setInterval(function () {
                 attempts++;
-                if (typeof firebase !== 'undefined' && firebase.firestore && firebase.apps && firebase.apps.length > 0) {
-                    clearInterval(checkFirebase);
+                if (typeof firebase !== 'undefined' && firebase.firestore) {
+                    clearInterval(t);
                     resolve();
                 }
                 if (attempts > 80) {
-                    clearInterval(checkFirebase);
+                    clearInterval(t);
                     resolve();
                 }
             }, 100);
         });
     }
-    
     console.log('✅ Firebase 준비 완료');
     
     // 상품 정보 로드

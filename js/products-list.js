@@ -1,3 +1,5 @@
+console.log('[products-list] 스크립트 로드됨, readyState=', typeof document !== 'undefined' ? document.readyState : 'N/A');
+
 // 이 시점 이후 등록 = 새 상품(등록순 최신순). 이 시점 이전 = 기존 상품(키워드별 묶음 유지). 필요 시 날짜만 수정.
 const NEW_PRODUCT_CUTOFF_MS = new Date('2025-03-13T00:00:00+09:00').getTime();
 
@@ -85,33 +87,34 @@ function getUrlParameter(name, defaultValue = null) {
 
 // 페이지 초기화
 async function initPage() {
-    const urlParams = new URLSearchParams(window.location.search);
-    currentCategory = urlParams.get('category');
-    currentType = urlParams.get('type');
-    if (currentCategory !== null && currentCategory.trim() === '') currentCategory = null;
-    if (currentType !== null && currentType.trim() === '') currentType = null;
-    
-    // category가 있으면 type 완전히 무시 (카테고리 전용 모드)
-    if (currentCategory) {
-        currentType = null;
-    } else if (!currentType) {
-        currentType = 'hit';
+    console.log('[products-list] initPage 시작');
+    try {
+        if (typeof window.whenFirebaseReady === 'function') {
+            console.log('[products-list] whenFirebaseReady 대기 중...');
+            await window.whenFirebaseReady();
+            console.log('[products-list] whenFirebaseReady 완료');
+        } else {
+            console.warn('[products-list] whenFirebaseReady 없음');
+        }
+        var urlParams = new URLSearchParams(window.location.search || '');
+        currentCategory = urlParams.get('category');
+        currentType = urlParams.get('type');
+        if (currentCategory !== null && currentCategory.trim() === '') currentCategory = null;
+        if (currentType !== null && currentType.trim() === '') currentType = null;
+        if (currentCategory) currentType = null;
+        else if (!currentType) currentType = 'hit';
+        console.log('[products-list] URL category=', currentCategory, 'type=', currentType);
+        console.log('[products-list] updatePageInfo 호출');
+        await updatePageInfo();
+        console.log('[products-list] updatePageInfo 완료, loadProducts 호출');
+        await loadProducts();
+        console.log('[products-list] loadProducts 완료');
+        initEventListeners();
+        console.log('[products-list] initPage 완료');
+    } catch (err) {
+        console.error('[products-list] initPage 오류:', err);
+        console.error('[products-list] 스택:', err && err.stack);
     }
-    
-    console.log('🔍 URL 파라미터 확인:');
-    console.log('  - URL:', window.location.href);
-    console.log('  - category:', currentCategory);
-    console.log('  - type:', currentType);
-    console.log('  - 카테고리 모드:', !!currentCategory);
-    
-    // 페이지 정보 업데이트
-    await updatePageInfo();
-    
-    // 상품 로드
-    await loadProducts();
-    
-    // 이벤트 리스너
-    initEventListeners();
 }
 
 // 카테고리 경로 가져오기 (현재 카테고리부터 루트까지)
@@ -272,17 +275,17 @@ async function renderCategoryBreadcrumb() {
             if (siblings.length > 1) {
                 // 형제 카테고리가 있으면 드롭다운
                 html += `<li class="breadcrumb-dropdown">`;
-                html += `<a href="products-list.html?category=${category.id}" class="breadcrumb-link">${category.name} <i class="fas fa-chevron-down"></i></a>`;
+                html += `<a href="/products-list?category=${category.id}" class="breadcrumb-link">${category.name} <i class="fas fa-chevron-down"></i></a>`;
                 html += `<ul class="breadcrumb-dropdown-menu">`;
                 siblings.forEach(sibling => {
                     const isActive = sibling.id === category.id;
-                    html += `<li><a href="products-list.html?category=${sibling.id}" class="${isActive ? 'active' : ''}">${sibling.name}</a></li>`;
+                    html += `<li><a href="/products-list?category=${sibling.id}" class="${isActive ? 'active' : ''}">${sibling.name}</a></li>`;
                 });
                 html += `</ul>`;
                 html += `</li>`;
             } else {
                 // 형제 카테고리가 없으면 일반 링크
-                html += `<li><a href="products-list.html?category=${category.id}">${category.name}</a></li>`;
+                html += `<li><a href="/products-list?category=${category.id}">${category.name}</a></li>`;
             }
         }
     }
@@ -429,39 +432,50 @@ function productBelongsToCategory(product, categoryId) {
 }
 
 // 상품 로드 (로딩 스피너 없이 완료 시 바로 목록 또는 '상품 없음' 표시)
-// ?category=ID 가 있으면 해당 카테고리 상품만, 없으면 전체 상품 표시
 async function loadProducts() {
-    const urlCategory = new URLSearchParams(window.location.search).get('category');
-    const isCategoryPage = urlCategory != null && String(urlCategory).trim() !== '';
+    var urlCategory = new URLSearchParams(window.location.search || '').get('category');
+    var isCategoryPage = urlCategory != null && String(urlCategory).trim() !== '';
+    console.log('[products-list] loadProducts 시작 isCategoryPage=', isCategoryPage, 'urlCategory=', urlCategory);
 
     try {
-        if (typeof firebase !== 'undefined' && firebase.firestore) {
-            const db = firebase.firestore();
-            const fetchPromise = db.collection('products').get();
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('LOAD_TIMEOUT')), PRODUCTS_LOAD_TIMEOUT_MS);
-            });
-            const productsSnapshot = await Promise.race([fetchPromise, timeoutPromise]);
+        if (typeof firebase === 'undefined' || !firebase.firestore) {
+            console.warn('[products-list] Firebase 없음, currentProducts=[]');
+            currentProducts = [];
+            sortProducts();
+            renderProducts();
+            updatePagination();
+            listElements.totalCount.textContent = currentProducts.length;
+            return;
+        }
+        console.log('[products-list] products 컬렉션에서 상품 조회 시작 (선택한 카테고리 ID로 필터링)');
+        var db = firebase.firestore();
+        var fetchPromise = db.collection('products').get();
+        var timeoutPromise = new Promise(function (_, reject) {
+            setTimeout(function () { reject(new Error('LOAD_TIMEOUT')); }, PRODUCTS_LOAD_TIMEOUT_MS);
+        });
+        var productsSnapshot = await Promise.race([fetchPromise, timeoutPromise]);
+        console.log('[products-list] products 스냅샷 수신 empty=', productsSnapshot.empty, 'size=', productsSnapshot.size);
 
             if (!productsSnapshot.empty) {
                 // doc.id를 별도 보관해 링크에 항상 문서 ID 사용 (개발환경 캐시/덮어쓰기 방지)
-                const docsWithData = [];
-                productsSnapshot.forEach(doc => {
+                var docsWithData = [];
+                productsSnapshot.forEach(function (doc) {
                     const data = doc.data();
                     if (data.status === 'sale') {
                         docsWithData.push({ docId: doc.id, data: data });
                     }
                 });
-                docsWithData.sort((a, b) => {
+                console.log('[products-list] sale 상품 수=', docsWithData.length);
+                docsWithData.sort(function (a, b) {
                     const aTime = getCreatedAtMs(a.data.createdAt);
                     const bTime = getCreatedAtMs(b.data.createdAt);
                     return bTime - aTime;
                 });
 
-                const firestoreProducts = [];
+                var firestoreProducts = [];
                 if (isCategoryPage) {
-                    const catId = String(urlCategory).trim();
-                    docsWithData.forEach(item => {
+                    var catId = String(urlCategory).trim();
+                    docsWithData.forEach(function (item) {
                         if (!productBelongsToCategory(item.data, catId)) return;
                         var d = item.data;
                         firestoreProducts.push({
@@ -476,39 +490,16 @@ async function loadProducts() {
                             createdAtMs: getCreatedAtMs(d.createdAt)
                         });
                     });
-                    console.log('[카테고리] URL category=' + catId + ', 전체 ' + docsWithData.length + '개 중 ' + firestoreProducts.length + '개만 표시');
-                } else {
-                    docsWithData.forEach(item => {
-                        var d = item.data;
-                        firestoreProducts.push({
-                            id: item.docId,
-                            title: (d.name || d.productName || d.title || '').toString().trim(),
-                            option: d.shortDesc || '',
-                            price: d.price != null ? d.price : 0,
-                            support: (d.supportAmount != null && d.supportAmount > 0) ? (formatTrix(d.supportAmount) + ' trix') : '0 trix',
-                            rating: 0,
-                            image: (window.resolveProductImageUrl && window.resolveProductImageUrl(d.mainImageUrl || d.imageUrl)) || d.mainImageUrl || d.imageUrl || 'https://placehold.co/300x300/E0E0E0/999?text=No+Image',
-                            description: d.description || d.shortDesc || '',
-                            createdAtMs: getCreatedAtMs(d.createdAt)
-                        });
-                    });
-                }
-                if (firestoreProducts.length > 0) {
+                    console.log('[products-list] products 컬렉션 → 카테고리 필터 결과: catId=', catId, ', sale 상품', docsWithData.length, '개 중', firestoreProducts.length, '개 표시');
                     currentProducts = firestoreProducts;
                 } else {
-                    currentProducts = isCategoryPage ? [] : (PRODUCTS_DATA[currentType] || []);
+                    // URL에 category 없음 → 전체 상품 표시 안 함, 빈 목록만
+                    currentProducts = [];
                 }
             } else {
-                currentProducts = isCategoryPage ? [] : (PRODUCTS_DATA[currentType] || []);
+                currentProducts = isCategoryPage ? [] : [];
             }
-        } else {
-            currentProducts = isCategoryPage ? [] : (PRODUCTS_DATA[currentType] || []);
-        }
-        
-        console.log('Loaded Products:', currentProducts);
-        console.log('Products Count:', currentProducts.length);
-        
-        // 정렬 적용
+        console.log('[products-list] currentProducts 개수=', currentProducts.length);
         sortProducts();
         
         // 상품 렌더링
@@ -521,18 +512,12 @@ async function loadProducts() {
         listElements.totalCount.textContent = currentProducts.length;
         if (currentCategory) updateBreadcrumbProductCount(currentProducts.length);
     } catch (error) {
-        const isTimeout = error && error.message === 'LOAD_TIMEOUT';
-        if (isTimeout) {
-            console.warn('⏱️ 상품 로드 타임아웃 - 상품 없음으로 표시');
-        } else {
-            console.error('❌ 상품 로드 오류:', error);
-        }
-        // 오류/타임아웃 시: 상품 없으면 없다고 표시 (무한 로딩 방지)
-        if (currentCategory || isTimeout) {
-            currentProducts = [];
-        } else {
-            currentProducts = PRODUCTS_DATA[currentType] || [];
-        }
+        var isTimeout = error && error.message === 'LOAD_TIMEOUT';
+        console.error('[products-list] loadProducts 오류:', error && error.message, isTimeout ? '(타임아웃)' : '');
+        if (error && error.stack) console.error('[products-list] 스택:', error.stack);
+        if (!isTimeout) console.error('[products-list] 오류 상세:', error);
+        // 오류/타임아웃 시: 목록 페이지에서는 전체 상품 fallback 없이 빈 목록만 표시
+        currentProducts = [];
         
         sortProducts();
         renderProducts();
@@ -595,8 +580,16 @@ function sortProducts() {
     }
 }
 
-// 상품 렌더링
-function renderProducts() {
+// 상품 렌더링 (그리드가 아직 없으면 짧은 뒤 한 번만 재시도 → 첫 페인트 타이밍 대응)
+function renderProducts(retryOnce) {
+    var grid = listElements.productGrid;
+    if (!grid) {
+        if (retryOnce !== false) {
+            console.log('[products-list] productGrid 없음, 50ms 후 재시도');
+            setTimeout(function () { renderProducts(false); }, 50);
+        }
+        return;
+    }
     if (currentProducts.length === 0) {
         showEmptyState();
         return;
@@ -610,7 +603,7 @@ function renderProducts() {
         const actualIndex = startIndex + index;
         return createProductCard(product, actualIndex);
     }).join('');
-    listElements.productGrid.innerHTML = html;
+    grid.innerHTML = html;
     updateProductRatingsInGrid(pageProducts);
 }
 
@@ -622,13 +615,13 @@ function createProductCard(product, index) {
     const priceHtml = isLoggedIn && product.price != null && product.price !== '' ? (Number(product.price).toLocaleString() + '원') : '';
     return `
         <div class="product-card" data-product-id="${productId}">
-            <a href="${productId ? 'product-detail.html?id=' + encodeURIComponent(productId) : '#'}" class="product-link">
+            <a href="${productId ? 'product-detail.html' : '#'}" class="product-link" data-product-link="1">
                 <div class="product-image">
                     <img src="${product.image}" alt="${product.title}">
                 </div>
             </a>
             <div class="product-info">
-                <a href="${productId ? 'product-detail.html?id=' + encodeURIComponent(productId) : '#'}" class="product-title">${product.title}</a>
+                <a href="${productId ? 'product-detail.html' : '#'}" class="product-title" data-product-link="1">${product.title}</a>
                 <div class="product-option">${product.option || ''}</div>
                 <div class="product-price">${priceHtml}</div>
                 <div class="product-description">${product.description}</div>
@@ -681,6 +674,7 @@ async function updateProductRatingsInGrid(products) {
 
 // 빈 상태 표시
 function showEmptyState() {
+    if (!listElements.productGrid) return;
     const hasCategoryParam = new URLSearchParams(window.location.search).get('category');
     if (!hasCategoryParam) {
         listElements.productGrid.innerHTML = `
@@ -758,7 +752,25 @@ function updatePagination() {
 }
 
 // 이벤트 리스너 초기화
+// 메인과 동일: 상품 카드 클릭 시 sessionStorage에 ID 저장 후 product-detail.html?id= 로 이동
+function initProductGridClickForList() {
+    var grid = listElements.productGrid;
+    if (!grid) return;
+    grid.addEventListener('click', function (e) {
+        if (!e.target.closest || !e.target.closest('[data-product-link="1"]')) return;
+        var card = e.target.closest('.product-card');
+        if (!card) return;
+        var id = card.getAttribute('data-product-id');
+        if (!id || id === '') return;
+        e.preventDefault();
+        e.stopPropagation();
+        try { sessionStorage.setItem('selectedProductId', id); } catch (err) {}
+        window.location.href = 'product-detail.html?id=' + encodeURIComponent(id);
+    });
+}
+
 function initEventListeners() {
+    initProductGridClickForList();
     // 정렬 변경
     listElements.sortSelect.addEventListener('change', (e) => {
         currentSort = e.target.value;
@@ -882,11 +894,11 @@ function buildCategoryTree(categories) {
     });
 }
 
-// 상품목록 페이지에서는 현재 경로에 ?category=ID 만 붙여서 쿼리 유실 방지
+// 이미 products-list 페이지면 ?category= 만 붙임 → /products-list?category=ID 유지
 function categoryListHref(categoryId) {
-    const path = window.location.pathname || '';
+    var path = (window.location && window.location.pathname) || '';
     if (/products-list/.test(path)) return '?category=' + encodeURIComponent(categoryId);
-    return 'products-list.html?category=' + encodeURIComponent(categoryId);
+    return '/products-list?category=' + encodeURIComponent(categoryId);
 }
 
 function renderCategoryMenu(categoryTree) {
@@ -987,11 +999,43 @@ function initShareButtonsForProductList() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    if (typeof updateHeaderForLoginStatus === 'function') updateHeaderForLoginStatus();
-    
-    await initPage();
-    setTimeout(loadCategoriesMenu, 1000);
-    initShareButtonsForProductList();
+// 동적 로드 시 DOMContentLoaded가 이미 지났을 수 있음 → readyState 확인 후 즉시 실행
+function runInit() {
+    document.removeEventListener('DOMContentLoaded', runInit);
+    console.log('[products-list] DOM 준비됨, initPage 호출');
+    (async function () {
+        if (typeof updateHeaderForLoginStatus === 'function') updateHeaderForLoginStatus();
+        await initPage();
+        setTimeout(loadCategoriesMenu, 1000);
+        initShareButtonsForProductList();
+    })();
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runInit);
+} else {
+    console.log('[products-list] DOM 이미 완료(readyState=' + document.readyState + '), initPage 즉시 호출');
+    runInit();
+}
+
+// 뒤로가기/앞으로가기 시 bfcache 복원하면 스크립트가 다시 안 돌 수 있음 → URL 다시 읽고 목록 갱신
+window.addEventListener('pageshow', function (event) {
+    if (!event.persisted) return;
+    console.log('[products-list] pageshow(persisted) → URL 재적용 후 목록 갱신');
+    var urlParams = new URLSearchParams(window.location.search);
+    currentCategory = urlParams.get('category');
+    currentType = urlParams.get('type');
+    if (currentCategory !== null && currentCategory.trim() === '') currentCategory = null;
+    if (currentType !== null && currentType.trim() === '') currentType = null;
+    if (currentCategory) currentType = null;
+    else if (!currentType) currentType = 'hit';
+    currentPage = 1;
+    (async function () {
+        await loadProducts();
+        sortProducts();
+        renderProducts();
+        updatePagination();
+        if (listElements.totalCount) listElements.totalCount.textContent = currentProducts.length;
+        if (currentCategory && typeof updateBreadcrumbProductCount === 'function') updateBreadcrumbProductCount(currentProducts.length);
+    })();
 });
 

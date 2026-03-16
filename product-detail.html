@@ -508,10 +508,11 @@
     </div>
 
     <!-- Firebase SDK -->
+    <!-- Firebase SDK → firebase-config.js 먼저 로드 (순서 변경 금지) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-config.js?v=2"></script>
     <script src="js/image-config.js"></script>
     <script src="js/wishlist-cart-firebase.js"></script>
     <script src="js/visitor-logger.js"></script>
@@ -620,8 +621,13 @@
         </div>
     </div>
 
-    <script src="js/nav-categories.js?v=1"></script>
+    <!-- Firebase SDK → firebase-config.js 먼저 로드 (순서 변경 금지) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="js/firebase-config.js?v=2"></script>
+    <script src="js/nav-categories.js?v=2"></script>
     <script src="js/login-required-nav.js?v=1"></script>
-    <script src="js/product-detail.js?v=27"></script>
+    <script src="js/product-detail.js?v=28"></script>
 </body>
 </html>

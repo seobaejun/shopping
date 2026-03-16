@@ -150,7 +150,8 @@ async function updateSearchResultRatings(results, productGrid) {
 
 // 검색 결과 렌더링
 async function renderSearchResults() {
-    const keyword = getSearchKeyword();
+    console.log('[search-results] renderSearchResults 시작');
+    var keyword = getSearchKeyword();
     const keywordElement = document.getElementById('searchKeyword');
     const totalCountElement = document.getElementById('totalCount');
     const productGrid = document.getElementById('searchProductGrid');
@@ -180,9 +181,15 @@ async function renderSearchResults() {
         searchInput.value = keyword;
     }
     
-    // Firebase에서 검색
-    const results = await searchProductsFromFirestore(keyword);
-    console.log('검색 결과 개수:', results.length);
+        console.log('[search-results] searchProductsFromFirestore 호출 keyword=', keyword);
+    var results = [];
+    try {
+        results = await searchProductsFromFirestore(keyword);
+        console.log('[search-results] 검색 결과 개수:', results.length);
+    } catch (e) {
+        console.error('[search-results] searchProductsFromFirestore 오류:', e);
+        if (e && e.stack) console.error('[search-results] 스택:', e.stack);
+    }
     
     // 총 개수 표시
     if (totalCountElement) {
@@ -390,8 +397,15 @@ function handleSearch(event) {
 
 // 초기화
 async function init() {
-    console.log('🚀 검색 결과 페이지 초기화 시작');
-    
+    console.log('[search-results] init 시작');
+    try {
+        if (typeof window.whenFirebaseReady === 'function') {
+            console.log('[search-results] whenFirebaseReady 대기 중...');
+            await window.whenFirebaseReady();
+            console.log('[search-results] whenFirebaseReady 완료');
+        } else {
+            console.warn('[search-results] whenFirebaseReady 없음');
+        }
     // 로그인 상태 업데이트 (script.js 로드 대기)
     setTimeout(() => {
         if (typeof updateHeaderForLoginStatus === 'function') {
@@ -441,8 +455,9 @@ async function init() {
         }
     }
     
-    // 검색 결과 렌더링
-    await renderSearchResults();
+        console.log('[search-results] renderSearchResults 호출');
+        await renderSearchResults();
+        console.log('[search-results] renderSearchResults 완료');
     
     // 최근 본 상품 초기화 (검색 결과 렌더링 후)
     console.log('🔵🔵🔵 최근 본 상품 초기화 예약...');
@@ -464,7 +479,11 @@ async function init() {
     // 공유 버튼 초기화
     initShareButtonsForSearch();
     
-    console.log('✅ 검색 결과 페이지 초기화 완료');
+        console.log('[search-results] init 완료');
+    } catch (err) {
+        console.error('[search-results] init 오류:', err);
+        if (err && err.stack) console.error('[search-results] 스택:', err.stack);
+    }
 }
 
 // 검색 결과 페이지용 최근 본 상품 초기화 (today-viewed.js 사용 시 스킵)
