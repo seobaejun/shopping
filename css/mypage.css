@@ -2418,3 +2418,51 @@
     border-radius: 6px;
     border-left: 3px solid #dc2626;
 }
+
+/* 토큰 구매하기 입금 정보 (바로구매와 동일한 노란 박스 + 계좌 복사하기) */
+.token-purchase-panel .payment-bank-section {
+    padding: 14px;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+.token-purchase-panel .payment-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #333;
+}
+.token-purchase-panel .payment-info-line {
+    font-size: 14px;
+    color: #555;
+    margin: 0 0 4px 0;
+}
+.token-purchase-panel .payment-account-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+.token-purchase-panel .payment-account-number {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #333;
+}
+.token-purchase-panel .btn-copy-account {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #f9a825;
+    border-radius: 6px;
+    background: #fff;
+    color: #f57c00;
+    cursor: pointer;
+}
+.token-purchase-panel .btn-copy-account:hover {
+    background: rgba(255, 193, 7, 0.15);
+}
+.token-purchase-panel .token-deposit-notice {
+    margin-top: 12px;
+}

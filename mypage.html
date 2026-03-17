@@ -215,16 +215,14 @@
                                 <label>결제 금액</label>
                                 <input type="text" id="tokenPurchaseAmount" placeholder="금액" class="form-control token-input" readonly>
                             </div>
-                            <div class="bank-info-panel">
-                                <div class="bank-info-header">
-                                    <i class="fas fa-university"></i>
-                                    <strong>입금 계좌 정보</strong>
+                            <div class="payment-bank-section token-deposit-bank">
+                                <h4 class="payment-section-title">입금 정보</h4>
+                                <p class="payment-info-line">하나은행 (주)딩펫씨큐리티</p>
+                                <div class="payment-account-row">
+                                    <span id="tokenAccountNumber" class="payment-account-number">670-910020-22804</span>
+                                    <button type="button" class="btn-copy-account" id="btnCopyTokenAccount">복사하기</button>
                                 </div>
-                                <div class="bank-info-content">
-                                    <p class="bank-account">하나은행 670-910020-22804</p>
-                                    <p class="bank-holder">(주)딩펫씨큐리티</p>
-                                    <p class="bank-notice">입금 완료 후 입금완료 버튼을 눌러주세요</p>
-                                </div>
+                                <p class="bank-notice token-deposit-notice">입금 완료 후 입금완료 버튼을 눌러주세요</p>
                             </div>
                             <button type="button" class="btn btn-primary btn-token-submit" id="btnTokenPurchaseComplete"><i class="fas fa-check-circle"></i> 입금완료</button>
                         </div>

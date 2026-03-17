@@ -336,6 +336,37 @@ function bindTokenModals() {
             showSection('token-purchase');
         });
     }
+    var btnCopyTokenAccount = document.getElementById('btnCopyTokenAccount');
+    var tokenAccountEl = document.getElementById('tokenAccountNumber');
+    if (btnCopyTokenAccount && tokenAccountEl) {
+        btnCopyTokenAccount.addEventListener('click', function () {
+            var account = (tokenAccountEl.textContent || '').trim() || '670-910020-22804';
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(account).then(function () {
+                    alert('계좌번호가 복사되었습니다.');
+                }).catch(function () {
+                    fallbackCopyAccount(account);
+                });
+            } else {
+                fallbackCopyAccount(account);
+            }
+        });
+    }
+    function fallbackCopyAccount(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            alert('계좌번호가 복사되었습니다.');
+        } catch (e) {
+            alert('복사에 실패했습니다. 계좌번호: ' + text);
+        }
+        document.body.removeChild(ta);
+    }
     if (purchaseQty && purchaseAmount) {
         purchaseQty.addEventListener('input', function () {
             var qty = parseInt(purchaseQty.value, 10) || 0;
