@@ -208,7 +208,8 @@ async function getAllowedMembers() {
         }
         const allowedCodes = getAllowedMdCodes();
         if (allowedCodes.length === 0) {
-            throw new Error('조회 권한이 없습니다.');
+            console.warn('MD 코드가 없어 빈 목록 반환. 관리자에게 MD 코드(4~5자리) 발급을 요청하세요.');
+            return [];
         }
         const members = [];
         

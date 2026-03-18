@@ -544,7 +544,8 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
     var isMdAdmin = window.isMdAdmin === true;
     var emptyColspan = isMdAdmin ? 7 : 11;
     if (!membersToRender || membersToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="' + emptyColspan + '" class="empty-message">검색 결과가 없습니다.</td></tr>';
+        var emptyMsg = (isMdAdmin && !isSearchResults) ? 'MD 코드가 등록되지 않았습니다. 관리자에게 MD 코드(4~5자리) 발급을 요청하세요.' : '검색 결과가 없습니다.';
+        tbody.innerHTML = '<tr><td colspan="' + emptyColspan + '" class="empty-message">' + emptyMsg + '</td></tr>';
         if (paginationElId) {
             const paginationEl = document.getElementById(paginationElId);
             if (paginationEl) {
@@ -753,55 +754,6 @@ window.changeMemberPage = function(page) {
     // 페이지 상단으로 스크롤
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
-
-// loadAllMembers 함수 수정 (renderMemberTable 사용)
-async function loadAllMembers() {
-    console.log('🔵🔵🔵 loadAllMembers 함수 호출됨');
-    
-    try {
-        // Firebase Admin 초기화 대기
-        const firebaseAdmin = await waitForFirebaseAdmin();
-        console.log('✅ 회원조회: Firebase Admin 초기화 완료');
-        
-        // Firestore에서 회원 데이터 가져오기
-        console.log('🔵 회원조회: Firestore에서 회원 데이터 가져오기 시작...');
-        const members = await firebaseAdmin.memberService.getMembers();
-        console.log('✅ 회원조회: Firestore에서 데이터 가져오기 완료:', members.length, '명');
-        
-        if (members && members.length > 0) {
-            console.log('✅ 회원조회: 첫 번째 회원 샘플:', members[0]);
-        } else {
-            console.warn('⚠️ 회원조회: 데이터가 없습니다.');
-        }
-        
-        // 전역 변수에 저장 (무조건 설정)
-        window.allMembersData = members;
-        window.filteredMembersData = members;
-        window.currentMemberPage = 1;
-        
-        // 총 회원 수 업데이트
-        const totalCountEl = document.getElementById('totalMemberCount');
-        if (totalCountEl) {
-            totalCountEl.textContent = members.length;
-        }
-        
-        // 테이블 렌더링
-        renderMemberTable(members);
-        
-        return members;
-        
-    } catch (error) {
-        console.error('❌ 회원조회: 데이터 로드 오류:', error);
-        console.error('오류 상세:', error.message, error.stack);
-        
-        const tbody = document.getElementById('memberTableBody');
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="13" class="empty-message">오류 발생: ${error.message}</td></tr>`;
-        }
-        
-        throw error;
-    }
-}
 
 // 회원 상태 변경 함수
 window.changeMemberStatus = async function(memberId, newStatus) {
@@ -1050,14 +1002,15 @@ console.log('✅ 회원 관리 함수 전역 등록 완료:', {
     function checkAndLoad() {
         const memberSearchPage = document.getElementById('member-search');
         if (memberSearchPage && memberSearchPage.classList.contains('active')) {
-            console.log('🔵 member-search 페이지가 활성화되어 있음, 즉시 데이터 로드');
+            var delay = (window.isMdAdmin ? 300 : 500);
+            console.log('🔵 member-search 페이지가 활성화되어 있음, ' + delay + 'ms 후 데이터 로드');
             setTimeout(() => {
                 if (window.loadAllMembers) {
                     window.loadAllMembers().catch(error => {
                         console.error('초기 데이터 로드 오류:', error);
                     });
                 }
-            }, 500);
+            }, delay);
         }
     }
 })();
