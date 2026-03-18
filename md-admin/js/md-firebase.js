@@ -132,33 +132,52 @@ function getAllowedMdCodes() {
     return [];
 }
 
-/** 배포(다른 도메인)에서 localStorage에 mdCode가 없을 때 Firestore에서 한 번만 다시 가져와서 채움 */
+/** 배포(다른 도메인)에서 localStorage에 mdCode가 없을 때 Firestore에서 다시 가져와서 채움. Auth 현재 사용자 이메일로도 시도 */
 async function refreshMdCodeFromFirestoreIfNeeded() {
     var mdAdminData = localStorage.getItem('mdAdminData');
-    if (!mdAdminData) return null;
-    var mdData;
-    try {
-        mdData = JSON.parse(mdAdminData);
-    } catch (e) {
-        return null;
+    var mdData = null;
+    var email = '';
+    if (mdAdminData) {
+        try {
+            mdData = JSON.parse(mdAdminData);
+            if (mdData.mdCode && /^\d{4,5}$/.test(String(mdData.mdCode).trim())) return mdData.mdCode;
+            email = (mdData.email || mdData.userId || '').toString().trim();
+        } catch (e) {}
     }
-    if (mdData.mdCode && /^\d{4,5}$/.test(String(mdData.mdCode).trim())) return null;
-    var email = (mdData.email || mdData.userId || '').toString().trim();
+    if (!email && typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
+        email = (firebase.auth().currentUser.email || '').toString().trim();
+        if (!mdData) mdData = { email: email, userId: email, userName: 'MD관리자' };
+    }
     if (!email || !window.db) return null;
     try {
         var mdSnap = await window.db.collection('mdManagers').where('email', '==', email).get();
         if (mdSnap.empty) mdSnap = await window.db.collection('mdManagers').where('userId', '==', email).get();
         var mdCode = null;
-        if (!mdSnap.empty) mdCode = (mdSnap.docs[0].data().mdCode || '').toString().trim();
+        var foundMdData = null;
+        if (!mdSnap.empty) {
+            foundMdData = mdSnap.docs[0].data();
+            mdCode = (foundMdData.mdCode || '').toString().trim();
+        }
         if (!mdCode || !/^\d{4,5}$/.test(mdCode)) {
             var memberSnap = await window.db.collection('members').where('email', '==', email).limit(1).get();
-            if (memberSnap.empty && (mdData.userId || mdData.email)) memberSnap = await window.db.collection('members').where('userId', '==', mdData.userId || email).limit(1).get();
-            if (!memberSnap.empty) mdCode = (memberSnap.docs[0].data().mdCode || '').toString().trim();
+            if (memberSnap.empty) memberSnap = await window.db.collection('members').where('userId', '==', email).limit(1).get();
+            if (!memberSnap.empty) {
+                var memberData = memberSnap.docs[0].data();
+                mdCode = (memberData.mdCode || '').toString().trim();
+                if (!foundMdData) foundMdData = memberData;
+            }
         }
         if (mdCode && /^\d{4,5}$/.test(mdCode)) {
+            if (!mdData) mdData = { email: email, userId: email, userName: (foundMdData && (foundMdData.name || foundMdData.userName)) || 'MD관리자' };
             mdData.mdCode = mdCode;
+            if (foundMdData) {
+                if (foundMdData.name || foundMdData.userName) mdData.userName = foundMdData.name || foundMdData.userName;
+                if (foundMdData.email) mdData.email = foundMdData.email;
+                if (foundMdData.userId) mdData.userId = foundMdData.userId;
+            }
             localStorage.setItem('mdAdminData', JSON.stringify(mdData));
             localStorage.setItem('currentMdCode', mdCode);
+            localStorage.setItem('isMdAdmin', 'true');
             console.log('MD 코드 Firestore에서 복구:', mdCode);
             return mdCode;
         }
@@ -241,6 +260,16 @@ async function getAllowedMembers() {
             var all = await window.firebaseAdmin.memberService.getMembers();
             console.log('관리자 조회: 전체 회원 수', all ? all.length : 0);
             return all || [];
+        }
+        if (isAdminViewingMd() && window.db) {
+            var snapshot = await window.db.collection('members').get();
+            var allMembers = [];
+            snapshot.forEach(function(doc) {
+                var data = doc.data();
+                allMembers.push({ id: doc.id, docId: doc.id, ...data });
+            });
+            console.log('관리자 조회(폴백): Firestore에서 전체 회원 수', allMembers.length);
+            return allMembers;
         }
         var allowedCodes = getAllowedMdCodes();
         if (allowedCodes.length === 0 && typeof refreshMdCodeFromFirestoreIfNeeded === 'function') {
