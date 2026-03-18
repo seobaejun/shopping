@@ -267,9 +267,8 @@
         }
         function waitFirebase(){ return new Promise(function(resolve,reject){ var a=0; var t=setInterval(function(){ if(typeof firebase!=='undefined'&&firebase.apps){ clearInterval(t); resolve(); } else if(++a>=50){ clearInterval(t); reject(new Error('Firebase timeout')); } },100); }); }
         waitFirebase().then(function(){
-            var adminJsBase = (window.location.origin || '').replace(/\/$/, '') + '/admin/js';
-            var s1=document.createElement('script'); s1.src=adminJsBase+'/firebase-admin.js'; document.body.appendChild(s1);
-            s1.onerror=function(){ showLoadError('firebase-admin.js 로드 실패. 경로: ' + s1.src); };
+            var s1=document.createElement('script'); s1.src='../admin/js/firebase-admin.js'; document.body.appendChild(s1);
+            s1.onerror=function(){ showLoadError('firebase-admin.js 로드 실패. 경로: ../admin/js/firebase-admin.js'); };
             s1.onload=function(){
                 var initP = (window.firebaseAdmin&&window.firebaseAdmin.getInitPromise) ? window.firebaseAdmin.getInitPromise() : Promise.resolve();
                 initP.then(function(){
@@ -280,14 +279,14 @@
                     sMd.onerror=function(){ showLoadError('md-firebase.js 로드 실패. 경로: '+sMd.src); };
                     sMd.onload=function(){
                         window.isMdAdmin = true;
-                        var s2=document.createElement('script'); s2.src=(window.location.origin||'').replace(/\/$/,'')+'/admin/js/member-search.js?v='+Date.now(); document.body.appendChild(s2);
+                        var s2=document.createElement('script'); s2.src='../admin/js/member-search.js?v='+Date.now(); document.body.appendChild(s2);
                         s2.onerror=function(){ showLoadError('member-search.js 로드 실패.'); };
                         s2.onload=function(){
                             if (sessionStorage.getItem('mdAdminFromAdmin') !== 'true' && window.mdFirebase && window.firebaseAdmin && window.firebaseAdmin.memberService) {
                                 var origGetMembers = window.firebaseAdmin.memberService.getMembers;
                                 window.firebaseAdmin.memberService.getMembers = function() { return window.mdFirebase.getAllowedMembers(); };
                             }
-                            var s3=document.createElement('script'); s3.src=(window.location.origin||'').replace(/\/$/,'')+'/admin/js/member-purchase.js'; document.body.appendChild(s3);
+                            var s3=document.createElement('script'); s3.src='../admin/js/member-purchase.js'; document.body.appendChild(s3);
                             s3.onerror=function(){ showLoadError('member-purchase.js 로드 실패.'); };
                             s3.onload=function(){
                                 try {
