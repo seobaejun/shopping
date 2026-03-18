@@ -132,6 +132,42 @@ function getAllowedMdCodes() {
     return [];
 }
 
+/** 배포(다른 도메인)에서 localStorage에 mdCode가 없을 때 Firestore에서 한 번만 다시 가져와서 채움 */
+async function refreshMdCodeFromFirestoreIfNeeded() {
+    var mdAdminData = localStorage.getItem('mdAdminData');
+    if (!mdAdminData) return null;
+    var mdData;
+    try {
+        mdData = JSON.parse(mdAdminData);
+    } catch (e) {
+        return null;
+    }
+    if (mdData.mdCode && /^\d{4,5}$/.test(String(mdData.mdCode).trim())) return null;
+    var email = (mdData.email || mdData.userId || '').toString().trim();
+    if (!email || !window.db) return null;
+    try {
+        var mdSnap = await window.db.collection('mdManagers').where('email', '==', email).get();
+        if (mdSnap.empty) mdSnap = await window.db.collection('mdManagers').where('userId', '==', email).get();
+        var mdCode = null;
+        if (!mdSnap.empty) mdCode = (mdSnap.docs[0].data().mdCode || '').toString().trim();
+        if (!mdCode || !/^\d{4,5}$/.test(mdCode)) {
+            var memberSnap = await window.db.collection('members').where('email', '==', email).limit(1).get();
+            if (memberSnap.empty && (mdData.userId || mdData.email)) memberSnap = await window.db.collection('members').where('userId', '==', mdData.userId || email).limit(1).get();
+            if (!memberSnap.empty) mdCode = (memberSnap.docs[0].data().mdCode || '').toString().trim();
+        }
+        if (mdCode && /^\d{4,5}$/.test(mdCode)) {
+            mdData.mdCode = mdCode;
+            localStorage.setItem('mdAdminData', JSON.stringify(mdData));
+            localStorage.setItem('currentMdCode', mdCode);
+            console.log('MD 코드 Firestore에서 복구:', mdCode);
+            return mdCode;
+        }
+    } catch (e) {
+        console.warn('MD 코드 Firestore 복구 실패:', e);
+    }
+    return null;
+}
+
 // 회원 데이터 조회 (MD 코드 기반) - 권한 체크 추가
 async function getMembersByMdCode(mdCode) {
     try {
@@ -206,7 +242,11 @@ async function getAllowedMembers() {
             console.log('관리자 조회: 전체 회원 수', all ? all.length : 0);
             return all || [];
         }
-        const allowedCodes = getAllowedMdCodes();
+        var allowedCodes = getAllowedMdCodes();
+        if (allowedCodes.length === 0 && typeof refreshMdCodeFromFirestoreIfNeeded === 'function') {
+            await refreshMdCodeFromFirestoreIfNeeded();
+            allowedCodes = getAllowedMdCodes();
+        }
         if (allowedCodes.length === 0) {
             console.warn('MD 코드가 없어 빈 목록 반환. 관리자에게 MD 코드(4~5자리) 발급을 요청하세요.');
             return [];
