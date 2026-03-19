@@ -242,6 +242,17 @@ async function getMembersByMdCode(mdCode) {
                 });
             });
         }
+
+        // mdManagers에만 있고 members에는 없거나 mdCode가 비어 목록에 안 잡히는 MD 본인(담당자) 병합
+        const codesForManagers = code.length === 4
+            ? [code, ...getSubordinateCodes(code)]
+            : [code];
+        await mergeMdManagersIntoMemberList(members, codesForManagers);
+
+        // 로그인 MD: 회원 문서는 있는데 mdCode 불일치·누락으로 위 쿼리에 없을 때 본인 행 추가
+        if (!isAdminViewingMd()) {
+            await mergeLoggedInMdSelfIfMissingForLookup(members, codesForManagers);
+        }
         
         console.log(`MD 코드 ${code}로 조회된 회원 수:`, members.length);
         return members;
@@ -250,6 +261,95 @@ async function getMembersByMdCode(mdCode) {
         console.error('회원 조회 오류:', error);
         throw error;
     }
+}
+
+/** MD조회·코드별 목록: Firestore mdManagers에서 해당 mdCode 담당자를 회원 목록에 합침(중복 userId·이메일 제외) */
+async function mergeMdManagersIntoMemberList(members, mdCodes) {
+    if (!window.db || !mdCodes || mdCodes.length === 0) return;
+    const unique = [...new Set(mdCodes.filter(c => c && String(c).trim()))];
+    if (unique.length === 0) return;
+
+    function isAlreadyInList(dUserId, dEmail) {
+        const uid = (dUserId || '').toString().trim();
+        const em = (dEmail || '').toString().trim();
+        return members.some(function (m) {
+            const u = (m.userId || '').toString().trim();
+            const e = (m.email || '').toString().trim();
+            if (uid && u === uid) return true;
+            if (em && e === em) return true;
+            return false;
+        });
+    }
+
+    for (let i = 0; i < unique.length; i += 10) {
+        const chunk = unique.slice(i, i + 10);
+        let snap;
+        try {
+            snap = await window.db.collection('mdManagers').where('mdCode', 'in', chunk).get();
+        } catch (e) {
+            console.warn('mergeMdManagersIntoMemberList: mdManagers 조회 실패', e);
+            continue;
+        }
+        snap.forEach(function (doc) {
+            const d = doc.data();
+            const st = (d.status != null ? String(d.status) : 'active').toLowerCase();
+            if (st === 'inactive' || st === 'deleted' || st === 'suspended') return;
+            const uid = (d.userId || '').toString().trim();
+            const em = (d.email || '').toString().trim();
+            if (!uid && !em) return;
+            if (isAlreadyInList(uid, em)) return;
+            members.push({
+                id: doc.id,
+                docId: doc.id,
+                userId: uid,
+                name: d.name || '',
+                email: em,
+                phone: d.phone || '',
+                mdCode: (d.mdCode || '').toString().trim(),
+                isMdManagerRecord: true
+            });
+        });
+    }
+}
+
+/** MD조회: 로그인한 MD의 members 문서가 mdCode 필터에 안 걸렸을 때 본인 한 명 추가 */
+async function mergeLoggedInMdSelfIfMissingForLookup(members, mdCodes) {
+    const raw = localStorage.getItem('mdAdminData');
+    if (!raw) return;
+    let mdData;
+    try {
+        mdData = JSON.parse(raw);
+    } catch (e) {
+        return;
+    }
+    const currentUserId = (mdData.userId || mdData.email || '').toString().trim();
+    const currentEmail = (mdData.email || '').toString().trim();
+    if (!currentUserId && !currentEmail) return;
+
+    const inList = members.some(function (m) {
+        const u = (m.userId || '').toString().trim();
+        const e = (m.email || '').toString().trim();
+        return (currentUserId && u === currentUserId) || (currentEmail && e === currentEmail);
+    });
+    if (inList) return;
+
+    let selfSnap;
+    if (currentEmail) {
+        selfSnap = await window.db.collection('members').where('email', '==', currentEmail).limit(1).get();
+    }
+    if ((!selfSnap || selfSnap.empty) && currentUserId) {
+        selfSnap = await window.db.collection('members').where('userId', '==', currentUserId).limit(1).get();
+    }
+    if (!selfSnap || selfSnap.empty) return;
+
+    const doc = selfSnap.docs[0];
+    const data = doc.data();
+    members.push({
+        id: doc.id,
+        ...data,
+        docId: doc.id,
+        mdCode: data.mdCode || mdData.mdCode || (mdCodes[0] || '')
+    });
 }
 
 // 현재 MD의 모든 허용된 회원 조회

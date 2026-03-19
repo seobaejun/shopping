@@ -13,6 +13,11 @@
         .md-admin-header .btn-logout { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
         .md-admin-header .btn-logout:hover { background: rgba(255,255,255,0.3); }
         body { padding-top: 70px; }
+        /* MD조회: 관리자(바로가기) 전용 메뉴 비활성 표시 */
+        .admin-sidebar a[data-page="md-search"].nav-md-search-locked {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -49,6 +54,7 @@
                     <h3 class="nav-title"><i class="fas fa-users"></i> 회원관리</h3>
                     <ul class="nav-list">
                         <li class="active"><a href="#" data-page="member-search"><i class="fas fa-search"></i> 회원조회</a></li>
+                        <li><a href="#" data-page="md-search" id="navMdSearchLink"><i class="fas fa-user-tag"></i> MD조회(관리자 전용)</a></li>
                         <li><a href="#" data-page="member-purchase"><i class="fas fa-shopping-cart"></i> 개인별 구매 누적정보</a></li>
                     </ul>
                 </div>
@@ -173,6 +179,63 @@
                 <div id="memberPagination" class="pagination"></div>
             </div>
 
+            <!-- MD조회: MD 코드로 해당 MD 소속 회원 목록 -->
+            <div id="md-search" class="content-page">
+                <div class="page-header">
+                    <h2>MD조회</h2>
+                    <p class="page-description" id="mdLookupSubtitle">MD 코드(4~5자리)를 입력하면 해당 코드에 소속된 회원이 표시됩니다.</p>
+                </div>
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>MD 코드</label>
+                            <input type="text" class="form-control" id="mdLookupCode" placeholder="예: 1024 또는 10241" maxlength="5" inputmode="numeric" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="search-actions">
+                        <button type="button" class="btn btn-primary" id="mdLookupSearchBtn">검색</button>
+                        <button type="button" class="btn btn-default" id="mdLookupResetBtn">초기화</button>
+                    </div>
+                </div>
+                <div id="mdLookupStatsPanel" class="md-lookup-stats-panel" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; margin-bottom: 20px;">
+                    <div style="background: #f5f6f8; border: 1px solid #e1e5e9; padding: 16px; border-radius: 8px;">
+                        <div style="font-size: 13px; color: #666; margin-bottom: 6px;">총 인원(합)</div>
+                        <div id="mdLookupStatCount" style="font-size: 22px; font-weight: 700; color: #333;">—</div>
+                    </div>
+                    <div style="background: #f5f6f8; border: 1px solid #e1e5e9; padding: 16px; border-radius: 8px;">
+                        <div style="font-size: 13px; color: #666; margin-bottom: 6px;">구매총액 합</div>
+                        <div id="mdLookupStatPurchase" style="font-size: 22px; font-weight: 700; color: #28a745;">—</div>
+                    </div>
+                    <div style="background: #f5f6f8; border: 1px solid #e1e5e9; padding: 16px; border-radius: 8px;">
+                        <div style="font-size: 13px; color: #666; margin-bottom: 6px;">지원토큰 합</div>
+                        <div id="mdLookupStatSupport" style="font-size: 22px; font-weight: 700; color: #c82333;">—</div>
+                    </div>
+                </div>
+                <div class="page-header" style="margin-top: 0; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #4A5FC1;">
+                    <h3 style="font-size: 18px; margin: 0; color: #333;">조회 결과: <strong id="mdLookupResultCount" style="color: #4A5FC1; font-size: 20px;">0</strong>명</h3>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>순번</th>
+                                <th>아이디</th>
+                                <th>이름</th>
+                                <th>가입일자</th>
+                                <th>추천인</th>
+                                <th>MD코드</th>
+                                <th>구매총액</th>
+                                <th>지원토큰</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mdLookupTableBody">
+                            <tr><td colspan="8" class="empty-message">MD 코드를 입력하고 검색하세요.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="mdLookupPagination" class="pagination"></div>
+            </div>
+
             <!-- 개인별 구매 누적정보 페이지 (관리자와 동일) -->
             <div id="member-purchase" class="content-page">
                 <div class="page-header">
@@ -290,6 +353,9 @@
                                 var origGetMembers = window.firebaseAdmin.memberService.getMembers;
                                 window.firebaseAdmin.memberService.getMembers = function() { return window.mdFirebase.getAllowedMembers(); };
                             }
+                            var sLu=document.createElement('script'); sLu.src=scriptDir+'js/md-lookup.js?v='+Date.now(); document.body.appendChild(sLu);
+                            sLu.onerror=function(){ showLoadError('md-lookup.js 로드 실패. 경로: '+sLu.src); };
+                            sLu.onload=function(){
                             var s3=document.createElement('script'); s3.src='../admin/js/member-purchase.js'; document.body.appendChild(s3);
                             s3.onerror=function(){ showLoadError('member-purchase.js 로드 실패.'); };
                             s3.onload=function(){
@@ -323,15 +389,35 @@
                                         }catch(err){ if(countEl) countEl.textContent='-'; if(paymentEl) paymentEl.textContent='-'; if(supportEl) supportEl.textContent='-'; console.error('대시보드 로드 오류',err); }
                                     })();
                                 };
+                                function refreshMdSearchNavLock(){
+                                    var link=document.getElementById('navMdSearchLink')||document.querySelector('.admin-sidebar a[data-page="md-search"]');
+                                    if(!link) return;
+                                    var ok=typeof sessionStorage!=='undefined'&&sessionStorage.getItem('mdAdminFromAdmin')==='true';
+                                    if(ok){
+                                        link.classList.remove('nav-md-search-locked');
+                                        link.removeAttribute('aria-disabled');
+                                        link.removeAttribute('title');
+                                    } else {
+                                        link.classList.add('nav-md-search-locked');
+                                        link.setAttribute('aria-disabled','true');
+                                        link.setAttribute('title','관리자 페이지에서 MD 바로가기로 접속한 경우에만 이용할 수 있습니다.');
+                                    }
+                                }
+                                refreshMdSearchNavLock();
                                 document.querySelectorAll('.admin-sidebar a[data-page]').forEach(function(a){
                                     a.addEventListener('click',function(e){ e.preventDefault();
                                         var page=this.getAttribute('data-page');
+                                        if(page==='md-search'&&!(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('mdAdminFromAdmin')==='true')){
+                                            alert('MD조회는 관리자 페이지에서 MD 바로가기로 들어온 경우에만 이용할 수 있습니다.');
+                                            return;
+                                        }
                                         document.querySelectorAll('.content-page').forEach(function(p){ p.classList.remove('active'); p.style.display=p.id==='dashboard'?'none':''; });
                                         var el=document.getElementById(page); if(el){ el.classList.add('active'); if(page==='dashboard') el.style.display='block'; }
                                         document.querySelectorAll('.admin-sidebar .nav-list li').forEach(function(li){ li.classList.remove('active'); });
                                         if(this.parentElement) this.parentElement.classList.add('active');
                                         if(page==='dashboard'&&window.loadMdDashboard) window.loadMdDashboard();
                                         if(page==='member-search'&&window.searchMemberInfo) window.searchMemberInfo();
+                                        if(page==='md-search'&&window.initMdLookupPage) window.initMdLookupPage();
                                     });
                                 });
                                 var memberSearchBtn=document.getElementById('memberSearchBtn');
@@ -340,10 +426,17 @@
                                 if(memberSearchBtn&&window.searchMemberInfo) memberSearchBtn.onclick=function(e){ e.preventDefault(); window.searchMemberInfo(); return false; };
                                 if(memberResetBtn&&window.resetMemberSearch) memberResetBtn.onclick=function(e){ e.preventDefault(); window.resetMemberSearch(); return false; };
                                 if(memberExportBtn&&window.exportMembersToExcel) memberExportBtn.onclick=function(e){ e.preventDefault(); window.exportMembersToExcel(); return false; };
+                                var mdLookupBtn=document.getElementById('mdLookupSearchBtn');
+                                var mdLookupReset=document.getElementById('mdLookupResetBtn');
+                                var mdLookupInput=document.getElementById('mdLookupCode');
+                                if(mdLookupBtn&&window.searchMdLookupMembers) mdLookupBtn.onclick=function(e){ e.preventDefault(); window.searchMdLookupMembers(); return false; };
+                                if(mdLookupReset&&window.resetMdLookupPage) mdLookupReset.onclick=function(e){ e.preventDefault(); window.resetMdLookupPage(); return false; };
+                                if(mdLookupInput&&window.searchMdLookupMembers) mdLookupInput.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); window.searchMdLookupMembers(); } });
                                 var tbody=document.getElementById('memberTableBody');
-                                if(tbody) tbody.innerHTML='<tr><td colspan="7" class="empty-message">회원 정보를 불러오는 중...</td></tr>';
+                                if(tbody) tbody.innerHTML='<tr><td colspan="9" class="empty-message">회원 정보를 불러오는 중...</td></tr>';
                                 if(window.searchMemberInfo) setTimeout(function(){ window.searchMemberInfo(); }, 400);
                                 } catch(e) { showLoadError('UI 연결 중 오류: ' + (e&&e.message ? e.message : String(e))); }
+                            };
                             };
                         };
                     };
