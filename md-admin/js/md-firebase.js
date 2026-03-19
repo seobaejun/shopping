@@ -560,7 +560,105 @@ function getStatusText(status) {
     return statusMap[status] || status || '알 수 없음';
 }
 
-// 전역 함수로 내보내기
+/** 관리자 → MD 화면(mdAdminFromAdmin)에서만: 전체회원 행의 MD 추가 → mdManagers에 관리자 권한설정과 동일 스키마로 저장 */
+window.mdAdminAddMdFromMemberDocId = async function (memberDocId) {
+    if (typeof sessionStorage === 'undefined' || sessionStorage.getItem('mdAdminFromAdmin') !== 'true') {
+        alert('관리자 페이지에서 MD 바로가기로 들어온 경우에만 MD 추가가 가능합니다.');
+        return;
+    }
+    var docId = memberDocId != null ? String(memberDocId).trim() : '';
+    if (!docId) {
+        alert('회원 문서 ID가 없습니다.');
+        return;
+    }
+    var m = null;
+    var lists = [window.allMembersData, window.filteredMembersData];
+    for (var i = 0; i < lists.length; i++) {
+        var arr = lists[i];
+        if (!Array.isArray(arr)) continue;
+        for (var j = 0; j < arr.length; j++) {
+            var x = arr[j];
+            if (String(x.id || x.docId) === docId) {
+                m = x;
+                break;
+            }
+        }
+        if (m) break;
+    }
+    if (!m) {
+        alert('회원 정보를 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도해주세요.');
+        return;
+    }
+    var userId = (m.userId || '').toString().trim();
+    var nameRaw = (m.name || m.userName || '').toString().trim();
+    var name = nameRaw && nameRaw.indexOf('@') === -1 ? nameRaw : '';
+    if (!userId) {
+        alert('아이디(userId)가 없는 회원은 MD로 등록할 수 없습니다.');
+        return;
+    }
+    if (!name) {
+        alert('이름이 없는 회원은 MD로 등록할 수 없습니다.');
+        return;
+    }
+    var defaultCode = (m.mdCode || '').toString().trim();
+    var mdCodeInput = typeof window.prompt === 'function' ? window.prompt('MD 코드(4~5자리 숫자)를 입력하세요.', defaultCode || '') : '';
+    if (mdCodeInput == null) return;
+    var mdCode = String(mdCodeInput).trim();
+    if (!/^\d{4,5}$/.test(mdCode)) {
+        alert('MD 코드는 4자리 또는 5자리 숫자여야 합니다.');
+        return;
+    }
+    try {
+        await waitForFirebaseMd();
+        var dup = await window.db.collection('mdManagers').where('userId', '==', userId).limit(1).get();
+        if (!dup.empty) {
+            alert('이미 MD로 등록된 아이디입니다.');
+            return;
+        }
+        var email = (m.email || '').toString().trim();
+        var phone = (m.phone || m.mobile || '').toString().trim();
+        var payload = {
+            userId: userId,
+            name: name,
+            mdCode: mdCode,
+            email: email,
+            phone: phone,
+            status: 'active'
+        };
+        if (window.firebaseAdmin && window.firebaseAdmin.mdService && typeof window.firebaseAdmin.mdService.addMd === 'function') {
+            await window.firebaseAdmin.mdService.addMd(payload);
+        } else {
+            await window.db.collection('mdManagers').add(Object.assign({}, payload, {
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }));
+        }
+        alert('MD로 추가되었습니다. 관리자 권한 설정의 MD 목록과 동일한 데이터로 표시됩니다.');
+        if (typeof window.loadAllMembers === 'function') await window.loadAllMembers();
+        if (typeof window.searchMemberInfo === 'function') await window.searchMemberInfo();
+    } catch (err) {
+        console.error('MD 추가 오류:', err);
+        alert('MD 추가에 실패했습니다: ' + (err && err.message ? err.message : String(err)));
+    }
+};
+
+(function bindMdAdminAddMdDelegation() {
+    function onBodyClick(e) {
+        if (!window.isMdAdmin || typeof sessionStorage === 'undefined' || sessionStorage.getItem('mdAdminFromAdmin') !== 'true') return;
+        var btn = e.target && e.target.closest && e.target.closest('.btn-md-admin-add');
+        if (!btn) return;
+        e.preventDefault();
+        var id = btn.getAttribute('data-member-doc-id');
+        if (id != null && window.mdAdminAddMdFromMemberDocId) window.mdAdminAddMdFromMemberDocId(id);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { document.body.addEventListener('click', onBodyClick); });
+    } else {
+        document.body.addEventListener('click', onBodyClick);
+    }
+})();
+
+// 전역 함수로보내기
 window.mdFirebase = {
     validateMdCode,
     getMembersByMdCode,

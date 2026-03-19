@@ -169,6 +169,35 @@ async function enrichMembersWithOrderStatsMdFallback(members) {
 }
 if (typeof window !== 'undefined') window.enrichMembersWithOrderStatsMdFallback = enrichMembersWithOrderStatsMdFallback;
 
+/** MD 관리자 회원 목록: mdManagers에 등록된 아이디면 MD 회원, 아니면 일반 회원 (status가 inactive/deleted/suspended면 제외) */
+async function enrichMembersWithMdManagerStatus(members) {
+    if (!window.isMdAdmin || !members || members.length === 0) return members;
+    var db = window.db || (window.firebaseAdmin && window.firebaseAdmin.db);
+    if (!db) {
+        console.warn('enrichMembersWithMdManagerStatus: db 없음');
+        return members.map(function (m) { return Object.assign({}, m, { isRegisteredMdManager: false }); });
+    }
+    try {
+        var snap = await db.collection('mdManagers').get();
+        var mdUserIds = new Set();
+        snap.forEach(function (doc) {
+            var d = doc.data();
+            var uid = (d.userId || '').toString().trim();
+            if (!uid) return;
+            var st = (d.status != null ? String(d.status) : 'active').toLowerCase();
+            if (st === 'inactive' || st === 'deleted' || st === 'suspended') return;
+            mdUserIds.add(uid);
+        });
+        return members.map(function (m) {
+            var uid = (m.userId || '').toString().trim();
+            return Object.assign({}, m, { isRegisteredMdManager: mdUserIds.has(uid) });
+        });
+    } catch (e) {
+        console.warn('enrichMembersWithMdManagerStatus: mdManagers 조회 실패', e);
+        return members.map(function (m) { return Object.assign({}, m, { isRegisteredMdManager: false }); });
+    }
+}
+
 /** 구매금액은 orders 기준, 지원금/누적은 조별추첨 확정 후 지급완료(paid)된 추첨 지원금 기준으로 회원에 병합 */
 async function enrichMembersWithOrderStats(firebaseAdmin, members) {
     console.log('🔵 구매금액·지원금 집계 시작 (enrichMembersWithOrderStats), 회원 수:', members ? members.length : 0);
@@ -265,6 +294,9 @@ async function loadAllMembers() {
             if (allZeros && window.db) {
                 members = await enrichMembersWithOrderStatsMdFallback(members);
             }
+        }
+        if (window.isMdAdmin && members.length > 0) {
+            members = await enrichMembersWithMdManagerStatus(members);
         }
         if (members.length) console.log('회원조회 렌더 직전 첫 회원 구매금액/지원금:', members[0].purchaseAmount, members[0].supportAmount);
         
@@ -392,6 +424,9 @@ async function searchMemberInfo() {
             if (allZerosSearch) {
                 members = await enrichMembersWithOrderStatsMdFallback(members);
             }
+        }
+        if (window.isMdAdmin && members.length > 0) {
+            members = await enrichMembersWithMdManagerStatus(members);
         }
         
         window.allMembersData = members;
@@ -542,7 +577,7 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
 
     if (!tbody) return;
     var isMdAdmin = window.isMdAdmin === true;
-    var emptyColspan = isMdAdmin ? 7 : 11;
+    var emptyColspan = isMdAdmin ? 9 : 11;
     if (!membersToRender || membersToRender.length === 0) {
         var emptyMsg = (isMdAdmin && !isSearchResults) ? 'MD 코드가 등록되지 않았습니다. 관리자에게 MD 코드(4~5자리) 발급을 요청하세요.' : '검색 결과가 없습니다.';
         tbody.innerHTML = '<tr><td colspan="' + emptyColspan + '" class="empty-message">' + emptyMsg + '</td></tr>';
@@ -583,7 +618,17 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
         }
         const referralCode = member.referralCode || member.recommender || '';
         if (isMdAdmin) {
-            return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td></tr>';
+            var showMdAddBtn = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('mdAdminFromAdmin') === 'true';
+            var docIdRaw = String(member.id != null ? member.id : (member.docId != null ? member.docId : ''));
+            var safeDocAttr = docIdRaw.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            var isMdMember = member.isRegisteredMdManager === true;
+            var memberKindCell = isMdMember
+                ? '<td><span class="badge badge-success">MD 회원</span></td>'
+                : '<td><span class="badge badge-secondary">일반 회원</span></td>';
+            var mdAddCell = showMdAddBtn
+                ? '<td><button type="button" class="btn btn-sm btn-primary btn-md-admin-add" data-member-doc-id="' + safeDocAttr + '">MD 추가</button></td>'
+                : '<td>—</td>';
+            return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td>' + memberKindCell + mdAddCell + '</tr>';
         }
         const phone = member.phone || '';
         const emailDisplay = (member.email || '').toString().trim();

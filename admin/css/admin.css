@@ -480,6 +480,11 @@ body {
     color: #0c5460;
 }
 
+.badge-secondary {
+    background: #e9ecef;
+    color: #495057;
+}
+
 /* 상태 선택 셀렉트 박스 */
 .status-select {
     padding: 6px 10px !important;
