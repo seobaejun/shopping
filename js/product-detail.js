@@ -1089,30 +1089,67 @@ function updatePageInfo() {
     // 상품 정보 테이블 업데이트 (오른쪽 패널, 데이터 있으면 사용/없으면 기본값)
     const productInfoTable = productDetailElements.productInfoTable;
     var defaultTitles = ['카테고리', '제품소재', '색상', '치수', '제조국', '사용기한', '취급 시 주의사항', '품질보증기준'];
-    function isManufacturerTitle(title) {
-        if (!title || typeof title !== 'string') return false;
-        var t = title.trim();
-        return t === '제조사' || t === '제조자' || t.indexOf('제조사') !== -1 || t.indexOf('제조자') !== -1;
+    var defaultDetailContentMap = {
+        '제품소재': '상품페이지 참고',
+        '색상': '상품페이지 참고',
+        '치수': '상품페이지 참고',
+        '제조국': '상품페이지 참고',
+        '사용기한': '상품페이지 참고',
+        '취급 시 주의사항': '상품페이지 참고',
+        '품질보증기준': '상품페이지 참고'
+    };
+    function normalizeDetailTitle(title) {
+        if (!title || typeof title !== 'string') return '';
+        var t = title.trim().replace(/\s+/g, ' ');
+        if (t === '제조사') return '';
+        if (t === '제조자') return '제조국';
+        // 신 스키마의 정확한 제목은 그대로 유지
+        if (t === '사용기한' || t === '취급 시 주의사항' || t === '품질보증기준') return t;
+        // 구 스키마/오타 호환: 동일 의미의 표기만 정규화(다른 항목으로 이동 금지)
+        if (t === '취급시주의사항' || t === '취급시 주의사항' || t === '취급 시 주의 사항') return '취급 시 주의사항';
+        if (t === '제조연월') return '사용기한';
+        // A/S 항목은 현재 사용자 노출 대상이 아니므로 품질보증기준으로 합치지 않음
+        if (t === 'A/S 책임자와 전화번호' || t === 'A/S책임자와전화번호' || t === 'AS 책임자와 전화번호') return '';
+        return t;
     }
     function buildInfoTableBody() {
         var map = {};
+        var extras = [];
+        function setMapValue(title, content) {
+            var key = String(title || '').trim();
+            if (!key) return;
+            var next = String(content || '').trim();
+            var prev = map[key];
+            // 기존 값이 있고 새 값이 비어있으면 덮어쓰지 않음
+            if (prev != null && String(prev).trim() !== '' && next === '') return;
+            map[key] = next;
+        }
         if (PRODUCT_INFO.details && PRODUCT_INFO.details.length > 0) {
             PRODUCT_INFO.details.forEach(function (d) {
-                var t = (d.title || '').trim();
-                if (isManufacturerTitle(t)) return;
-                map[t] = (d.content || '').trim();
+                var t = normalizeDetailTitle(d.title || '');
+                var c = (d.content || '').trim();
+                if (!t) return;
+                setMapValue(t, c);
+                if (defaultTitles.indexOf(t) === -1) {
+                    extras.push({ title: t, content: c });
+                }
             });
         }
         function val(title) {
             if (map[title] != null && String(map[title]).trim() !== '') return String(map[title]).trim();
             if (title === '카테고리') return PRODUCT_INFO.category || '-';
+            if (defaultDetailContentMap[title]) return defaultDetailContentMap[title];
             return '-';
         }
-        return defaultTitles.filter(function (title) { return !isManufacturerTitle(title); }).map(function (title) {
+        var rows = defaultTitles.map(function (title) {
             var content = val(title);
             var tdClass = title === '카테고리' ? ' class="product-info-category-cell"' : '';
             return '<tr><th>' + String(title).replace(/</g, '&lt;') + '</th><td' + tdClass + '>' + String(content).replace(/</g, '&lt;') + '</td></tr>';
-        }).join('');
+        });
+        extras.forEach(function (d) {
+            rows.push('<tr><th>' + String(d.title).replace(/</g, '&lt;') + '</th><td>' + String(d.content || '-').replace(/</g, '&lt;') + '</td></tr>');
+        });
+        return rows.join('');
     }
     if (productInfoTable) {
         productInfoTable.innerHTML = buildInfoTableBody();
@@ -1178,12 +1215,20 @@ function updatePageInfo() {
     function buildSpecTableBody() {
         var detailMap = {};
         var extraDetails = [];
+        function setDetailMapValue(title, content) {
+            var key = String(title || '').trim();
+            if (!key) return;
+            var next = String(content || '').trim();
+            var prev = detailMap[key];
+            if (prev != null && String(prev).trim() !== '' && next === '') return;
+            detailMap[key] = next;
+        }
         if (PRODUCT_INFO.details && PRODUCT_INFO.details.length > 0) {
             PRODUCT_INFO.details.forEach(function (d) {
-                var t = (d.title || '').trim();
+                var t = normalizeDetailTitle(d.title || '');
                 var c = (d.content || '').trim();
-                if (!t || isManufacturerTitle(t)) return;
-                detailMap[t] = c;
+                if (!t) return;
+                setDetailMapValue(t, c);
                 if (defaultSpecTitles.indexOf(t) === -1) extraDetails.push({ title: t, content: c });
             });
         }
@@ -1191,23 +1236,21 @@ function updatePageInfo() {
             var fromDetail = detailMap[title];
             if (fromDetail != null && String(fromDetail).trim() !== '') return String(fromDetail).trim();
             if (title === '카테고리') return PRODUCT_INFO.category || '-';
+            if (defaultDetailContentMap[title]) return defaultDetailContentMap[title];
             return '-';
         }
-        var rows = defaultSpecTitles.filter(function (title) { return !isManufacturerTitle(title); }).map(function (title) {
+        var rows = defaultSpecTitles.map(function (title) {
             var content = getCellContent(title);
             var tdClass = title === '카테고리' ? ' class="product-spec-category-cell"' : '';
             return '<tr><th>' + String(title).replace(/</g, '&lt;') + '</th><td' + tdClass + '>' + String(content).replace(/</g, '&lt;') + '</td></tr>';
         });
         extraDetails.forEach(function (d) {
-            if (isManufacturerTitle(d.title)) return;
             rows.push('<tr><th>' + String(d.title).replace(/</g, '&lt;') + '</th><td>' + String(d.content || '-').replace(/</g, '&lt;') + '</td></tr>');
         });
         return rows.join('');
     }
     if (productSpecTable) {
-        var tableHtml = buildSpecTableBody();
-        tableHtml = tableHtml.replace(/<tr><th>[^<]*제조사[^<]*<\/th><td>[^<]*<\/td><\/tr>/g, '').replace(/<tr><th>[^<]*제조자[^<]*<\/th><td>[^<]*<\/td><\/tr>/g, '');
-        productSpecTable.innerHTML = tableHtml;
+        productSpecTable.innerHTML = buildSpecTableBody();
     }
     
     // 카테고리 ID → 이름 변환 후 태그/브레드크럼/테이블에 반영

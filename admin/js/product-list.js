@@ -14,11 +14,10 @@ const DEFAULT_DETAIL_ROWS = [
     { title: '제품소재', content: '상품페이지 참고' },
     { title: '색상', content: '상품페이지 참고' },
     { title: '치수', content: '상품페이지 참고' },
-    { title: '제조자', content: '상품페이지 참고' },
+    { title: '제조국', content: '상품페이지 참고' },
+    { title: '사용기한', content: '상품페이지 참고' },
     { title: '취급 시 주의사항', content: '상품페이지 참고' },
-    { title: '제조연월', content: '상품페이지 참고' },
-    { title: '품질보증기준', content: '상품페이지 참고' },
-    { title: 'A/S 책임자와 전화번호', content: '상품페이지 참고' }
+    { title: '품질보증기준', content: '상품페이지 참고' }
 ];
 
 /** 수정 모달에서 선택된 category id에 해당하는 1차/2차/3차 id 경로 반환 [id1, id2, id3] */
