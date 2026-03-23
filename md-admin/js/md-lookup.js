@@ -215,10 +215,10 @@
             var memberId = member.userId || member.id || '';
             var nameRaw = (member.name || member.userName || '').toString().trim();
             var name = (!nameRaw || nameRaw.indexOf('@') !== -1) ? '이름 없음' : nameRaw;
-            var joinDate = formatMemberJoinDate(member);
+            var email = (member.email || '').toString().trim();
             var referralCode = getMdLookupReferralDisplay(member);
             var mdCodeDisp = getMdLookupMdCodeDisplay(member);
-            return '<tr><td>' + (start + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + escapeHtml(mdCodeDisp) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrixVal(Number(member.supportAmount || 0)) + ' trix</td></tr>';
+            return '<tr><td>' + (start + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(email) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + escapeHtml(mdCodeDisp) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrixVal(Number(member.supportAmount || 0)) + ' trix</td></tr>';
         }).join('');
 
         tbody.innerHTML = rows;

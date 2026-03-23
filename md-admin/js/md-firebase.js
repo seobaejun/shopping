@@ -660,44 +660,63 @@ async function searchMembers(searchTerm) {
             return [];
         }
         
-        const term = searchTerm.trim().toLowerCase();
+        const termRaw = searchTerm.trim();
+        const termLower = termRaw.toLowerCase();
         const members = [];
-        
-        // 아이디로 검색
-        const userIdSnapshot = await window.db.collection('members')
-            .where('userId', '>=', term)
-            .where('userId', '<=', term + '\uf8ff')
-            .get();
-        
-        userIdSnapshot.forEach(doc => {
+        const seen = Object.create(null);
+        function pushDocIfNew(doc) {
+            if (!doc) return;
+            if (seen[doc.id]) return;
+            seen[doc.id] = true;
             const data = doc.data();
             members.push({
                 id: doc.id,
                 ...data,
                 docId: doc.id
             });
-        });
+        }
         
-        // 이름으로 검색 (중복 제거)
-        const nameSnapshot = await window.db.collection('members')
-            .where('userName', '>=', term)
-            .where('userName', '<=', term + '\uf8ff')
+        // 아이디로 검색
+        const userIdSnapshot = await window.db.collection('members')
+            .where('userId', '>=', termRaw)
+            .where('userId', '<=', termRaw + '\uf8ff')
             .get();
         
-        nameSnapshot.forEach(doc => {
-            const data = doc.data();
-            const existing = members.find(m => m.docId === doc.id);
-            if (!existing) {
-                members.push({
-                    id: doc.id,
-                    ...data,
-                    docId: doc.id
-                });
-            }
+        userIdSnapshot.forEach(pushDocIfNew);
+        
+        // 이름(userName)으로 검색 (중복 제거)
+        const userNameSnapshot = await window.db.collection('members')
+            .where('userName', '>=', termRaw)
+            .where('userName', '<=', termRaw + '\uf8ff')
+            .get();
+        
+        userNameSnapshot.forEach(pushDocIfNew);
+
+        // 이름(name)으로 검색 (중복 제거)
+        const nameSnapshot = await window.db.collection('members')
+            .where('name', '>=', termRaw)
+            .where('name', '<=', termRaw + '\uf8ff')
+            .get();
+        nameSnapshot.forEach(pushDocIfNew);
+
+        // 대소문자/공백 차이 보정: in-memory 필터로 한 번 더 거르기
+        function normalize(val) {
+            return String(val == null ? '' : val).replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, '').trim().toLowerCase();
+        }
+        const normTerm = normalize(termLower);
+        const filtered = members.filter(function (m) {
+            const uid = normalize(m.userId || m.id || '');
+            const n1 = normalize(m.name || '');
+            const n2 = normalize(m.userName || '');
+            const em = normalize(m.email || '');
+            return (uid && uid.indexOf(normTerm) !== -1)
+                || (n1 && n1.indexOf(normTerm) !== -1)
+                || (n2 && n2.indexOf(normTerm) !== -1)
+                || (em && em.indexOf(normTerm) !== -1);
         });
         
-        console.log(`"${searchTerm}" 검색 결과:`, members.length, '명');
-        return members;
+        console.log(`"${searchTerm}" 검색 결과:`, filtered.length, '명');
+        return filtered;
         
     } catch (error) {
         console.error('회원 검색 오류:', error);

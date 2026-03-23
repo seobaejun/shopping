@@ -79,19 +79,104 @@ window.searchMemberPurchase = async function() {
             firebaseAdmin = await waitForFirebaseAdminPurchase();
         }
         
-        // 회원 목록 (MD일 때 getAllowedMembers 사용; firebaseAdmin이 null이어도 window.db로 구매 내역 조회) → 관리자에서 MD 바로가기로 들어와도 동일 목록으로 검색)
+        // 회원 목록 (MD일 때 getAllowedMembers 사용; firebaseAdmin이 null이어도 window.db로 구매 내역 조회)
         var members;
         if (window.isMdAdmin && window.mdFirebase && typeof window.mdFirebase.getAllowedMembers === 'function') {
             members = await window.mdFirebase.getAllowedMembers();
         } else {
             members = await firebaseAdmin.memberService.getMembers();
         }
-        var keywordLower = keyword.toLowerCase();
-        var member = members.find(function (m) {
-            var uid = (m.userId || m.id || '').toString().trim().toLowerCase();
-            var nm = (m.name || m.userName || '').toString().trim().toLowerCase();
-            return (uid && uid.indexOf(keywordLower) !== -1) || (nm && nm.indexOf(keywordLower) !== -1);
-        });
+        function normalizeSearchText(value) {
+            if (value == null) return '';
+            return String(value)
+                .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width chars
+                .replace(/\s+/g, '')
+                .trim()
+                .toLowerCase();
+        }
+
+        function isMatchedMemberByKeyword(m, normalizedKeyword) {
+            if (!m) return false;
+            var uid = normalizeSearchText(m.userId || m.id || '');
+            var nm = normalizeSearchText(m.name || '');
+            var userNm = normalizeSearchText(m.userName || '');
+            var em = normalizeSearchText(m.email || '');
+            return (uid && uid.indexOf(normalizedKeyword) !== -1)
+                || (nm && nm.indexOf(normalizedKeyword) !== -1)
+                || (userNm && userNm.indexOf(normalizedKeyword) !== -1)
+                || (em && em.indexOf(normalizedKeyword) !== -1);
+        }
+        function isExactMatchedMemberByKeyword(m, normalizedKeyword) {
+            if (!m) return false;
+            var uid = normalizeSearchText(m.userId || m.id || '');
+            var nm = normalizeSearchText(m.name || '');
+            var userNm = normalizeSearchText(m.userName || '');
+            var em = normalizeSearchText(m.email || '');
+            return uid === normalizedKeyword
+                || nm === normalizedKeyword
+                || userNm === normalizedKeyword
+                || em === normalizedKeyword;
+        }
+
+        // 날짜 범위 (동명이인 해소 시에도 동일 조건으로 구매 건수 비교)
+        const startDate = document.getElementById('purchaseStartDate')?.value;
+        const endDate = document.getElementById('purchaseEndDate')?.value;
+
+        var keywordNorm = normalizeSearchText(keyword);
+        var merged = members.slice();
+        var member = null;
+
+        // 이름/아이디 검색 정확도 확보: mdFirebase.searchMembers 결과를 우선 병합해 다시 매칭
+        if (window.mdFirebase && typeof window.mdFirebase.searchMembers === 'function') {
+            try {
+                var searched = await window.mdFirebase.searchMembers(keyword);
+                var byId = Object.create(null);
+                var mergedList = [];
+                members.forEach(function (m) {
+                    var k = String(m.id || m.docId || m.userId || '').trim();
+                    if (k && !byId[k]) {
+                        byId[k] = true;
+                        mergedList.push(m);
+                    }
+                });
+                (searched || []).forEach(function (m) {
+                    var k = String(m.id || m.docId || m.userId || '').trim();
+                    if (!k || byId[k]) return;
+                    byId[k] = true;
+                    mergedList.push(m);
+                });
+                merged = mergedList;
+            } catch (e) {
+                console.warn('purchase 검색 폴백(searchMembers) 실패:', e);
+            }
+        }
+
+        var exactCandidates = merged.filter(function (m) { return isExactMatchedMemberByKeyword(m, keywordNorm); });
+        var fuzzyCandidates = merged.filter(function (m) { return isMatchedMemberByKeyword(m, keywordNorm); });
+        var candidates = exactCandidates.length > 0 ? exactCandidates : fuzzyCandidates;
+
+        // 이름 검색은 동명이인/부분일치가 많아 잘못된 회원을 집는 경우가 있음.
+        // 후보가 여러 명이면 같은 기간 실제 구매 건수가 가장 많은 회원을 선택.
+        var chosenPurchases = null;
+        if (candidates.length === 1) {
+            member = candidates[0];
+        } else if (candidates.length > 1) {
+            var best = null;
+            for (var ci = 0; ci < candidates.length; ci++) {
+                var cand = candidates[ci];
+                var candId = cand.userId || cand.id;
+                if (!candId) continue;
+                var candPurchases = await getMemberPurchases(candId, startDate, endDate, firebaseAdmin);
+                var score = candPurchases.length;
+                if (!best || score > best.score) {
+                    best = { member: cand, purchases: candPurchases, score: score };
+                }
+            }
+            if (best) {
+                member = best.member;
+                chosenPurchases = best.purchases;
+            }
+        }
         
         if (!member) {
             alert('해당 회원을 찾을 수 없습니다.');
@@ -100,12 +185,8 @@ window.searchMemberPurchase = async function() {
         
         console.log('✅ 회원 찾음:', member);
         
-        // 날짜 범위
-        const startDate = document.getElementById('purchaseStartDate')?.value;
-        const endDate = document.getElementById('purchaseEndDate')?.value;
-        
         const searchId = member.userId || member.id;
-        const purchases = await getMemberPurchases(searchId, startDate, endDate, firebaseAdmin);
+        const purchases = chosenPurchases || await getMemberPurchases(searchId, startDate, endDate, firebaseAdmin);
         var paidSupport = 0;
         var paidSupportByOrderId = {};
         if (window.isMdAdmin) {

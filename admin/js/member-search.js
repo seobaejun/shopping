@@ -610,6 +610,7 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
         const memberId = member.userId || member.id || '';
         const nameRaw = (member.name || member.userName || '').toString().trim();
         const name = (!nameRaw || nameRaw.indexOf('@') !== -1) ? '이름 없음' : nameRaw;
+        const emailDisplay = (member.email || '').toString().trim();
         let joinDate = '';
         if (member.joinDate) joinDate = member.joinDate;
         else if (member.createdAt) {
@@ -628,10 +629,9 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
             var mdAddCell = showMdAddBtn
                 ? '<td><button type="button" class="btn btn-sm btn-primary btn-md-admin-add" data-member-doc-id="' + safeDocAttr + '">MD 추가</button></td>'
                 : '<td>—</td>';
-            return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td>' + memberKindCell + mdAddCell + '</tr>';
+            return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(emailDisplay) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td>' + memberKindCell + mdAddCell + '</tr>';
         }
         const phone = member.phone || '';
-        const emailDisplay = (member.email || '').toString().trim();
         const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
         const status = member.status || '정상';
         const safeId = String(member.id || memberId).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');

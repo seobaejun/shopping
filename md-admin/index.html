@@ -138,7 +138,7 @@
                                     <th>순번</th>
                                     <th>아이디</th>
                                     <th>이름</th>
-                                    <th>가입일자</th>
+                                    <th>이메일</th>
                                     <th>추천인</th>
                                     <th>구매총액</th>
                                     <th>지원토큰</th>
@@ -165,7 +165,7 @@
                                 <th>순번</th>
                                 <th>아이디</th>
                                 <th>이름</th>
-                                <th>가입일자</th>
+                                <th>이메일</th>
                                 <th>추천인</th>
                                 <th>구매총액</th>
                                 <th>지원토큰</th>
@@ -221,7 +221,7 @@
                                 <th>순번</th>
                                 <th>아이디</th>
                                 <th>이름</th>
-                                <th>가입일자</th>
+                                <th>이메일</th>
                                 <th>추천인</th>
                                 <th>MD코드</th>
                                 <th>구매총액</th>
@@ -356,7 +356,7 @@
                             var sLu=document.createElement('script'); sLu.src=scriptDir+'js/md-lookup.js?v='+Date.now(); document.body.appendChild(sLu);
                             sLu.onerror=function(){ showLoadError('md-lookup.js 로드 실패. 경로: '+sLu.src); };
                             sLu.onload=function(){
-                            var s3=document.createElement('script'); s3.src='../admin/js/member-purchase.js'; document.body.appendChild(s3);
+                            var s3=document.createElement('script'); s3.src='../admin/js/member-purchase.js?v='+Date.now(); document.body.appendChild(s3);
                             s3.onerror=function(){ showLoadError('member-purchase.js 로드 실패.'); };
                             s3.onload=function(){
                                 try {
