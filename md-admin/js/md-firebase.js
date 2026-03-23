@@ -11,6 +11,129 @@ function formatTrix(value) {
     return str;
 }
 
+/** Firestore Timestamp·Long 등 → UTC 밀리초 (MD조회 가입일 표시용, 스프레드 후에도 안정) */
+function extractFirestoreTimeMillis(value) {
+    if (value == null || value === '') return null;
+    if (typeof value.toDate === 'function') {
+        try {
+            var d = value.toDate();
+            if (d && !isNaN(d.getTime())) return d.getTime();
+        } catch (e) { /* ignore */ }
+    }
+    if (typeof value === 'object' && value.seconds != null) {
+        var s = value.seconds;
+        if (s != null && typeof s.toNumber === 'function') s = s.toNumber();
+        else if (s != null && typeof s.valueOf === 'function') s = Number(s.valueOf());
+        var sec = typeof s === 'number' ? s : parseInt(s, 10);
+        if (!isNaN(sec)) return sec * 1000;
+    }
+    if (typeof value === 'object' && value._seconds != null) {
+        var s2 = value._seconds;
+        if (s2 != null && typeof s2.toNumber === 'function') s2 = s2.toNumber();
+        var sec2 = typeof s2 === 'number' ? s2 : parseInt(s2, 10);
+        if (!isNaN(sec2)) return sec2 * 1000;
+    }
+    return null;
+}
+
+/** 문서 mdCode와 로그인/쿼리 폴백이 다를 때(예: DB 4자리·세션 5자리) 더 구체적인 소속 코드 선택 */
+function pickBestMdCodeForLookup(fromDoc, fallback) {
+    var a = (fromDoc != null ? String(fromDoc) : '').trim();
+    var b = (fallback != null ? String(fallback) : '').trim();
+    if (!a) return b;
+    if (!b) return a;
+    if (a === b) return a;
+    if (/^\d+$/.test(a) && /^\d+$/.test(b)) {
+        if (a.length === 5 && b.length === 4) return a;
+        if (b.length === 5 && a.length === 4) return b;
+        if (b.length > a.length && b.indexOf(a) === 0) return b;
+        if (a.length > b.length && a.indexOf(b) === 0) return a;
+    }
+    return a;
+}
+
+/**
+ * Firestore mdCode가 문자열 또는 숫자로 저장된 레거시가 섞여 있어, 동일 값에 대해 타입별로 한 번씩 조회 후 doc.id 기준 중복 제거.
+ * (문자 '13451' 쿼리는 number 13451 문서와 매칭되지 않음 → 4자리 상위 검색 시 하위 5자리가 안 잡히던 원인)
+ */
+function getMdCodeEqualityVariantsForQuery(codeStr) {
+    var s = String(codeStr == null ? '' : codeStr).trim();
+    if (!s) return [];
+    var out = [s];
+    var n = parseInt(s, 10);
+    if (!isNaN(n) && String(n) === s && /^\d{4,5}$/.test(s)) {
+        out.push(n);
+    }
+    return out;
+}
+
+async function fetchMemberDocsForMdCodeEquality(codeStr) {
+    if (!window.db) return [];
+    var col = window.db.collection('members');
+    var variants = getMdCodeEqualityVariantsForQuery(codeStr);
+    var seen = Object.create(null);
+    var out = [];
+    for (var vi = 0; vi < variants.length; vi++) {
+        var snap = await col.where('mdCode', '==', variants[vi]).get();
+        snap.forEach(function (doc) {
+            var id = doc.id;
+            if (seen[id]) return;
+            seen[id] = true;
+            out.push(doc);
+        });
+    }
+    return out;
+}
+
+/** Firestore mdCode가 Long 등일 때 4~5자리 문자열로 */
+function stringifyMemberMdCodeField(value) {
+    if (value == null || value === '') return '';
+    if (typeof value === 'number' && !isNaN(value)) return String(Math.trunc(value));
+    if (typeof value === 'string') return value.replace(/\s/g, '').trim();
+    if (typeof value === 'object' && value != null && typeof value.toString === 'function') {
+        var t = String(value.toString()).replace(/\s/g, '').trim();
+        if (/^\d{4,5}$/.test(t)) return t;
+    }
+    var s = String(value).replace(/\s/g, '').trim();
+    return /^\d{4,5}$/.test(s) ? s : '';
+}
+
+/**
+ * 조회 코드 vs 문서 mdCode
+ * - 문서가 5자리·조회가 4자리(상위)면 문서(하위 줄) 우선
+ * - 문서가 4자리·조회가 5자리(하위 줄로 검색)면 문서(실제 소속 4자리) 우선 — 잘못 return q 하면 13451로 덮임
+ */
+function resolveMdLookupRowDisplayMd(matchedQueryCode, docMdValue) {
+    var q = matchedQueryCode != null ? String(matchedQueryCode).replace(/\s/g, '').trim() : '';
+    var d = stringifyMemberMdCodeField(docMdValue);
+    if (!/^\d{4,5}$/.test(q)) q = '';
+    if (!q) return d;
+    if (!d) return q;
+    if (q === d) return q;
+    if (d.length === 5 && q.length === 4 && d.indexOf(q) === 0) return d;
+    if (q.length === 5 && d.length === 4 && q.indexOf(d) === 0) return d;
+    return q;
+}
+
+/**
+ * @param {string} [matchedQueryCode] 해당 행을 가져온 where('mdCode','==', …)에 대응하는 표시용 코드
+ */
+function pushMemberRowFromDoc(members, doc, matchedQueryCode) {
+    const data = doc.data();
+    const id = doc.id;
+    const fromQuery = matchedQueryCode != null ? String(matchedQueryCode).replace(/\s/g, '').trim() : '';
+    const rawMd = resolveMdLookupRowDisplayMd(fromQuery, data.mdCode);
+    members.push({
+        id,
+        ...data,
+        docId: id,
+        mdCode: rawMd,
+        mdLookupCreatedAtMs: extractFirestoreTimeMillis(data.createdAt),
+        mdLookupJoinDateMs: extractFirestoreTimeMillis(data.joinDate),
+        mdLookupRawMdCode: rawMd
+    });
+}
+
 // Firebase 초기화 대기 함수
 async function waitForFirebaseMd(maxWait = 10000) {
     const startTime = Date.now();
@@ -212,34 +335,18 @@ async function getMembersByMdCode(mdCode) {
             console.log('4자리 코드 조회:', code, '하위 코드들:', subordinates);
             
             for (const searchCode of allCodes) {
-                const snapshot = await window.db.collection('members')
-                    .where('mdCode', '==', searchCode)
-                    .get();
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    members.push({
-                        id: doc.id,
-                        ...data,
-                        docId: doc.id
-                    });
+                const docs = await fetchMemberDocsForMdCodeEquality(searchCode);
+                docs.forEach(function (doc) {
+                    pushMemberRowFromDoc(members, doc, searchCode);
                 });
             }
         } else if (code.length === 5) {
             // 5자리 코드: 해당 코드만 조회
             console.log('5자리 코드 조회:', code);
             
-            const snapshot = await window.db.collection('members')
-                .where('mdCode', '==', code)
-                .get();
-            
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                members.push({
-                    id: doc.id,
-                    ...data,
-                    docId: doc.id
-                });
+            const docs = await fetchMemberDocsForMdCodeEquality(code);
+            docs.forEach(function (doc) {
+                pushMemberRowFromDoc(members, doc, code);
             });
         }
 
@@ -283,14 +390,10 @@ async function mergeMdManagersIntoMemberList(members, mdCodes) {
 
     for (let i = 0; i < unique.length; i += 10) {
         const chunk = unique.slice(i, i + 10);
-        let snap;
-        try {
-            snap = await window.db.collection('mdManagers').where('mdCode', 'in', chunk).get();
-        } catch (e) {
-            console.warn('mergeMdManagersIntoMemberList: mdManagers 조회 실패', e);
-            continue;
-        }
-        snap.forEach(function (doc) {
+        const seenMgrDocIds = new Set();
+        function handleMdManagerDoc(doc) {
+            if (seenMgrDocIds.has(doc.id)) return;
+            seenMgrDocIds.add(doc.id);
             const d = doc.data();
             const st = (d.status != null ? String(d.status) : 'active').toLowerCase();
             if (st === 'inactive' || st === 'deleted' || st === 'suspended') return;
@@ -298,6 +401,7 @@ async function mergeMdManagersIntoMemberList(members, mdCodes) {
             const em = (d.email || '').toString().trim();
             if (!uid && !em) return;
             if (isAlreadyInList(uid, em)) return;
+            var mgrMd = (d.mdCode != null ? String(d.mdCode) : '').trim();
             members.push({
                 id: doc.id,
                 docId: doc.id,
@@ -305,10 +409,31 @@ async function mergeMdManagersIntoMemberList(members, mdCodes) {
                 name: d.name || '',
                 email: em,
                 phone: d.phone || '',
-                mdCode: (d.mdCode || '').toString().trim(),
+                mdCode: mgrMd,
+                mdLookupRawMdCode: mgrMd,
                 isMdManagerRecord: true
             });
-        });
+        }
+        try {
+            const snap = await window.db.collection('mdManagers').where('mdCode', 'in', chunk).get();
+            snap.forEach(handleMdManagerDoc);
+        } catch (e) {
+            console.warn('mergeMdManagersIntoMemberList: mdManagers 조회 실패', e);
+        }
+        const numChunk = [];
+        for (let j = 0; j < chunk.length; j++) {
+            const s = String(chunk[j]).trim();
+            const n = parseInt(s, 10);
+            if (!isNaN(n) && String(n) === s) numChunk.push(n);
+        }
+        if (numChunk.length > 0) {
+            try {
+                const snapN = await window.db.collection('mdManagers').where('mdCode', 'in', numChunk).get();
+                snapN.forEach(handleMdManagerDoc);
+            } catch (e2) {
+                console.warn('mergeMdManagersIntoMemberList: mdManagers 숫자 in 조회 실패', e2);
+            }
+        }
     }
 }
 
@@ -344,11 +469,17 @@ async function mergeLoggedInMdSelfIfMissingForLookup(members, mdCodes) {
 
     const doc = selfSnap.docs[0];
     const data = doc.data();
+    const rawMdFromDoc = data.mdCode != null ? String(data.mdCode).trim() : '';
+    const fallbackMd = mdData.mdCode || (mdCodes[0] || '');
+    const bestMd = pickBestMdCodeForLookup(rawMdFromDoc, fallbackMd) || rawMdFromDoc || String(fallbackMd || '').trim();
     members.push({
         id: doc.id,
         ...data,
         docId: doc.id,
-        mdCode: data.mdCode || mdData.mdCode || (mdCodes[0] || '')
+        mdCode: bestMd,
+        mdLookupCreatedAtMs: extractFirestoreTimeMillis(data.createdAt),
+        mdLookupJoinDateMs: extractFirestoreTimeMillis(data.joinDate),
+        mdLookupRawMdCode: bestMd
     });
 }
 
@@ -383,11 +514,8 @@ async function getAllowedMembers() {
         const members = [];
         
         for (const code of allowedCodes) {
-            const snapshot = await window.db.collection('members')
-                .where('mdCode', '==', code)
-                .get();
-            
-            snapshot.forEach(doc => {
+            const docs = await fetchMemberDocsForMdCodeEquality(code);
+            docs.forEach(function (doc) {
                 const data = doc.data();
                 members.push({
                     id: doc.id,

@@ -342,7 +342,7 @@
                     if (!window.db && typeof firebase !== 'undefined') window.db = firebase.firestore();
                     var pathname = window.location.pathname || '';
                     var scriptDir = pathname.endsWith('/') ? pathname : (/\.(html?|php|aspx?)$/i.test(pathname) ? pathname.replace(/\/[^/]*$/, '/') : pathname + '/');
-                    var sMd=document.createElement('script'); sMd.src=scriptDir+'js/md-firebase.js'; document.body.appendChild(sMd);
+                    var sMd=document.createElement('script'); sMd.src=scriptDir+'js/md-firebase.js?v='+Date.now(); document.body.appendChild(sMd);
                     sMd.onerror=function(){ showLoadError('md-firebase.js 로드 실패. 경로: '+sMd.src); };
                     sMd.onload=function(){
                         window.isMdAdmin = true;

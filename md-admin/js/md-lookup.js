@@ -28,6 +28,129 @@
         return truncated.toFixed(8);
     }
 
+    function toSecondsFromFirestoreValue(val) {
+        if (val == null) return null;
+        if (typeof val === 'number' && !isNaN(val)) return val;
+        if (typeof val === 'string') {
+            var n = parseInt(val, 10);
+            return isNaN(n) ? null : n;
+        }
+        if (typeof val === 'object') {
+            if (typeof val.toDate === 'function') {
+                try {
+                    var d = val.toDate();
+                    if (d && !isNaN(d.getTime())) return Math.floor(d.getTime() / 1000);
+                } catch (e) { /* ignore */ }
+            }
+            if (val.seconds != null) {
+                var s = val.seconds;
+                if (typeof s === 'object' && typeof s.valueOf === 'function') s = s.valueOf();
+                var sec = typeof s === 'number' ? s : parseInt(s, 10);
+                return isNaN(sec) ? null : sec;
+            }
+            if (val._seconds != null) {
+                var s2 = val._seconds;
+                if (typeof s2 === 'object' && typeof s2.valueOf === 'function') s2 = s2.valueOf();
+                var sec2 = typeof s2 === 'number' ? s2 : parseInt(s2, 10);
+                return isNaN(sec2) ? null : sec2;
+            }
+        }
+        return null;
+    }
+
+    /** Firestore Timestamp·문자열 등 → 표시용 날짜 문자열 */
+    function formatFirestoreDateLike(val) {
+        if (val == null || val === '') return '';
+        if (typeof val === 'string') {
+            var t = val.trim();
+            if (!t || t === '[object Object]') return '';
+            return t;
+        }
+        if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.Timestamp) {
+            try {
+                if (val instanceof firebase.firestore.Timestamp) {
+                    return val.toDate().toISOString().replace('T', ' ').substring(0, 19);
+                }
+            } catch (e) { /* ignore */ }
+        }
+        var sec = toSecondsFromFirestoreValue(val);
+        if (sec != null) {
+            return new Date(sec * 1000).toISOString().replace('T', ' ').substring(0, 19);
+        }
+        return '';
+    }
+
+    /**
+     * 가입일 표시: 문자열 joinDate → md-firebase에서 넣은 ms 백업 → createdAt/updatedAt
+     * (Object.assign 등으로 Timestamp가 깨져도 mdLookupCreatedAtMs 사용)
+     */
+    function formatMemberJoinDate(member) {
+        if (!member) return '';
+        var jStr = formatFirestoreDateLike(member.joinDate);
+        if (jStr) return jStr;
+        if (member.mdLookupJoinDateMs != null && !isNaN(member.mdLookupJoinDateMs)) {
+            return new Date(member.mdLookupJoinDateMs).toISOString().replace('T', ' ').substring(0, 19);
+        }
+        if (member.mdLookupCreatedAtMs != null && !isNaN(member.mdLookupCreatedAtMs)) {
+            return new Date(member.mdLookupCreatedAtMs).toISOString().replace('T', ' ').substring(0, 19);
+        }
+        var c = formatFirestoreDateLike(member.createdAt);
+        if (c) return c;
+        return formatFirestoreDateLike(member.updatedAt);
+    }
+
+    /** 4~5자리 숫자 MD/추천인 코드만 추출 (Firestore number·문자열 공통) */
+    function mdLookupDigits45(value) {
+        if (value == null || value === '') return '';
+        var s = String(value).replace(/\s/g, '').trim();
+        if (/^\d{4,5}$/.test(s)) return s;
+        return '';
+    }
+
+    /**
+     * MD코드 열: Firestore/조회 시점 소속만 표시(mdLookupRawMdCode → mdCode).
+     * 소속이 4자리·가입 추천인이 5자리인 경우가 있어도, 소속은 DB 그대로 두고 추천인 열에서만 가입 입력을 보여 줌.
+     */
+    function getMdLookupMdCodeDisplay(member) {
+        if (!member) return '';
+        var raw = mdLookupDigits45(member.mdLookupRawMdCode);
+        if (raw) return raw;
+        var d = mdLookupDigits45(member.mdCode);
+        if (d) return d;
+        if (member.mdCode != null) return String(member.mdCode).replace(/\s/g, '').trim();
+        return '';
+    }
+
+    /**
+     * 추천인: referralCode → recommender
+     * - MD열(소속 줄)과 같은 5자리면 가입 시 소속·추천인에 같은 값이 들어간 경우 → 상위 4자리만(추천인 MD)
+     * - MD가 4자리·추천인 필드만 5자리면 가입 입력 그대로 5자리 표시(4자리 검색 때 정상 케이스)
+     */
+    function getMdLookupReferralDisplay(member) {
+        if (!member) return '';
+        var mdDisp = getMdLookupMdCodeDisplay(member);
+        var r = (member.referralCode != null ? String(member.referralCode) : '').trim();
+        var c = (member.recommender != null ? String(member.recommender) : '').trim();
+
+        function dispReferralField(ref) {
+            if (!ref) return '';
+            var d = mdLookupDigits45(ref);
+            if (!d) return ref;
+            if (d.length === 5 && mdDisp && d === mdDisp) return d.slice(0, 4);
+            return d;
+        }
+
+        var rDisp = dispReferralField(r);
+        if (rDisp) return rDisp;
+        var cDisp = dispReferralField(c);
+        if (cDisp) return cDisp;
+        if (/^\d{5}$/.test(mdDisp)) return mdDisp.slice(0, 4);
+        var lastSearch = (typeof window !== 'undefined' && window.mdLookupLastCode)
+            ? String(window.mdLookupLastCode).trim() : '';
+        if (/^\d{4}$/.test(lastSearch)) return lastSearch;
+        return '';
+    }
+
     function updateMdLookupStatsPanel(members, opts) {
         opts = opts || {};
         var elC = document.getElementById('mdLookupStatCount');
@@ -92,14 +215,9 @@
             var memberId = member.userId || member.id || '';
             var nameRaw = (member.name || member.userName || '').toString().trim();
             var name = (!nameRaw || nameRaw.indexOf('@') !== -1) ? '이름 없음' : nameRaw;
-            var joinDate = '';
-            if (member.joinDate) joinDate = member.joinDate;
-            else if (member.createdAt) {
-                if (member.createdAt.seconds) joinDate = new Date(member.createdAt.seconds * 1000).toISOString().replace('T', ' ').substring(0, 19);
-                else if (member.createdAt.toDate) joinDate = member.createdAt.toDate().toISOString().replace('T', ' ').substring(0, 19);
-            }
-            var referralCode = member.referralCode || member.recommender || '';
-            var mdCodeDisp = (member.mdCode || '').toString().trim();
+            var joinDate = formatMemberJoinDate(member);
+            var referralCode = getMdLookupReferralDisplay(member);
+            var mdCodeDisp = getMdLookupMdCodeDisplay(member);
             return '<tr><td>' + (start + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + escapeHtml(mdCodeDisp) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrixVal(Number(member.supportAmount || 0)) + ' trix</td></tr>';
         }).join('');
 
