@@ -543,8 +543,46 @@ const productService = {
             console.error('상품 삭제 오류:', error);
             throw error;
         }
+    },
+
+    /** 단일 상품 문서 조회 (주문 지원금 폴백·승인 백필용) */
+    async getProductById(productId) {
+        try {
+            if (!productId) return null;
+            if (!db) await initFirebase();
+            if (!db) return null;
+            const snap = await collections.products().doc(String(productId).trim()).get();
+            if (!snap.exists) return null;
+            return Object.assign({ id: snap.id }, snap.data());
+        } catch (error) {
+            console.error('getProductById 오류:', error);
+            return null;
+        }
     }
 };
+
+/**
+ * 주문에 기록된 지원금이 비어 있거나 0이면 상품 마스터 supportAmount×수량으로 보강 (추첨 풀·집계·승인 백필 공통).
+ * @param {object} order Firestore 주문 data
+ * @param {object|null} product 상품 data (supportAmount 필드)
+ */
+function resolveOrderSupportAmount(order, product) {
+    if (!order || typeof order !== 'object') return 0;
+    function num(v) {
+        var x = Number(v);
+        return isNaN(x) ? 0 : x;
+    }
+    var fromOrder = num(order.supportAmount);
+    if (fromOrder <= 0) fromOrder = num(order.support);
+    if (fromOrder <= 0) fromOrder = num(order.productSupport);
+    if (fromOrder > 0) return fromOrder;
+    if (!product || typeof product !== 'object') return 0;
+    var perUnit = num(product.supportAmount);
+    if (perUnit <= 0) return 0;
+    var qty = num(order.quantity);
+    if (qty <= 0) qty = 1;
+    return Math.floor(perUnit * qty);
+}
 
 // 주문 관리 함수
 const orderService = {
@@ -613,13 +651,18 @@ const orderService = {
                 return {};
             }
             const snapshot = await db.collection('orders').get();
+            const productSnap = await db.collection('products').get();
+            const productById = {};
+            productSnap.docs.forEach(function (pdoc) {
+                productById[pdoc.id] = pdoc.data();
+            });
             const byMember = {};
             snapshot.docs.forEach(doc => {
                 const d = doc.data();
                 const uid1 = (d.userId || '').toString().trim();
                 const uid2 = (d.memberId != null && d.memberId !== '') ? String(d.memberId).trim() : '';
                 const orderTotal = Number(d.totalPrice ?? d.productPrice ?? d.amount ?? 0) || (Number(d.price || 0) * Number(d.quantity || 1));
-                const support = Number(d.supportAmount ?? d.support ?? d.productSupport ?? 0);
+                const support = resolveOrderSupportAmount(d, d.productId ? productById[d.productId] : null);
                 function addTo(key) {
                     if (!key) return;
                     if (!byMember[key]) byMember[key] = { purchaseAmount: 0, supportAmount: 0, accumulatedSupport: 0 };
@@ -1276,7 +1319,8 @@ window.firebaseAdmin = {
     visitorStatsService,
     boardService,
     tokenService,
-    enrichMembersWithOrderStats
+    enrichMembersWithOrderStats,
+    resolveOrderSupportAmount
 };
 
 // 스크립트 실행 시점에 firebase가 이미 있으면 즉시 db 연결 (동기)

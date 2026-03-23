@@ -865,6 +865,40 @@ function changePurchaseRequestPage(section, page) {
     }
 }
 
+/** 승인 시 주문에 지원금이 비어 있으면 상품 마스터(supportAmount×수량)로 백필한 update 페이로드 */
+async function buildApproveOrderUpdatePayload(orderId) {
+    var fa = window.firebaseAdmin;
+    if (!fa || !fa.collections || !fa.orderService) return { status: 'approved' };
+    try {
+        if (typeof fa.getInitPromise === 'function') await fa.getInitPromise();
+    } catch (e) {}
+    try {
+        var snap = await fa.collections.orders().doc(orderId).get();
+        if (!snap.exists) return { status: 'approved' };
+        var orderData = snap.data();
+        var product = null;
+        if (orderData.productId && fa.productService && typeof fa.productService.getProductById === 'function') {
+            try {
+                product = await fa.productService.getProductById(orderData.productId);
+            } catch (pe) {
+                console.warn('승인 시 상품 조회 실패:', pe);
+            }
+        }
+        var resolved = typeof fa.resolveOrderSupportAmount === 'function'
+            ? fa.resolveOrderSupportAmount(Object.assign({ id: orderId }, orderData), product)
+            : (Number(orderData.supportAmount) || 0);
+        var current = Number(orderData.supportAmount ?? orderData.support ?? orderData.productSupport) || 0;
+        var patch = { status: 'approved' };
+        if (resolved > 0 && current <= 0) {
+            patch.supportAmount = resolved;
+        }
+        return patch;
+    } catch (err) {
+        console.warn('buildApproveOrderUpdatePayload 실패:', err);
+        return { status: 'approved' };
+    }
+}
+
 // 이페이지승인: 현재 페이지에 보이는 승인대기 건만 일괄 승인
 async function approvePageOrders() {
     var allPending = window._purchaseRequestPendingOrders || [];
@@ -879,7 +913,8 @@ async function approvePageOrders() {
             var order = pageSlice[i];
             var orderId = order.id || order.orderId;
             if (!orderId) continue;
-            await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'approved' });
+            var approvePatch = await buildApproveOrderUpdatePayload(orderId);
+            await window.firebaseAdmin.orderService.updateOrder(orderId, approvePatch);
             try {
                 var orderDoc = await window.firebaseAdmin.collections.orders().doc(orderId).get();
                 if (orderDoc.exists) {
@@ -908,7 +943,8 @@ async function approveAllOrders() {
             var order = allPending[i];
             var orderId = order.id || order.orderId;
             if (!orderId) continue;
-            await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'approved' });
+            var approvePatchAll = await buildApproveOrderUpdatePayload(orderId);
+            await window.firebaseAdmin.orderService.updateOrder(orderId, approvePatchAll);
             try {
                 var orderDoc = await window.firebaseAdmin.collections.orders().doc(orderId).get();
                 if (orderDoc.exists) {
@@ -1935,7 +1971,8 @@ document.addEventListener('click', (e) => {
         (async () => {
             try {
                 if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
-                    await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'approved' });
+                    var singleApprovePatch = await buildApproveOrderUpdatePayload(orderId);
+                    await window.firebaseAdmin.orderService.updateOrder(orderId, singleApprovePatch);
                     
                     // 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
                     try {
@@ -1992,7 +2029,12 @@ document.addEventListener('click', (e) => {
         (async () => {
             try {
                 if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
-                    await window.firebaseAdmin.orderService.updateOrder(orderId, { status: newStatus });
+                    if (newStatus === 'approved') {
+                        var statusApprovePatch = await buildApproveOrderUpdatePayload(orderId);
+                        await window.firebaseAdmin.orderService.updateOrder(orderId, statusApprovePatch);
+                    } else {
+                        await window.firebaseAdmin.orderService.updateOrder(orderId, { status: newStatus });
+                    }
                     alert('상태가 변경되었습니다.');
                     await loadPurchaseRequests();
                 }
@@ -3785,6 +3827,9 @@ async function loadLotteryConfirmedFromFirebase() {
 async function loadLotteryWaitingData(confirmedList) {
     try {
         if (!window.firebaseAdmin || !window.firebaseAdmin.orderService) return;
+        if (typeof window.firebaseAdmin.getInitPromise === 'function') {
+            await window.firebaseAdmin.getInitPromise();
+        }
         var confirmed = confirmedList != null ? confirmedList : (window.LOTTERY_CONFIRMED_RESULTS || []);
         var winnerOrderIds = new Set();
         confirmed.forEach(function (r) {
@@ -3815,7 +3860,23 @@ async function loadLotteryWaitingData(confirmedList) {
                 });
             } catch (e) { console.warn('추첨 대기 명단 회원 로드 실패:', e); }
         }
+        var productById = {};
+        if (window.firebaseAdmin.productService && typeof window.firebaseAdmin.productService.getProducts === 'function') {
+            try {
+                var prods = await window.firebaseAdmin.productService.getProducts({}) || [];
+                prods.forEach(function (p) {
+                    if (p && p.id) productById[p.id] = p;
+                });
+            } catch (pe) {
+                console.warn('추첨 대기: 상품 목록 로드 실패 (지원금은 주문값만 사용):', pe);
+            }
+        }
+        var resolveSupport = window.firebaseAdmin.resolveOrderSupportAmount;
         var list = sorted.map(function (order) {
+            var prod = order.productId ? productById[order.productId] : null;
+            var supportVal = typeof resolveSupport === 'function'
+                ? resolveSupport(order, prod)
+                : (Number(order.supportAmount ?? order.support ?? order.productSupport) || 0);
             return {
                 id: order.id,
                 orderId: order.id,
@@ -3824,7 +3885,7 @@ async function loadLotteryWaitingData(confirmedList) {
                 name: order.userName || order.name || '-',
                 phone: _orderPhoneWithMember(order, memberMap),
                 amount: order.productPrice || order.amount || 0,
-                productSupport: order.supportAmount || 0,
+                productSupport: supportVal,
                 productId: order.productId,
                 productName: order.productName || order.product_name || null,
                 confirmed: true,
