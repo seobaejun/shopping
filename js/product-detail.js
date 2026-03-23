@@ -502,10 +502,31 @@ function getSelectedDelivery() {
     return { recipientName: recipientName, phone: phone, postcode: postcode, address: address, detailAddress: detailAddress };
 }
 
+/**
+ * 배송지 모달을 닫을 때 closeBuyNowDeliveryModal()이 _buyNowLoginUser를 비우므로,
+ * 결제 확인 단계에서는 localStorage의 loginUser로 복구한다.
+ */
+function getLoginUserForBuyNowOrder() {
+    var u = _buyNowLoginUser;
+    if (u && u.userId) return u;
+    try {
+        if (localStorage.getItem('isLoggedIn') === 'true') {
+            var raw = localStorage.getItem('loginUser');
+            if (raw) {
+                u = JSON.parse(raw);
+                if (u && u.userId) return u;
+            }
+        }
+    } catch (e) {}
+    return null;
+}
+
 // 바로구매: 구매 요청을 Firestore orders에 저장 (배송지 선택 후)
 function submitBuyNowOrder(delivery) {
-    var loginUser = _buyNowLoginUser;
-    if (!loginUser || !PRODUCT_INFO || !PRODUCT_INFO.id) return;
+    var loginUser = getLoginUserForBuyNowOrder();
+    if (!loginUser || !loginUser.userId || !PRODUCT_INFO || !PRODUCT_INFO.id) {
+        return Promise.reject(new Error('로그인 정보 또는 상품 정보를 확인할 수 없습니다.'));
+    }
     var totalQuantity = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.quantity || 1); }, 0);
     var totalPrice = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.price || 0) * (opt.quantity || 1); }, 0);
     var supportAmount = (PRODUCT_INFO.supportAmount != null && PRODUCT_INFO.supportAmount > 0)

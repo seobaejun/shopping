@@ -621,14 +621,10 @@
         </div>
     </div>
 
-    <!-- Firebase SDK → firebase-config.js 먼저 로드 (순서 변경 금지) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="js/firebase-config.js?v=2"></script>
+    <!-- 상단에서 이미 Firebase SDK·firebase-config 로드됨 (중복 로드 시 초기화 꼬임 방지) -->
     <script src="js/search-form.js?v=1"></script>
     <script src="js/nav-categories.js?v=2"></script>
     <script src="js/login-required-nav.js?v=1"></script>
-    <script src="js/product-detail.js?v=28"></script>
+    <script src="js/product-detail.js?v=29"></script>
 </body>
 </html>
