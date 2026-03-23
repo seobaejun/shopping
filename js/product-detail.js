@@ -502,6 +502,14 @@ function getSelectedDelivery() {
     return { recipientName: recipientName, phone: phone, postcode: postcode, address: address, detailAddress: detailAddress };
 }
 
+/** 배송 기본주소·상세주소 중 하나라도 있어야 주문 가능 (둘 다 비어 있으면 배송 불가) */
+function isDeliveryAddressFilled(delivery) {
+    if (!delivery) return false;
+    var addr = (delivery.address || '').trim();
+    var detail = (delivery.detailAddress || '').trim();
+    return addr.length > 0 || detail.length > 0;
+}
+
 /**
  * 배송지 모달을 닫을 때 closeBuyNowDeliveryModal()이 _buyNowLoginUser를 비우므로,
  * 결제 확인 단계에서는 localStorage의 loginUser로 복구한다.
@@ -526,6 +534,9 @@ function submitBuyNowOrder(delivery) {
     var loginUser = getLoginUserForBuyNowOrder();
     if (!loginUser || !loginUser.userId || !PRODUCT_INFO || !PRODUCT_INFO.id) {
         return Promise.reject(new Error('로그인 정보 또는 상품 정보를 확인할 수 없습니다.'));
+    }
+    if (!isDeliveryAddressFilled(delivery)) {
+        return Promise.reject(new Error('배송 주소가 없습니다. 주소를 입력한 뒤 다시 시도해주세요.'));
     }
     var totalQuantity = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.quantity || 1); }, 0);
     var totalPrice = selectedOptionsData.reduce(function (sum, opt) { return sum + (opt.price || 0) * (opt.quantity || 1); }, 0);
@@ -656,8 +667,12 @@ function initBuyNowDeliveryModal() {
             }
             var source = document.querySelector('input[name="deliverySource"]:checked');
             var sourceVal = source ? source.value : 'profile';
-            if (sourceVal === 'new' && !delivery.address) {
-                alert('주소를 입력해주세요.');
+            if (!isDeliveryAddressFilled(delivery)) {
+                if (sourceVal === 'new') {
+                    alert('주소를 입력해주세요.');
+                } else {
+                    alert('등록된 배송지에 주소가 없습니다. 마이페이지에서 주소를 등록하거나, 배송지에서「직접 입력」을 선택해 주소를 입력해주세요.');
+                }
                 return;
             }
             _buyNowPendingDelivery = delivery;
