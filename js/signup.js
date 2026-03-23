@@ -13,6 +13,59 @@ let signupData = {};
 // Firebase 초기화 (설정은 firebase-config.js에서 로드)
 let db = null;
 
+/** Firebase Auth와 동일하게 이메일 정규화 (중복 판별·createUser 기준 통일) */
+function normalizeSignupEmail(email) {
+    if (!email || typeof email !== 'string') return '';
+    return email.trim().toLowerCase();
+}
+
+/**
+ * Firestore members에서 이메일 중복 조회 (소문자 정규화값 + 기존 대소문자 혼용 문서 호환)
+ */
+async function findMembersByEmailForDuplicateCheck(db, rawEmail) {
+    const normalized = normalizeSignupEmail(rawEmail);
+    const trimmed = (rawEmail || '').trim();
+    let snap = await db.collection('members').where('email', '==', normalized).get();
+    if (!snap.empty) return snap;
+    if (trimmed && trimmed !== normalized) {
+        snap = await db.collection('members').where('email', '==', trimmed).get();
+    }
+    return snap;
+}
+
+/**
+ * createUserWithEmailAndPassword 직전과 동일한 기준으로 이메일 사용 가능 여부 판단.
+ * (Auth fetchSignInMethods + members, 탈퇴 회원 이메일은 재가입 가능으로 허용)
+ * @returns {Promise<{ available: boolean, code: string }>}
+ */
+async function evaluateEmailForSignup(db, rawEmail) {
+    const email = normalizeSignupEmail(rawEmail);
+    if (!email) {
+        return { available: false, code: 'empty' };
+    }
+    try {
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            const methods = await firebase.auth().fetchSignInMethodsForEmail(email);
+            if (methods && methods.length > 0) {
+                return { available: false, code: 'auth-in-use' };
+            }
+        }
+    } catch (authErr) {
+        console.warn('evaluateEmailForSignup: fetchSignInMethodsForEmail 실패', authErr);
+        return { available: false, code: 'auth-check-failed' };
+    }
+
+    const snapshot = await findMembersByEmailForDuplicateCheck(db, rawEmail);
+    if (!snapshot.empty) {
+        const existing = snapshot.docs[0].data();
+        if (existing.status === 'withdrawn') {
+            return { available: true, code: 'withdrawn-email' };
+        }
+        return { available: false, code: 'member-active' };
+    }
+    return { available: true, code: 'ok' };
+}
+
 // Firebase 초기화 함수
 async function initFirebase() {
     if (db) {
@@ -306,7 +359,7 @@ function saveStep2Data() {
     signupData = {
         userName: document.getElementById('userName').value.trim(),
         userId: document.getElementById('userId').value.trim(),
-        email: document.getElementById('userEmail').value.trim(),
+        email: normalizeSignupEmail(document.getElementById('userEmail').value.trim()),
         password: document.getElementById('password').value.trim(),
         postcode: document.getElementById('postcode').value.trim(),
         address: document.getElementById('address').value.trim(),
@@ -346,37 +399,31 @@ function setupEmailCheck() {
             const db = await initFirebase();
             if (!db) throw new Error('Firebase 초기화 실패');
 
-            // Firebase Auth에서 이메일 사용 여부 확인 (가입 시 사용하는 이메일)
-            if (typeof firebase !== 'undefined' && firebase.auth) {
-                const methods = await firebase.auth().fetchSignInMethodsForEmail(email);
-                if (methods && methods.length > 0) {
-                    alert('이미 사용 중인 이메일입니다.');
-                    userEmailInput.dataset.verified = 'false';
-                    checkBtn.disabled = false;
-                    checkBtn.textContent = '중복확인';
-                    checkBtn.style.background = '';
-                    return;
-                }
+            const result = await evaluateEmailForSignup(db, email);
+
+            if (result.code === 'auth-check-failed') {
+                alert('이메일 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                userEmailInput.dataset.verified = 'false';
+                checkBtn.textContent = '중복확인';
+                checkBtn.style.background = '';
+                checkBtn.disabled = false;
+                return;
             }
 
-            // Firestore members에서도 이메일 중복 확인 (탈퇴 회원 제외)
-            const snapshot = await db.collection('members')
-                .where('email', '==', email)
-                .get();
+            if (!result.available) {
+                alert('이미 사용 중인 이메일입니다.');
+                userEmailInput.dataset.verified = 'false';
+                checkBtn.textContent = '중복확인';
+                checkBtn.style.background = '';
+                checkBtn.disabled = false;
+                return;
+            }
 
-            if (!snapshot.empty) {
-                const existing = snapshot.docs[0].data();
-                if (existing.status === 'withdrawn') {
-                    alert('탈퇴한 이메일입니다. 재가입하시면 같은 이메일로 다시 이용할 수 있습니다.');
-                    checkBtn.textContent = '확인완료';
-                    checkBtn.style.background = '#4caf50';
-                    userEmailInput.dataset.verified = 'true';
-                } else {
-                    alert('이미 사용 중인 이메일입니다.');
-                    userEmailInput.dataset.verified = 'false';
-                    checkBtn.textContent = '중복확인';
-                    checkBtn.style.background = '';
-                }
+            if (result.code === 'withdrawn-email') {
+                alert('탈퇴한 이메일입니다. 재가입하시면 같은 이메일로 다시 이용할 수 있습니다.');
+                checkBtn.textContent = '확인완료';
+                checkBtn.style.background = '#4caf50';
+                userEmailInput.dataset.verified = 'true';
                 checkBtn.disabled = false;
                 return;
             }
@@ -794,7 +841,8 @@ function setupFinalSignup() {
             agreeSMS: document.getElementById('agreeSMS').checked,
             agreePublic: document.getElementById('agreePublic').checked
         };
-        
+        finalData.email = normalizeSignupEmail(finalData.email || '');
+
         // 회원가입 처리
         const signupBtn = form.querySelector('.btn-signup');
         signupBtn.disabled = true;
@@ -838,6 +886,19 @@ function setupFinalSignup() {
                 sendSignupCompleteSMS(finalData.mobile);
                 alert('재가입이 완료되었습니다. 입력하신 비밀번호로 로그인해 주세요.');
                 window.location.href = 'login.html';
+                signupBtn.disabled = false;
+                signupBtn.textContent = '회원가입';
+                return;
+            }
+
+            // createUser 직전에 중복확인 버튼과 동일 기준으로 재검사 (레이스·열거방지 괴리 완화)
+            const preCreateEmailCheck = await evaluateEmailForSignup(db, finalData.email);
+            if (!preCreateEmailCheck.available) {
+                if (preCreateEmailCheck.code === 'auth-check-failed') {
+                    alert('이메일 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                } else {
+                    alert('이미 사용 중인 이메일입니다.');
+                }
                 signupBtn.disabled = false;
                 signupBtn.textContent = '회원가입';
                 return;
