@@ -5301,20 +5301,13 @@ async function openMdModal(editId) {
             document.getElementById('mdEditUserId').value = editUserId;
             document.getElementById('mdEditName').value = md.name || '';
             document.getElementById('mdEditMdCode').value = md.mdCode || '';
+            document.getElementById('mdEditMdCode').readOnly = true;
             document.getElementById('mdEditEmail').value = editEmail;
             document.getElementById('mdEditPhone').value = editPhone;
         }
     } else {
-        title.textContent = 'MD 추가';
-        if (addSection) addSection.style.display = 'block';
-        if (editForm) editForm.style.display = 'none';
-        document.getElementById('mdEditId').value = '';
-        var nameEl = document.getElementById('mdAddName');
-        var userIdEl = document.getElementById('mdAddUserId');
-        var mdCodeEl = document.getElementById('mdAddMdCode');
-        if (nameEl) nameEl.value = '';
-        if (userIdEl) userIdEl.value = '';
-        if (mdCodeEl) mdCodeEl.value = '';
+        alert('MD 추가/코드 부여는 MD 관리자 화면에서만 가능합니다.');
+        return;
     }
     modal.style.display = 'flex';
 }
@@ -5335,63 +5328,17 @@ async function saveMdModal() {
     try {
         if (id) {
             var name = (document.getElementById('mdEditName') && document.getElementById('mdEditName').value || '').trim();
-            var mdCode = (document.getElementById('mdEditMdCode') && document.getElementById('mdEditMdCode').value || '').trim();
             var email = (document.getElementById('mdEditEmail') && document.getElementById('mdEditEmail').value || '').trim();
             var phone = (document.getElementById('mdEditPhone') && document.getElementById('mdEditPhone').value || '').trim();
-            if (!name || !mdCode) {
-                alert('이름과 MD코드를 입력해주세요.');
-                return;
-            }
-            await mdService.updateMd(id, { name: name, mdCode: mdCode, email: email, phone: phone });
-            alert('수정되었습니다.');
-        } else {
-            var addName = (document.getElementById('mdAddName') && document.getElementById('mdAddName').value || '').trim();
-            var addUserId = (document.getElementById('mdAddUserId') && document.getElementById('mdAddUserId').value || '').trim();
-            var addMdCode = (document.getElementById('mdAddMdCode') && document.getElementById('mdAddMdCode').value || '').trim();
-            if (!addName) {
+            if (!name) {
                 alert('이름을 입력해주세요.');
                 return;
             }
-            if (!addUserId) {
-                alert('아이디를 입력해주세요.');
-                return;
-            }
-            if (!addMdCode) {
-                alert('MD코드를 입력해주세요.');
-                return;
-            }
-            var email = '';
-            var phone = '';
-            var memberService = window.firebaseAdmin && window.firebaseAdmin.memberService;
-            if (memberService) {
-                try {
-                    var members = await memberService.getMembers({ searchTerm: addUserId });
-                    if (members && members.length) {
-                        var m = members.find(function (x) { return x.userId === addUserId; }) || members[0];
-                        if (m.userId === addUserId || (m.name && m.name === addName)) {
-                            email = m.email || '';
-                            phone = m.phone || m.mobile || '';
-                        }
-                    }
-                    if (!email && !phone) {
-                        members = await memberService.getMembers({ searchTerm: addName });
-                        if (members && members.length) {
-                            var m = (members.find(function (x) { return x.name === addName; }) || members[0]);
-                            email = m.email || '';
-                            phone = m.phone || m.mobile || '';
-                        }
-                    }
-                } catch (e) { console.warn('MD 추가 시 회원 조회 실패:', e); }
-            }
-            await mdService.addMd({
-                userId: addUserId,
-                name: addName,
-                mdCode: addMdCode,
-                email: email,
-                phone: phone,
-                status: 'active'
-            });
-            alert('MD로 추가되었습니다.');
+            await mdService.updateMd(id, { name: name, email: email, phone: phone });
+            alert('수정되었습니다.');
+        } else {
+            alert('관리자 화면에서는 MD 추가/코드 부여를 할 수 없습니다. MD 관리자 화면을 이용해주세요.');
+            return;
         }
         closeMdModal();
         await loadMdSettings();

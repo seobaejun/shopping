@@ -626,9 +626,14 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
             var memberKindCell = isMdMember
                 ? '<td><span class="badge badge-success">MD 회원</span></td>'
                 : '<td><span class="badge badge-secondary">일반 회원</span></td>';
-            var mdAddCell = showMdAddBtn
-                ? '<td><button type="button" class="btn btn-sm btn-primary btn-md-admin-add" data-member-doc-id="' + safeDocAttr + '">MD 추가</button></td>'
-                : '<td>—</td>';
+            var mdAddCell = '—';
+            if (showMdAddBtn) {
+                var addBtn = '<button type="button" class="btn btn-sm btn-primary btn-md-admin-add" data-member-doc-id="' + safeDocAttr + '">MD 추가</button>';
+                var removeBtn = '<button type="button" class="btn btn-sm btn-danger btn-md-admin-remove" data-member-doc-id="' + safeDocAttr + '" ' + (isMdMember ? '' : 'disabled') + ' style="margin-left:6px;">MD 삭제</button>';
+                mdAddCell = '<td>' + addBtn + removeBtn + '</td>';
+            } else {
+                mdAddCell = '<td>—</td>';
+            }
             return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(emailDisplay) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td>' + memberKindCell + mdAddCell + '</tr>';
         }
         const phone = member.phone || '';

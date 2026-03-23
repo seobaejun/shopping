@@ -833,10 +833,11 @@ function setupFinalSignup() {
             return;
         }
         
-        // 최종 데이터 수집 (추천인/MD는 2단계 mdCode만 사용)
+        // 최종 데이터 수집 (가입 입력값은 추천인 코드로만 취급)
+        const referralCodeInput = (signupData.mdCode || '').trim();
         const finalData = {
             ...signupData,
-            referralCode: (signupData.mdCode || '').trim(),
+            referralCode: referralCodeInput,
             agreeEmail: document.getElementById('agreeEmail').checked,
             agreeSMS: document.getElementById('agreeSMS').checked,
             agreePublic: document.getElementById('agreePublic').checked
@@ -864,7 +865,7 @@ function setupFinalSignup() {
 
             if (isWithdrawn) {
                 const docId = withdrawnDoc.id;
-                const recommenderValue = (signupData.mdCode || '').trim() || '관리자';
+                const recommenderValue = referralCodeInput || '관리자';
                 await db.collection('members').doc(docId).update({
                     email: finalData.email,
                     name: finalData.userName,
@@ -873,7 +874,7 @@ function setupFinalSignup() {
                     address: finalData.address,
                     detailAddress: finalData.detailAddress,
                     password: finalData.password,
-                    referralCode: (signupData.mdCode || '').trim(),
+                    referralCode: referralCodeInput,
                     recommender: recommenderValue,
                     agreeEmail: finalData.agreeEmail,
                     agreeSMS: finalData.agreeSMS,
@@ -913,8 +914,9 @@ function setupFinalSignup() {
             const uid = userCredential.user.uid;
             console.log('✅ Firebase Auth 계정 생성 완료, UID:', uid);
             
-            // 2. Firestore에 나머지 회원 정보 저장 (추천인/MD는 2단계 mdCode 하나로 통일)
-            const recommenderValue = (signupData.mdCode || '').trim() || '관리자';
+            // 2. Firestore에 나머지 회원 정보 저장
+            // 추천인 코드(referral/recommender)와 MD 코드(mdCode)는 분리한다.
+            const recommenderValue = referralCodeInput || '관리자';
             const memberData = {
                 uid: uid,
                 userId: finalData.userId,
@@ -924,8 +926,8 @@ function setupFinalSignup() {
                 postcode: finalData.postcode,
                 address: finalData.address,
                 detailAddress: finalData.detailAddress,
-                referralCode: (signupData.mdCode || '').trim(),
-                mdCode: (signupData.mdCode || '').trim(),
+                referralCode: referralCodeInput,
+                mdCode: '',
                 agreeEmail: finalData.agreeEmail || false,
                 agreeSMS: finalData.agreeSMS || false,
                 agreePublic: finalData.agreePublic || false,

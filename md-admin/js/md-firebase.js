@@ -85,6 +85,29 @@ async function fetchMemberDocsForMdCodeEquality(codeStr) {
     return out;
 }
 
+async function fetchMemberDocsByFieldEquality(fieldName, codeStr) {
+    if (!window.db) return [];
+    var col = window.db.collection('members');
+    var variants = getMdCodeEqualityVariantsForQuery(codeStr);
+    var seen = Object.create(null);
+    var out = [];
+    for (var vi = 0; vi < variants.length; vi++) {
+        var snap = await col.where(fieldName, '==', variants[vi]).get();
+        snap.forEach(function (doc) {
+            var id = doc.id;
+            if (seen[id]) return;
+            seen[id] = true;
+            out.push(doc);
+        });
+    }
+    return out;
+}
+
+/** MD 관리 대상 회원 조회: mdCode 기준만 조회 */
+async function fetchMemberDocsForManagedCode(codeStr) {
+    return await fetchMemberDocsForMdCodeEquality(codeStr);
+}
+
 /** Firestore mdCode가 Long 등일 때 4~5자리 문자열로 */
 function stringifyMemberMdCodeField(value) {
     if (value == null || value === '') return '';
@@ -311,6 +334,27 @@ async function refreshMdCodeFromFirestoreIfNeeded() {
 }
 
 // 회원 데이터 조회 (MD 코드 기반) - 권한 체크 추가
+function dedupeMembersForLookup(members) {
+    if (!Array.isArray(members) || members.length <= 1) return members || [];
+    const seen = Object.create(null);
+    const out = [];
+    for (let i = 0; i < members.length; i++) {
+        const m = members[i] || {};
+        const k1 = (m.id || m.docId || '').toString().trim();
+        const k2 = (m.userId || '').toString().trim();
+        const k3 = (m.email || '').toString().trim().toLowerCase();
+        const key = k1 || (k2 ? 'uid:' + k2 : '') || (k3 ? 'em:' + k3 : '');
+        if (!key) {
+            out.push(m);
+            continue;
+        }
+        if (seen[key]) continue;
+        seen[key] = true;
+        out.push(m);
+    }
+    return out;
+}
+
 async function getMembersByMdCode(mdCode) {
     try {
         await waitForFirebaseMd();
@@ -335,7 +379,7 @@ async function getMembersByMdCode(mdCode) {
             console.log('4자리 코드 조회:', code, '하위 코드들:', subordinates);
             
             for (const searchCode of allCodes) {
-                const docs = await fetchMemberDocsForMdCodeEquality(searchCode);
+                const docs = await fetchMemberDocsForManagedCode(searchCode);
                 docs.forEach(function (doc) {
                     pushMemberRowFromDoc(members, doc, searchCode);
                 });
@@ -344,7 +388,7 @@ async function getMembersByMdCode(mdCode) {
             // 5자리 코드: 해당 코드만 조회
             console.log('5자리 코드 조회:', code);
             
-            const docs = await fetchMemberDocsForMdCodeEquality(code);
+            const docs = await fetchMemberDocsForManagedCode(code);
             docs.forEach(function (doc) {
                 pushMemberRowFromDoc(members, doc, code);
             });
@@ -361,8 +405,12 @@ async function getMembersByMdCode(mdCode) {
             await mergeLoggedInMdSelfIfMissingForLookup(members, codesForManagers);
         }
         
-        console.log(`MD 코드 ${code}로 조회된 회원 수:`, members.length);
-        return members;
+        const deduped = dedupeMembersForLookup(members);
+        if (deduped.length !== members.length) {
+            console.log(`MD 조회 중복 제거: ${members.length} -> ${deduped.length}`);
+        }
+        console.log(`MD 코드 ${code}로 조회된 회원 수:`, deduped.length);
+        return deduped;
         
     } catch (error) {
         console.error('회원 조회 오류:', error);
@@ -514,7 +562,7 @@ async function getAllowedMembers() {
         const members = [];
         
         for (const code of allowedCodes) {
-            const docs = await fetchMemberDocsForMdCodeEquality(code);
+            const docs = await fetchMemberDocsForManagedCode(code);
             docs.forEach(function (doc) {
                 const data = doc.data();
                 members.push({
@@ -880,6 +928,14 @@ window.mdAdminAddMdFromMemberDocId = async function (memberDocId) {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }));
         }
+        // MD 등록 시 members.mdCode도 최종 MD 코드로 동기화
+        var memberDocId = (m.id || m.docId || '').toString().trim();
+        if (memberDocId) {
+            await window.db.collection('members').doc(memberDocId).update({
+                mdCode: mdCode,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
         alert('MD로 추가되었습니다. 관리자 권한 설정의 MD 목록과 동일한 데이터로 표시됩니다.');
         if (typeof window.loadAllMembers === 'function') await window.loadAllMembers();
         if (typeof window.searchMemberInfo === 'function') await window.searchMemberInfo();
@@ -889,14 +945,93 @@ window.mdAdminAddMdFromMemberDocId = async function (memberDocId) {
     }
 };
 
+window.mdAdminRemoveMdFromMemberDocId = async function (memberDocId) {
+    if (typeof sessionStorage === 'undefined' || sessionStorage.getItem('mdAdminFromAdmin') !== 'true') {
+        alert('관리자 페이지에서 MD 바로가기로 들어온 경우에만 MD 삭제가 가능합니다.');
+        return;
+    }
+    var docId = memberDocId != null ? String(memberDocId).trim() : '';
+    if (!docId) {
+        alert('회원 문서 ID가 없습니다.');
+        return;
+    }
+    var m = null;
+    var lists = [window.allMembersData, window.filteredMembersData];
+    for (var i = 0; i < lists.length; i++) {
+        var arr = lists[i];
+        if (!Array.isArray(arr)) continue;
+        for (var j = 0; j < arr.length; j++) {
+            var x = arr[j];
+            if (String(x.id || x.docId) === docId) {
+                m = x;
+                break;
+            }
+        }
+        if (m) break;
+    }
+    if (!m) {
+        alert('회원 정보를 찾을 수 없습니다. 목록을 새로고침한 뒤 다시 시도해주세요.');
+        return;
+    }
+    var userId = (m.userId || '').toString().trim();
+    var email = (m.email || '').toString().trim();
+    if (!userId && !email) {
+        alert('식별 가능한 회원 정보(userId/email)가 없습니다.');
+        return;
+    }
+    if (typeof window.confirm === 'function' && !window.confirm('해당 회원을 MD 목록에서 삭제하시겠습니까?')) return;
+    try {
+        await waitForFirebaseMd();
+        var targets = {};
+        if (userId) {
+            var byUser = await window.db.collection('mdManagers').where('userId', '==', userId).get();
+            byUser.forEach(function (d) { targets[d.id] = true; });
+        }
+        if (email) {
+            var byEmail = await window.db.collection('mdManagers').where('email', '==', email).get();
+            byEmail.forEach(function (d) { targets[d.id] = true; });
+        }
+        var ids = Object.keys(targets);
+        if (ids.length === 0) {
+            alert('MD 목록에 등록된 항목이 없습니다.');
+            return;
+        }
+        for (var k = 0; k < ids.length; k++) {
+            await window.db.collection('mdManagers').doc(ids[k]).delete();
+        }
+
+        // 일반 회원 전환: 회원 문서의 mdCode도 비움
+        var memberDocId = (m.id || m.docId || '').toString().trim();
+        if (memberDocId) {
+            await window.db.collection('members').doc(memberDocId).update({
+                mdCode: '',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        alert('MD에서 삭제되었습니다.');
+        if (typeof window.loadAllMembers === 'function') await window.loadAllMembers();
+        if (typeof window.searchMemberInfo === 'function') await window.searchMemberInfo();
+    } catch (err) {
+        console.error('MD 삭제 오류:', err);
+        alert('MD 삭제에 실패했습니다: ' + (err && err.message ? err.message : String(err)));
+    }
+};
+
 (function bindMdAdminAddMdDelegation() {
     function onBodyClick(e) {
         if (!window.isMdAdmin || typeof sessionStorage === 'undefined' || sessionStorage.getItem('mdAdminFromAdmin') !== 'true') return;
-        var btn = e.target && e.target.closest && e.target.closest('.btn-md-admin-add');
-        if (!btn) return;
+        var btnAdd = e.target && e.target.closest && e.target.closest('.btn-md-admin-add');
+        var btnRemove = e.target && e.target.closest && e.target.closest('.btn-md-admin-remove');
+        if (!btnAdd && !btnRemove) return;
         e.preventDefault();
+        var btn = btnAdd || btnRemove;
+        if (btnRemove && btnRemove.disabled) return;
         var id = btn.getAttribute('data-member-doc-id');
-        if (id != null && window.mdAdminAddMdFromMemberDocId) window.mdAdminAddMdFromMemberDocId(id);
+        if (btnAdd && id != null && window.mdAdminAddMdFromMemberDocId) {
+            window.mdAdminAddMdFromMemberDocId(id);
+        } else if (btnRemove && id != null && window.mdAdminRemoveMdFromMemberDocId) {
+            window.mdAdminRemoveMdFromMemberDocId(id);
+        }
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () { document.body.addEventListener('click', onBodyClick); });
