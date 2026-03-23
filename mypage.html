@@ -416,11 +416,16 @@
                             <h3>회원탈퇴</h3>
                         </div>
                         <div class="withdraw-notice">
-                            <p>회원탈퇴 시 계정이 탈퇴 처리되며, 주문·쇼핑지원금 이력은 보관됩니다. 동일 아이디로 재가입하시면 다시 이용하실 수 있습니다.</p>
+                            <p>회원탈퇴 시 로그인 계정(Firebase Auth)이 삭제되고, 회원 정보는 탈퇴 처리됩니다. 주문·쇼핑지원금 이력은 보관될 수 있습니다. 동일 이메일로 재가입할 수 있습니다.</p>
                             <p>정말 탈퇴하시겠습니까?</p>
                         </div>
                         <form id="mypageWithdrawForm" class="mypage-profile-form">
                             <div class="profile-form-card withdraw-form-card">
+                                <div class="form-row">
+                                    <label for="withdrawPassword">비밀번호 확인 <span class="required">*</span></label>
+                                    <input type="password" id="withdrawPassword" name="withdrawPassword" class="form-control" placeholder="로그인 비밀번호를 입력하세요" autocomplete="current-password" required>
+                                    <p class="form-help">탈퇴 처리 및 로그인 계정 삭제를 위해 본인 확인이 필요합니다.</p>
+                                </div>
                                 <div class="form-row form-row-checkbox">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="withdrawConfirm" name="withdrawConfirm">
@@ -930,10 +935,10 @@
     <script src="js/script.js?v=25"></script>
     <script src="js/admin-link-visibility.js"></script>
     <!-- 마이페이지 전용 Firestore 조회 (로그인 사용자 식별 통일) -->
-    <script src="js/mypage-api.js"></script>
+    <script src="js/mypage-api.js?v=2"></script>
     <script src="js/wishlist-cart-firebase.js"></script>
     <script src="js/notifications.js"></script>
     <!-- 마이페이지 스크립트 -->
-    <script src="js/mypage.js?v=3"></script>
+    <script src="js/mypage.js?v=4"></script>
 </body>
 </html>

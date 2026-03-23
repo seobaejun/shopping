@@ -1033,9 +1033,16 @@ function bindWithdrawSection() {
             alert('로그인 정보를 확인할 수 없습니다.');
             return;
         }
+        var pwdEl = document.getElementById('withdrawPassword');
+        var withdrawPassword = pwdEl ? pwdEl.value.trim() : '';
+        if (!withdrawPassword) {
+            alert('탈퇴 확인을 위해 비밀번호를 입력해 주세요.');
+            if (pwdEl) pwdEl.focus();
+            return;
+        }
         submitBtn.disabled = true;
         try {
-            await window.mypageApi.withdrawMember(ids.docId);
+            await window.mypageApi.withdrawMember(ids.docId, withdrawPassword);
             try {
                 localStorage.removeItem('isLoggedIn');
                 localStorage.removeItem('loginUser');

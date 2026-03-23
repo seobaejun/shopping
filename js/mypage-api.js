@@ -322,18 +322,74 @@
     }
 
     /**
-     * 회원 탈퇴 처리 (상태만 변경, 개인정보는 보관 정책에 따라 유지 또는 삭제)
+     * Firestore 회원 문서를 탈퇴 상태로 변경
+     */
+    function applyMemberWithdrawn(database, docId) {
+        return database.collection('members').doc(docId).update({
+            status: 'withdrawn',
+            withdrawnAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+
+    /**
+     * 회원 탈퇴: Firebase Auth 계정 삭제(가능 시) 후 Firestore status=withdrawn
+     * - 이메일·비밀번호 Auth 계정이 있으면 로그인 후 user.delete()
+     * - Auth에 없으면(구 가입 등) members.password와 입력 비밀번호 일치 시 Firestore만 탈퇴 처리
      * @param {string} docId - members 문서 id
+     * @param {string} password - 본인 확인용 비밀번호
      * @returns {Promise<void>}
      */
-    function withdrawMember(docId) {
+    function withdrawMember(docId, password) {
         if (!docId) return Promise.reject(new Error('회원 정보를 확인할 수 없습니다.'));
+        var pwd = (password != null ? String(password) : '').trim();
+        if (!pwd) {
+            return Promise.reject(new Error('탈퇴 확인을 위해 비밀번호를 입력해 주세요.'));
+        }
+
         return getMypageDb().then(function (database) {
             if (!database) return Promise.reject(new Error('Firestore를 사용할 수 없습니다.'));
-            return database.collection('members').doc(docId).update({
-                status: 'withdrawn',
-                withdrawnAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            return database.collection('members').doc(docId).get().then(function (memberSnap) {
+                if (!memberSnap.exists) {
+                    return Promise.reject(new Error('회원 정보를 찾을 수 없습니다.'));
+                }
+                var member = memberSnap.data();
+                var email = (member.email || '').trim();
+
+                function verifyFirestorePasswordThenWithdraw() {
+                    var stored = member.password != null ? String(member.password) : '';
+                    if (stored !== pwd) {
+                        return Promise.reject(new Error('비밀번호가 일치하지 않습니다.'));
+                    }
+                    return applyMemberWithdrawn(database, docId);
+                }
+
+                if (typeof firebase === 'undefined' || !firebase.auth || !email) {
+                    return verifyFirestorePasswordThenWithdraw();
+                }
+
+                return firebase.auth().signInWithEmailAndPassword(email, pwd)
+                    .then(function (cred) {
+                        return cred.user.delete();
+                    })
+                    .then(function () {
+                        return applyMemberWithdrawn(database, docId);
+                    })
+                    .catch(function (err) {
+                        if (err && err.code === 'auth/user-not-found') {
+                            return verifyFirestorePasswordThenWithdraw();
+                        }
+                        if (err && (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential')) {
+                            return Promise.reject(new Error('비밀번호가 일치하지 않습니다.'));
+                        }
+                        if (err && err.code === 'auth/too-many-requests') {
+                            return Promise.reject(new Error('시도 횟수가 많습니다. 잠시 후 다시 시도해 주세요.'));
+                        }
+                        if (err && err.code === 'auth/network-request-failed') {
+                            return Promise.reject(new Error('네트워크 오류가 발생했습니다.'));
+                        }
+                        return Promise.reject(err);
+                    });
             });
         });
     }
