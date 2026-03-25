@@ -4257,7 +4257,7 @@ async function confirmLotteryResult() {
                         if (orderDoc.exists) {
                             var uid = orderDoc.data().userId;
                             if (uid) {
-                                await createNotificationForUser(uid, 'lottery_completed', '추첨이 완료되었습니다', '추첨이 완료되었습니다. 마이페이지에서 확인하세요.', 'mypage.html?section=support').catch(function () {});
+                                await createNotificationForUser(uid, 'lottery_completed', '추첨이 완료되었습니다. 마이페이지에서 확인하세요.', '추첨이 완료되었습니다. 마이페이지에서 확인하세요.', 'mypage.html?section=support').catch(function () {});
                             }
                         }
                     } catch (e) {}
