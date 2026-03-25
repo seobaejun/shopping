@@ -4485,11 +4485,36 @@ function renderConfirmPagination(totalCount, currentPage) {
         return;
     }
     paginationEl.style.display = 'flex';
-    let html = '<button class="page-btn" ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="changeConfirmPage(' + (currentPage - 1) + ')"><i class="fas fa-chevron-left"></i></button>';
-    for (var i = 1; i <= totalPages; i++) {
+    
+    // 10페이지 단위로 표시
+    const pageGroupSize = 10;
+    const currentGroup = Math.ceil(currentPage / pageGroupSize);
+    const startPage = (currentGroup - 1) * pageGroupSize + 1;
+    const endPage = Math.min(startPage + pageGroupSize - 1, totalPages);
+    
+    let html = '';
+    
+    // 이전 그룹 버튼
+    if (currentGroup > 1) {
+        html += '<button class="page-btn" onclick="changeConfirmPage(' + (startPage - 1) + ')"><i class="fas fa-angle-double-left"></i></button>';
+    }
+    
+    // 이전 페이지 버튼
+    html += '<button class="page-btn" ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="changeConfirmPage(' + (currentPage - 1) + ')"><i class="fas fa-chevron-left"></i></button>';
+    
+    // 페이지 번호들 (현재 그룹의 10개)
+    for (var i = startPage; i <= endPage; i++) {
         html += '<button class="page-num ' + (i === currentPage ? 'active' : '') + '" onclick="changeConfirmPage(' + i + ')">' + i + '</button>';
     }
+    
+    // 다음 페이지 버튼
     html += '<button class="page-btn" ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="changeConfirmPage(' + (currentPage + 1) + ')"><i class="fas fa-chevron-right"></i></button>';
+    
+    // 다음 그룹 버튼
+    if (endPage < totalPages) {
+        html += '<button class="page-btn" onclick="changeConfirmPage(' + (endPage + 1) + ')"><i class="fas fa-angle-double-right"></i></button>';
+    }
+    
     paginationEl.innerHTML = html;
 }
 

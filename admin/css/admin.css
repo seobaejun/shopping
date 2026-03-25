@@ -843,6 +843,7 @@ body {
     align-items: center;
     gap: 5px;
     margin-top: 25px;
+    flex-wrap: wrap;
 }
 
 .page-btn,
@@ -854,6 +855,36 @@ body {
     border-radius: 4px;
     transition: all 0.3s;
     font-size: 13px;
+    min-width: 36px;
+    text-align: center;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+    .pagination {
+        gap: 3px;
+        margin-top: 15px;
+    }
+    
+    .page-btn,
+    .page-num {
+        padding: 6px 8px;
+        font-size: 12px;
+        min-width: 32px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination {
+        gap: 2px;
+    }
+    
+    .page-btn,
+    .page-num {
+        padding: 4px 6px;
+        font-size: 11px;
+        min-width: 28px;
+    }
 }
 
 .page-btn:hover:not(:disabled),
