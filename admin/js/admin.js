@@ -4245,6 +4245,29 @@ async function confirmLotteryResult() {
     var totalSupportConfirmed = winners.reduce(function (s, w) { return s + (w.support || 0); }, 0) + losers.reduce(function (s, l) { return s + (l.support || 0); }, 0);
     alert('추첨 결과가 확정되었습니다!\n\n회차: ' + (currentRound - 1) + '회\n당첨: ' + winners.length + '명\n미선정: ' + losers.length + '명\n총 지원금(10명 전원): ' + formatTrix(totalSupportConfirmed) + ' trix\n\n※ 지원금은 당일 일괄 지급됩니다.');
     
+    // 추첨 완료 문자 발송 (참가자 전원에게)
+    (async function () {
+        try {
+            var allParticipants = winners.concat(losers);
+            for (var i = 0; i < allParticipants.length; i++) {
+                var p = allParticipants[i];
+                if (p.orderId) {
+                    try {
+                        var orderDoc = await window.firebaseAdmin.collections.orders().doc(p.orderId).get();
+                        if (orderDoc.exists) {
+                            var uid = orderDoc.data().userId;
+                            if (uid) {
+                                await createNotificationForUser(uid, 'lottery_completed', '추첨이 완료되었습니다', '추첨이 완료되었습니다. 마이페이지에서 확인하세요.', 'mypage.html?section=support').catch(function () {});
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+        } catch (e) {
+            console.warn('추첨 완료 알림 발송 실패:', e);
+        }
+    })();
+    
     closeLotteryResult();
     renderLotteryStatus();
     if (selectedProductId) renderWaitingList(selectedProductId);
@@ -4711,7 +4734,8 @@ async function completePagePayment() {
                             if (orderDoc.exists) {
                                 var uid = orderDoc.data().userId;
                                 if (uid) {
-                                    await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
+                                    // 지급 완료 문자 발송 제거 (추첨 완료 시로 변경)
+                                    // await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
                                     if (addSupport) await tokenService.addSupportToMemberBalance(uid, result.support);
                                 }
                             }
@@ -4752,7 +4776,8 @@ async function completePagePayment() {
                         if (orderDoc.exists) {
                             var uid = orderDoc.data().userId;
                             if (uid) {
-                                await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
+                                // 지급 완료 문자 발송 제거 (추첨 완료 시로 변경)
+                                // await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
                                 if (addSupport) await tokenService.addSupportToMemberBalance(uid, result.support);
                             }
                         }
