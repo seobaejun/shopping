@@ -128,34 +128,23 @@ async function checkAndExecuteAutoLottery() {
         return;
     }
     var groupSize = parseInt(document.getElementById('groupSize')?.value || 10, 10);
-    var winnerCount = parseInt(document.getElementById('winnerCount')?.value || 2, 10);
     var waitingData = LOTTERY_WAITING_DATA[globalKey] || [];
     if (waitingData.length < groupSize) return;
     try {
-        if (typeof window !== 'undefined') window.selectedProductId = globalKey;
-        var participants = waitingData.slice(0, groupSize);
-        var shuffled = participants.slice().sort(function () { return Math.random() - 0.5; });
-        var winners = shuffled.slice(0, winnerCount);
-        var losers = shuffled.slice(winnerCount);
-        var totalSupportPool = winners.reduce(function (sum, w) { return sum + (w.productSupport || 0); }, 0);
-        var totalGroupPurchase = participants.reduce(function (sum, p) { return sum + (Number(p.amount) || 0); }, 0);
-        function calcSupport(person) {
-            if (!totalGroupPurchase || totalGroupPurchase <= 0) return 0;
-            var myAmount = Number(person.amount) || 0;
-            var support = (totalSupportPool / totalGroupPurchase) * myAmount;
-            return Math.floor(support / 10) * 10;
+        // 수동 추첨과 동일한 executeLottery()를 호출해 currentLotteryWinners/Losers를 채운다.
+        // (기존: 모달만 인자로 그려 확정 시 "추첨 결과를 찾을 수 없습니다" 발생)
+        if (typeof selectProduct === 'function') {
+            selectProduct(globalKey);
+        } else if (typeof window !== 'undefined') {
+            window.selectedProductId = globalKey;
         }
-        winners = winners.map(function (w) { return Object.assign({}, w, { calculatedSupport: calcSupport(w) }); });
-        losers = losers.map(function (l) { return Object.assign({}, l, { calculatedSupport: calcSupport(l) }); });
-        if (typeof window.currentLotteryWinners !== 'undefined') window.currentLotteryWinners = winners;
-        if (typeof window.currentLotteryLosers !== 'undefined') window.currentLotteryLosers = losers;
-        if (typeof showLotteryResult === 'function') showLotteryResult(winners, losers, participants.length);
-        var rest = waitingData.slice(groupSize);
-        var remainingData = losers.concat(rest);
-        LOTTERY_WAITING_DATA[globalKey] = remainingData;
-        if (typeof renderLotteryStatus === 'function') renderLotteryStatus();
-        if (typeof renderWaitingList === 'function') renderWaitingList(globalKey);
-        console.log('✅ 자동 추첨 완료: 당첨 ' + winners.length + '명, 미선정 ' + losers.length + '명, 남은 대기 ' + remainingData.length + '명');
+        var run = typeof executeLottery === 'function' ? executeLottery : (typeof window !== 'undefined' && typeof window.executeLottery === 'function' ? window.executeLottery.bind(window) : null);
+        if (!run) {
+            console.error('executeLottery를 찾을 수 없습니다. admin.js 로드 순서를 확인하세요.');
+            return;
+        }
+        run();
+        console.log('✅ 자동 추첨 완료 (executeLottery 경로)');
     } catch (error) {
         console.error('자동 추첨 실행 오류:', error);
     }
