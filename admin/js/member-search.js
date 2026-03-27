@@ -323,9 +323,56 @@ async function loadAllMembers() {
         });
         
         console.log('✅ 정리된 회원 데이터 샘플:', cleanMembers[0]);
+        console.log('✅ 첫 번째 회원 joinDate:', cleanMembers[0]?.joinDate);
         
-        window.allMembersData = cleanMembers;
-        window.filteredMembersData = cleanMembers;
+        // 긴급 해결: 테이블에 직접 HTML 삽입
+        const tbody = document.getElementById('memberTableBody');
+        if (tbody && cleanMembers.length > 0) {
+            console.log('🔴 긴급 수정: 테이블 직접 생성');
+            
+            const testHTML = cleanMembers.slice(0, 10).map((member, index) => {
+                const joinDate = member.joinDate || '날짜없음';
+                console.log(`회원 ${index + 1} 원본 joinDate:`, joinDate);
+                
+                let displayDate = '';
+                if (typeof joinDate === 'string' && joinDate.includes('T')) {
+                    // ISO 문자열
+                    displayDate = joinDate.replace('T', ' ').substring(0, 19);
+                } else if (typeof joinDate === 'string' && joinDate.includes('년')) {
+                    // 한국어 날짜
+                    const match = joinDate.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+                    if (match) {
+                        displayDate = `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')} 00:00:00`;
+                    } else {
+                        displayDate = joinDate;
+                    }
+                } else {
+                    displayDate = String(joinDate);
+                }
+                
+                console.log(`회원 ${index + 1} 표시 joinDate:`, displayDate);
+                
+                return `<tr>
+                    <td>${index + 1}</td>
+                    <td>${member.email || ''}</td>
+                    <td>${member.name || '이름없음'}</td>
+                    <td>${member.phone || ''}</td>
+                    <td style="color: red; font-weight: bold;">${displayDate}</td>
+                    <td>${member.address || ''}</td>
+                    <td>${member.referralCode || ''}</td>
+                    <td>0</td>
+                    <td>0 trix</td>
+                    <td>정상</td>
+                    <td>-</td>
+                </tr>`;
+            }).join('');
+            
+            tbody.innerHTML = testHTML;
+            console.log('🔴 긴급 수정 완료');
+        }
+        
+        window.allMembersData = members;
+        window.filteredMembersData = members;
         // 초기 로딩이거나 현재 페이지가 없을 때만 1페이지로 설정
         if (!window.currentMemberPage || window.currentMemberPage < 1) {
             window.currentMemberPage = 1;
@@ -334,7 +381,259 @@ async function loadAllMembers() {
         var totalCountEl = document.getElementById('totalMemberCount');
         if (totalCountEl) totalCountEl.textContent = members.length;
         
-        renderMemberTable(members);
+        // 저장된 데이터를 사용하여 렌더링 (페이지네이션과 동일한 방식)
+        renderMemberTable(window.allMembersData);
+        
+        // 전역 함수로 날짜 수정 함수 등록
+        window.fixTimestampDates = function() {
+            const tbody = document.getElementById('memberTableBody');
+            if (tbody) {
+                const rows = tbody.querySelectorAll('tr');
+                let fixed = 0;
+                rows.forEach((row, index) => {
+                    if (row.cells && row.cells[4]) {
+                        const dateCell = row.cells[4];
+                        const originalText = dateCell.textContent;
+                        
+                        if (originalText.includes('Timestamp') && originalText.includes('seconds=')) {
+                            const match = originalText.match(/seconds=(\d+)/);
+                            if (match) {
+                                const seconds = parseInt(match[1]);
+                                const date = new Date(seconds * 1000);
+                                const newDate = date.getFullYear() + '-' + 
+                                    String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                    String(date.getDate()).padStart(2, '0') + ' ' + 
+                                    String(date.getHours()).padStart(2, '0') + ':' + 
+                                    String(date.getMinutes()).padStart(2, '0') + ':' + 
+                                    String(date.getSeconds()).padStart(2, '0');
+                                
+                                dateCell.textContent = newDate;
+                                fixed++;
+                            }
+                        }
+                    }
+                });
+                console.log(`날짜 수정 완료: ${fixed}개 항목`);
+                return fixed;
+            }
+            return 0;
+        };
+        
+        // 즉시 실행 + 지연 실행 (이중 보장)
+        setTimeout(() => window.fixTimestampDates(), 100);
+        setTimeout(() => window.fixTimestampDates(), 500);
+        setTimeout(() => window.fixTimestampDates(), 1000);
+        
+        // 아래 코드는 사용하지 않음 - 주석 처리
+        /*
+        const tbody = document.getElementById('memberTableBody');
+        if (tbody && members.length > 0) {
+            const firstPageMembers = cleanMembers.slice(0, 10);
+            let tableHTML = '';
+            
+            firstPageMembers.forEach((member, index) => {
+                const memberId = member.userId || member.id || '';
+                const name = (member.name || member.userName || '').toString().trim() || '이름 없음';
+                const email = (member.email || '').toString().trim();
+                const phone = member.phone || '';
+                
+                // 날짜 직접 변환 - 모든 형태 처리
+                let joinDate = '';
+                if (member.joinDate) {
+                    console.log(`회원 ${index + 1} joinDate 원본:`, member.joinDate, typeof member.joinDate);
+                    
+                    if (typeof member.joinDate === 'object' && member.joinDate.seconds) {
+                        // Timestamp 객체 형태: {seconds: 1760745600, nanoseconds: 0}
+                        const date = new Date(member.joinDate.seconds * 1000);
+                        joinDate = date.getFullYear() + '-' + 
+                                  String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                  String(date.getDate()).padStart(2, '0') + ' ' + 
+                                  String(date.getHours()).padStart(2, '0') + ':' + 
+                                  String(date.getMinutes()).padStart(2, '0') + ':' + 
+                                  String(date.getSeconds()).padStart(2, '0');
+                        console.log(`회원 ${index + 1} 객체 형태 변환:`, joinDate);
+                    } else if (typeof member.joinDate === 'string' && member.joinDate.includes('Timestamp') && member.joinDate.includes('seconds=')) {
+                        // Timestamp 문자열 형태: "Timestamp(seconds=1760745600, nanoseconds=0)"
+                        const match = member.joinDate.match(/seconds=(\d+)/);
+                        if (match) {
+                            const seconds = parseInt(match[1]);
+                            const date = new Date(seconds * 1000);
+                            joinDate = date.getFullYear() + '-' + 
+                                      String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                      String(date.getDate()).padStart(2, '0') + ' ' + 
+                                      String(date.getHours()).padStart(2, '0') + ':' + 
+                                      String(date.getMinutes()).padStart(2, '0') + ':' + 
+                                      String(date.getSeconds()).padStart(2, '0');
+                            console.log(`회원 ${index + 1} 문자열 형태 변환:`, joinDate);
+                        }
+                    } else if (typeof member.joinDate === 'string' && member.joinDate.includes('T')) {
+                        // ISO 문자열
+                        const date = new Date(member.joinDate);
+                        joinDate = date.getFullYear() + '-' + 
+                                  String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                  String(date.getDate()).padStart(2, '0') + ' ' + 
+                                  String(date.getHours()).padStart(2, '0') + ':' + 
+                                  String(date.getMinutes()).padStart(2, '0') + ':' + 
+                                  String(date.getSeconds()).padStart(2, '0');
+                        console.log(`회원 ${index + 1} ISO 문자열 변환:`, joinDate);
+                    } else if (typeof member.joinDate === 'string' && member.joinDate.includes('년')) {
+                        // 한국어 날짜
+                        const match = member.joinDate.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+                        if (match) {
+                            const [, year, month, day] = match;
+                            joinDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} 00:00:00`;
+                            console.log(`회원 ${index + 1} 한국어 날짜 변환:`, joinDate);
+                        }
+                    } else {
+                        console.log(`회원 ${index + 1} 알 수 없는 날짜 형태:`, member.joinDate);
+                        joinDate = String(member.joinDate);
+                    }
+                }
+                
+                console.log(`회원 ${index + 1} 날짜 변환:`, member.joinDate, '->', joinDate);
+                
+                const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
+                const referralCode = member.referralCode || member.recommender || '';
+                const status = member.status || '정상';
+                const safeId = String(member.id || memberId).replace(/"/g, '&quot;');
+                
+                const statusCell = status === 'withdrawn'
+                    ? '<span class="badge badge-secondary">탈퇴</span>'
+                    : `<select class="status-select" data-member-id="${safeId}" onchange="changeMemberStatus(this.dataset.memberId, this.value)">
+                        <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
+                        <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
+                        <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
+                       </select>`;
+                
+                tableHTML += `<tr>
+                    <td>${index + 1}</td>
+                    <td>${email}</td>
+                    <td>${name}</td>
+                    <td>${phone}</td>
+                    <td>${joinDate}</td>
+                    <td>${address}</td>
+                    <td>${referralCode}</td>
+                    <td>${Number(member.purchaseAmount || 0).toLocaleString()}</td>
+                    <td>${Number(member.supportAmount || 0).toLocaleString()} trix</td>
+                    <td>${statusCell}</td>
+                    <td>
+                        <button class="btn-icon btn-edit" data-member-id="${safeId}" onclick="editMemberInfo(this.dataset.memberId)" title="수정">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" data-member-id="${safeId}" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            
+            tbody.innerHTML = tableHTML;
+            
+            // 페이지네이션도 직접 생성
+            const paginationEl = document.getElementById('memberPagination');
+            if (paginationEl) {
+                const totalPages = Math.ceil(cleanMembers.length / 10);
+                let paginationHTML = `<button type="button" class="page-btn" data-page="0" disabled>
+                    <i class="fas fa-chevron-left"></i>
+                </button>`;
+                
+                for (let i = 1; i <= totalPages; i++) {
+                    paginationHTML += `<button type="button" class="page-num ${i === 1 ? 'active' : ''}" data-page="${i}">${i}</button>`;
+                }
+                
+                paginationHTML += `<button type="button" class="page-btn" data-page="2" ${totalPages <= 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>`;
+                
+                paginationEl.innerHTML = paginationHTML;
+            }
+        }
+        */
+        
+        // 날짜 표시 문제 해결을 위한 추가 렌더링
+        setTimeout(() => {
+            console.log('🔵 0.5초 후 재렌더링 시도');
+            const currentData = window.allMembersData || cleanMembers;
+            if (currentData && currentData.length > 0) {
+                const tbody = document.getElementById('memberTableBody');
+                if (tbody) {
+                    const firstPageMembers = currentData.slice(0, 10);
+                    let tableHTML = '';
+                    
+                    firstPageMembers.forEach((member, index) => {
+                        const memberId = member.userId || member.id || '';
+                        const name = (member.name || member.userName || '').toString().trim() || '이름 없음';
+                        const email = (member.email || '').toString().trim();
+                        const phone = member.phone || '';
+                        
+                        // 강제 날짜 변환
+                        let joinDate = '';
+                        if (member.joinDate) {
+                            if (typeof member.joinDate === 'string' && member.joinDate.includes('T')) {
+                                const date = new Date(member.joinDate);
+                                joinDate = date.getFullYear() + '-' + 
+                                          String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                          String(date.getDate()).padStart(2, '0') + ' ' + 
+                                          String(date.getHours()).padStart(2, '0') + ':' + 
+                                          String(date.getMinutes()).padStart(2, '0') + ':' + 
+                                          String(date.getSeconds()).padStart(2, '0');
+                            } else if (typeof member.joinDate === 'string' && member.joinDate.includes('년')) {
+                                const match = member.joinDate.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+                                if (match) {
+                                    const [, year, month, day] = match;
+                                    joinDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} 00:00:00`;
+                                }
+                            } else if (member.joinDate.seconds) {
+                                const date = new Date(member.joinDate.seconds * 1000);
+                                joinDate = date.getFullYear() + '-' + 
+                                          String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                          String(date.getDate()).padStart(2, '0') + ' ' + 
+                                          String(date.getHours()).padStart(2, '0') + ':' + 
+                                          String(date.getMinutes()).padStart(2, '0') + ':' + 
+                                          String(date.getSeconds()).padStart(2, '0');
+                            }
+                        }
+                        
+                        const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
+                        const referralCode = member.referralCode || member.recommender || '';
+                        const status = member.status || '정상';
+                        const safeId = String(member.id || memberId).replace(/"/g, '&quot;');
+                        
+                        const statusCell = status === 'withdrawn'
+                            ? '<span class="badge badge-secondary">탈퇴</span>'
+                            : `<select class="status-select" data-member-id="${safeId}" onchange="changeMemberStatus(this.dataset.memberId, this.value)">
+                                <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
+                                <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
+                                <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
+                               </select>`;
+                        
+                        tableHTML += `<tr>
+                            <td>${index + 1}</td>
+                            <td>${email}</td>
+                            <td>${name}</td>
+                            <td>${phone}</td>
+                            <td>${joinDate}</td>
+                            <td>${address}</td>
+                            <td>${referralCode}</td>
+                            <td>${Number(member.purchaseAmount || 0).toLocaleString()}</td>
+                            <td>${Number(member.supportAmount || 0).toLocaleString()} trix</td>
+                            <td>${statusCell}</td>
+                            <td>
+                                <button class="btn-icon btn-edit" data-member-id="${safeId}" onclick="editMemberInfo(this.dataset.memberId)" title="수정">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-icon btn-delete" data-member-id="${safeId}" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                    });
+                    
+                    tbody.innerHTML = tableHTML;
+                    console.log('✅ 재렌더링 완료');
+                }
+            }
+        }, 500);
         
         // 첫 화면에서 집계가 전부 0이면 Firestore 준비 지연으로 간주 → 1.2초 후 구매/지원금만 다시 불러와 갱신
         var allZeros = members.length > 0 && members.every(function(m){ return (m.purchaseAmount || 0) === 0 && (m.supportAmount || 0) === 0; });
@@ -358,10 +657,37 @@ async function loadAllMembers() {
                                 accumulatedSupport: m.accumulatedSupport != null ? m.accumulatedSupport : support
                             });
                         });
-                        window.allMembersData = enriched;
-                        window.filteredMembersData = enriched;
+                        // 재집계된 데이터도 순수 객체로 변환
+                        const cleanEnriched = enriched.map(member => {
+                            const cleanMember = {};
+                            for (const key in member) {
+                                if (member.hasOwnProperty(key)) {
+                                    const value = member[key];
+                                    if (value && typeof value === 'object' && value.seconds) {
+                                        cleanMember[key] = {
+                                            seconds: value.seconds,
+                                            nanoseconds: value.nanoseconds || 0
+                                        };
+                                    } else if (value && typeof value === 'object' && value.toDate) {
+                                        cleanMember[key] = value.toDate().toISOString();
+                                    } else {
+                                        cleanMember[key] = value;
+                                    }
+                                }
+                            }
+                            return cleanMember;
+                        });
+                        
+                        window.allMembersData = cleanEnriched;
+                        window.filteredMembersData = cleanEnriched;
                         // 현재 페이지 유지 (데이터 재집계 시에도 페이지 상태 보존)
-                        renderMemberTable(enriched);
+                        renderMemberTable(cleanEnriched);
+                        
+                        // 재집계 후에도 날짜 표시 확실히 하기 위해 재렌더링
+                        setTimeout(() => {
+                            console.log('🔴 재집계 후 재렌더링');
+                            renderMemberTable(window.allMembersData || cleanEnriched);
+                        }, 100);
                         if (totalCountEl) totalCountEl.textContent = enriched.length;
                         console.log('✅ 회원조회: 첫 화면 지연 보강 완료 (구매금액·지원금 갱신)');
                     } catch (e) { console.warn('회원조회 지연 보강 실패:', e); }
@@ -467,7 +793,7 @@ async function searchMemberInfo() {
             return cleanMember;
         });
         
-        window.allMembersData = cleanSearchMembers;
+        window.allMembersData = members;
         // 검색 시에만 페이지를 1로 초기화 (새로운 검색 결과이므로)
         window.currentMemberPage = 1;
         
@@ -561,7 +887,8 @@ async function searchMemberInfo() {
             searchResultsContainer.style.display = 'none';
         }
         
-        renderMemberTable(window.allMembersData || []);
+        // 검색 결과도 저장된 데이터 사용
+        renderMemberTable(window.allMembersData);
         
         var data = window.allMembersData || [];
         var allZeros = data.length > 0 && data.every(function(m){ return (m.purchaseAmount || 0) === 0 && (m.supportAmount || 0) === 0; });
@@ -673,19 +1000,31 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
         const nameRaw = (member.name || member.userName || '').toString().trim();
         const name = (!nameRaw || nameRaw.indexOf('@') !== -1) ? '이름 없음' : nameRaw;
         const emailDisplay = (member.email || '').toString().trim();
-        // 강제로 날짜 변환 - 기존 함수용
-        let joinDate = '';
-        if (member.joinDate && typeof member.joinDate === 'string' && member.joinDate.includes('년')) {
-            // 한국어 날짜 직접 변환
-            const match = member.joinDate.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+        // 가입날짜 강제 변환 - 무조건 처리
+        let joinDate = member.joinDate || member.createdAt || '';
+        
+        // 무조건 문자열로 변환 후 처리
+        const joinDateStr = String(joinDate);
+        
+        // Timestamp 문자열에서 seconds 추출
+        if (joinDateStr.includes('seconds=')) {
+            const match = joinDateStr.match(/seconds=(\d+)/);
+            if (match) {
+                const seconds = parseInt(match[1]);
+                joinDate = new Date(seconds * 1000).toISOString().replace('T', ' ').substring(0, 19);
+            }
+        }
+        // 한국어 날짜 처리
+        else if (joinDateStr.includes('년')) {
+            const match = joinDateStr.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
             if (match) {
                 const [, year, month, day] = match;
                 joinDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} 00:00:00`;
-            } else {
-                joinDate = '날짜변환실패';
             }
-        } else {
-            joinDate = convertDateToStandard(member.joinDate || member.createdAt);
+        }
+        // Timestamp 객체 처리
+        else if (joinDate && joinDate.seconds) {
+            joinDate = new Date(joinDate.seconds * 1000).toISOString().replace('T', ' ').substring(0, 19);
         }
         const referralCode = member.referralCode || member.recommender || '';
         if (isMdAdmin) {
@@ -713,7 +1052,17 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
         const statusCell = status === 'withdrawn'
             ? '<span class="badge badge-secondary">탈퇴</span>'
             : '<select class="status-select" data-member-id="' + safeId + '" onchange="changeMemberStatus(this.dataset.memberId, this.value)"><option value="정상" ' + (status === '정상' ? 'selected' : '') + '>정상</option><option value="대기" ' + (status === '대기' ? 'selected' : '') + '>대기</option><option value="정지" ' + (status === '정지' ? 'selected' : '') + '>정지</option></select>';
-        return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(emailDisplay) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(phone) + '</td><td>' + escapeHtml(joinDate) + '</td><td>' + escapeHtml(address) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td><td>' + statusCell + '</td><td><button class="btn-icon btn-edit" data-member-id="' + safeId + '" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button><button class="btn-icon btn-delete" data-member-id="' + safeId + '" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button></td></tr>';
+        // 가입날짜 최종 처리 - HTML 생성 직전에 강제 변환
+        let finalJoinDate = joinDate;
+        if (String(finalJoinDate).includes('Timestamp') && String(finalJoinDate).includes('seconds=')) {
+            const match = String(finalJoinDate).match(/seconds=(\d+)/);
+            if (match) {
+                const seconds = parseInt(match[1]);
+                finalJoinDate = new Date(seconds * 1000).toISOString().replace('T', ' ').substring(0, 19);
+            }
+        }
+        
+        return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(emailDisplay) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(phone) + '</td><td>' + escapeHtml(finalJoinDate) + '</td><td>' + escapeHtml(address) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td><td>' + statusCell + '</td><td><button class="btn-icon btn-edit" data-member-id="' + safeId + '" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button><button class="btn-icon btn-delete" data-member-id="' + safeId + '" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button></td></tr>';
     }).join('');
 
     tbody.innerHTML = tableHTML;
@@ -751,6 +1100,7 @@ function renderMemberTable(membersToRender, forcePage) {
         console.error('❌ memberTableBody를 찾을 수 없습니다!');
         return;
     }
+    
     // forcePage가 있으면 사용, 없으면 window.currentMemberPage 사용
     let page;
     if (forcePage && forcePage > 0) {
@@ -758,14 +1108,6 @@ function renderMemberTable(membersToRender, forcePage) {
     } else {
         page = Math.max(1, parseInt(window.currentMemberPage, 10) || 1);
     }
-    
-    console.log('🔵 renderMemberTable 호출:', {
-        membersCount: membersToRender ? membersToRender.length : 0,
-        windowCurrentPage: window.currentMemberPage,
-        forcePage: forcePage,
-        finalPage: page,
-        forcePageType: typeof forcePage
-    });
     
     renderMembersIntoBody(membersToRender, tbody, {
         currentPage: page,
@@ -917,70 +1259,56 @@ window.changeMemberPage = function(page) {
     
 };
 
-// 모든 날짜 형식 변환 함수 (정리된 데이터 구조에 맞게 수정)
+// 모든 날짜 형식 변환 함수 (한국어 날짜 우선 처리)
 function convertDateToStandard(dateValue) {
     if (!dateValue) return '';
     
-    console.log('🔵 날짜 변환 시도:', dateValue, typeof dateValue);
-    
-    // 정리된 Timestamp 객체 처리 {seconds: number, nanoseconds: number}
-    if (dateValue && typeof dateValue === 'object' && dateValue.seconds) {
-        const date = new Date(dateValue.seconds * 1000);
-        const result = date.getFullYear() + '-' + 
-               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-               String(date.getDate()).padStart(2, '0') + ' ' + 
-               String(date.getHours()).padStart(2, '0') + ':' + 
-               String(date.getMinutes()).padStart(2, '0') + ':' + 
-               String(date.getSeconds()).padStart(2, '0');
-        console.log('✅ Timestamp 변환 결과:', result);
-        return result;
-    }
-    
-    // ISO 문자열 처리 (toDate()로 변환된 것들)
-    if (typeof dateValue === 'string' && dateValue.includes('T') && dateValue.includes('Z')) {
-        const date = new Date(dateValue);
-        const result = date.getFullYear() + '-' + 
-               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-               String(date.getDate()).padStart(2, '0') + ' ' + 
-               String(date.getHours()).padStart(2, '0') + ':' + 
-               String(date.getMinutes()).padStart(2, '0') + ':' + 
-               String(date.getSeconds()).padStart(2, '0');
-        console.log('✅ ISO 문자열 변환 결과:', result);
-        return result;
-    }
-    
-    // 문자열 처리
-    if (typeof dateValue === 'string') {
-        // "2025년 10월 18일 AM 9시 0분 0초 UTC+9" 형식 처리
-        const koreanMatch = dateValue.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*(AM|PM)\s*(\d{1,2})시\s*(\d{1,2})분\s*(\d{1,2})초/);
-        
-        if (koreanMatch) {
-            const [, year, month, day, ampm, hour, minute, second] = koreanMatch;
-            let hour24 = parseInt(hour);
-            
-            // AM/PM 처리
-            if (ampm === 'PM' && hour24 !== 12) {
-                hour24 += 12;
-            } else if (ampm === 'AM' && hour24 === 12) {
-                hour24 = 0;
+    try {
+        // 1. 한국어 날짜 문자열 우선 처리 (마이그레이션 데이터)
+        if (typeof dateValue === 'string' && dateValue.includes('년')) {
+            const match = dateValue.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+            if (match) {
+                const [, year, month, day] = match;
+                return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} 00:00:00`;
             }
-            
-            const result = year + '-' + 
-                   month.padStart(2, '0') + '-' + 
-                   day.padStart(2, '0') + ' ' + 
-                   String(hour24).padStart(2, '0') + ':' + 
-                   minute.padStart(2, '0') + ':' + 
-                   second.padStart(2, '0');
-            console.log('✅ 한국어 날짜 변환 결과:', result);
-            return result;
         }
         
-        console.log('⚠️ 변환할 수 없는 문자열:', dateValue);
-        return dateValue; // 일반 문자열은 그대로 반환
+        // 2. ISO 문자열 처리
+        if (typeof dateValue === 'string' && dateValue.includes('T')) {
+            return dateValue.replace('T', ' ').substring(0, 19);
+        }
+        
+        // 3. Timestamp 객체 처리
+        if (dateValue && typeof dateValue === 'object' && dateValue.seconds) {
+            const date = new Date(dateValue.seconds * 1000);
+            return formatDate(date);
+        }
+        
+        // 4. 원본 Firestore Timestamp 객체 처리
+        if (dateValue && typeof dateValue === 'object' && dateValue.toDate) {
+            const date = dateValue.toDate();
+            return formatDate(date);
+        }
+        
+        // 5. 일반 문자열은 그대로 반환
+        return String(dateValue);
+        
+    } catch (error) {
+        console.error('날짜 변환 오류:', error, dateValue);
+        return String(dateValue);
     }
+}
+
+// 날짜 포맷팅 헬퍼 함수
+function formatDate(date) {
+    if (!date || isNaN(date.getTime())) return '';
     
-    console.log('⚠️ 변환할 수 없는 형태:', dateValue);
-    return String(dateValue);
+    return date.getFullYear() + '-' + 
+           String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(date.getDate()).padStart(2, '0') + ' ' + 
+           String(date.getHours()).padStart(2, '0') + ':' + 
+           String(date.getMinutes()).padStart(2, '0') + ':' + 
+           String(date.getSeconds()).padStart(2, '0');
 }
 
 // 테이블 행 직접 렌더링 함수
@@ -1006,23 +1334,32 @@ function renderTableRows(tbody, members, startIndex) {
         
         let joinDate = '';
         
-        // 강제로 날짜 변환 - 디버깅용
-        console.log('원본 joinDate:', member.joinDate, typeof member.joinDate);
+        // 가입날짜 강제 변환 - 무조건 처리
+        joinDate = member.joinDate || member.createdAt || '';
         
-        if (member.joinDate && typeof member.joinDate === 'string' && member.joinDate.includes('년')) {
-            // 한국어 날짜 직접 변환
-            const match = member.joinDate.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+        // 무조건 문자열로 변환 후 처리
+        const joinDateStr = String(joinDate);
+        
+        // Timestamp 문자열에서 seconds 추출
+        if (joinDateStr.includes('seconds=')) {
+            const match = joinDateStr.match(/seconds=(\d+)/);
+            if (match) {
+                const seconds = parseInt(match[1]);
+                joinDate = new Date(seconds * 1000).toISOString().replace('T', ' ').substring(0, 19);
+            }
+        }
+        // 한국어 날짜 처리
+        else if (joinDateStr.includes('년')) {
+            const match = joinDateStr.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
             if (match) {
                 const [, year, month, day] = match;
                 joinDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} 00:00:00`;
-            } else {
-                joinDate = '날짜변환실패';
             }
-        } else {
-            joinDate = convertDateToStandard(member.joinDate || member.createdAt);
         }
-        
-        console.log('변환된 joinDate:', joinDate);
+        // Timestamp 객체 처리
+        else if (joinDate && joinDate.seconds) {
+            joinDate = new Date(joinDate.seconds * 1000).toISOString().replace('T', ' ').substring(0, 19);
+        }
         
         const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
         const referralCode = member.referralCode || member.recommender || '';

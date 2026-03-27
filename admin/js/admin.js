@@ -462,6 +462,42 @@ async function loadPageData(pageId) {
                 console.error('❌ memberTableBody를 찾을 수 없습니다!');
             }
             
+            // 회원조회 페이지 로드 완료 후 날짜 수정 (5초 후)
+            setTimeout(() => {
+                console.log('🔧 회원조회 페이지 로드 후 날짜 수정 시작');
+                const tbody = document.getElementById('memberTableBody');
+                if (tbody) {
+                    const rows = tbody.querySelectorAll('tr');
+                    let fixed = 0;
+                    rows.forEach((row) => {
+                        if (row.cells && row.cells[4]) {
+                            const dateCell = row.cells[4];
+                            const originalText = dateCell.textContent;
+                            
+                            if (originalText.includes('Timestamp') && originalText.includes('seconds=')) {
+                                const match = originalText.match(/seconds=(\d+)/);
+                                if (match) {
+                                    const seconds = parseInt(match[1]);
+                                    const date = new Date(seconds * 1000);
+                                    const newDate = date.getFullYear() + '-' + 
+                                        String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                        String(date.getDate()).padStart(2, '0') + ' ' + 
+                                        String(date.getHours()).padStart(2, '0') + ':' + 
+                                        String(date.getMinutes()).padStart(2, '0') + ':' + 
+                                        String(date.getSeconds()).padStart(2, '0');
+                                    
+                                    dateCell.textContent = newDate;
+                                    fixed++;
+                                }
+                            }
+                        }
+                    });
+                    if (fixed > 0) {
+                        console.log(`✅ 회원조회 페이지 로드 후 날짜 수정: ${fixed}개`);
+                    }
+                }
+            }, 5000);
+            
             // loadAllMembers 함수가 로드될 때까지 대기 (최대 5초)
             let waitCount = 0;
             const maxWait = 50; // 5초
@@ -5966,6 +6002,42 @@ async function initAdminPage() {
                 e.preventDefault();
                 if (typeof window.searchMemberInfo === 'function') {
                     await window.searchMemberInfo();
+                    
+                    // 검색 완료 후 날짜 강제 수정
+                    setTimeout(() => {
+                        const tbody = document.getElementById('memberTableBody');
+                        if (tbody) {
+                            const rows = tbody.querySelectorAll('tr');
+                            let fixed = 0;
+                            rows.forEach((row) => {
+                                if (row.cells && row.cells[4]) {
+                                    const dateCell = row.cells[4];
+                                    const originalText = dateCell.textContent;
+                                    
+                                    if (originalText.includes('Timestamp') && originalText.includes('seconds=')) {
+                                        const match = originalText.match(/seconds=(\d+)/);
+                                        if (match) {
+                                            const seconds = parseInt(match[1]);
+                                            const date = new Date(seconds * 1000);
+                                            const newDate = date.getFullYear() + '-' + 
+                                                String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                                String(date.getDate()).padStart(2, '0') + ' ' + 
+                                                String(date.getHours()).padStart(2, '0') + ':' + 
+                                                String(date.getMinutes()).padStart(2, '0') + ':' + 
+                                                String(date.getSeconds()).padStart(2, '0');
+                                            
+                                            dateCell.textContent = newDate;
+                                            fixed++;
+                                        }
+                                    }
+                                }
+                            });
+                            if (fixed > 0) {
+                                console.log(`✅ 회원조회 버튼 클릭 후 날짜 수정: ${fixed}개`);
+                            }
+                        }
+                    }, 300);
+                    
                 } else {
                     console.error('searchMemberInfo 함수를 찾을 수 없습니다.');
                     alert('검색 기능을 사용할 수 없습니다. 페이지를 새로고침해주세요.');
