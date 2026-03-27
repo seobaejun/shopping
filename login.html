@@ -55,6 +55,19 @@
             <div class="login-card">
                 <h2 class="login-title">로그인</h2>
                 
+                <!-- 기존 사용자 안내 -->
+                <div class="existing-user-notice">
+                    <div class="notice-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="notice-content">
+                        <h4>기존 회원님 로그인 안내</h4>
+                        <p><strong>아이디:</strong> 가입 시 등록한 이메일 주소</p>
+                        <p><strong>비밀번호:</strong> 기존 아이디 + 핸드폰번호 뒷4자리</p>
+                        <p class="notice-sub">로그인 후 마이페이지에서 비밀번호를 변경하세요</p>
+                    </div>
+                </div>
+
                 <form class="login-form" id="loginForm">
                     <div class="form-group">
                         <label for="userId">이메일</label>
@@ -260,7 +273,20 @@
             }
             
             console.log('✅ 로그인 완료:', loginInfo);
-            alert(`${userData.name}님, 환영합니다!`);
+            
+            // 임시 비밀번호로 로그인한 경우 비밀번호 변경 안내
+            const userId = userData.userId;
+            const phone = userData.phone || '';
+            const phoneDigits = phone.replace(/\D/g, '');
+            const last4 = phoneDigits.slice(-4);
+            const tempPassword = userId + last4;
+            
+            if (password === tempPassword) {
+                alert(`${userData.name}님, 환영합니다!\n\n⚠️ 임시 비밀번호로 로그인하셨습니다.\n보안을 위해 마이페이지에서 비밀번호를 변경해주세요.`);
+            } else {
+                alert(`${userData.name}님, 환영합니다!`);
+            }
+            
             window.location.href = 'index.html';
             
         } catch (error) {
