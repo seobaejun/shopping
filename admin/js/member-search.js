@@ -300,9 +300,36 @@ async function loadAllMembers() {
         }
         if (members.length) console.log('회원조회 렌더 직전 첫 회원 구매금액/지원금:', members[0].purchaseAmount, members[0].supportAmount);
         
-        window.allMembersData = members;
-        window.filteredMembersData = members;
-        window.currentMemberPage = 1;
+        // Firestore 데이터를 순수 객체로 변환 (순환 참조 제거)
+        const cleanMembers = members.map(member => {
+            const cleanMember = {};
+            for (const key in member) {
+                if (member.hasOwnProperty(key)) {
+                    const value = member[key];
+                    // Firestore Timestamp 객체는 직렬화 가능한 형태로 변환
+                    if (value && typeof value === 'object' && value.seconds) {
+                        cleanMember[key] = {
+                            seconds: value.seconds,
+                            nanoseconds: value.nanoseconds || 0
+                        };
+                    } else if (value && typeof value === 'object' && value.toDate) {
+                        cleanMember[key] = value.toDate().toISOString();
+                    } else {
+                        cleanMember[key] = value;
+                    }
+                }
+            }
+            return cleanMember;
+        });
+        
+        console.log('✅ 정리된 회원 데이터 샘플:', cleanMembers[0]);
+        
+        window.allMembersData = cleanMembers;
+        window.filteredMembersData = cleanMembers;
+        // 초기 로딩이거나 현재 페이지가 없을 때만 1페이지로 설정
+        if (!window.currentMemberPage || window.currentMemberPage < 1) {
+            window.currentMemberPage = 1;
+        }
         
         var totalCountEl = document.getElementById('totalMemberCount');
         if (totalCountEl) totalCountEl.textContent = members.length;
@@ -333,7 +360,7 @@ async function loadAllMembers() {
                         });
                         window.allMembersData = enriched;
                         window.filteredMembersData = enriched;
-                        window.currentMemberPage = 1;
+                        // 현재 페이지 유지 (데이터 재집계 시에도 페이지 상태 보존)
                         renderMemberTable(enriched);
                         if (totalCountEl) totalCountEl.textContent = enriched.length;
                         console.log('✅ 회원조회: 첫 화면 지연 보강 완료 (구매금액·지원금 갱신)');
@@ -357,17 +384,7 @@ async function loadAllMembers() {
     }
 }
 
-// 페이지 변경 함수
-window.changeMemberPage = function(page) {
-    if (!window.allMembersData) return;
-    const totalPages = Math.ceil(window.allMembersData.length / 10);
-    if (page < 1 || page > totalPages) return;
-    window.currentMemberPage = page;
-    // 데이터 다시 로드
-    if (window.loadAllMembers) {
-        window.loadAllMembers();
-    }
-};
+// 페이지 변경 함수 (아래 792번째 줄의 올바른 함수 사용)
 
 // 회원 검색 함수 (전체회원 loadAllMembers와 동일한 패턴)
 async function searchMemberInfo() {
@@ -429,7 +446,29 @@ async function searchMemberInfo() {
             members = await enrichMembersWithMdManagerStatus(members);
         }
         
-        window.allMembersData = members;
+        // 검색 결과도 순수 객체로 변환
+        const cleanSearchMembers = members.map(member => {
+            const cleanMember = {};
+            for (const key in member) {
+                if (member.hasOwnProperty(key)) {
+                    const value = member[key];
+                    if (value && typeof value === 'object' && value.seconds) {
+                        cleanMember[key] = {
+                            seconds: value.seconds,
+                            nanoseconds: value.nanoseconds || 0
+                        };
+                    } else if (value && typeof value === 'object' && value.toDate) {
+                        cleanMember[key] = value.toDate().toISOString();
+                    } else {
+                        cleanMember[key] = value;
+                    }
+                }
+            }
+            return cleanMember;
+        });
+        
+        window.allMembersData = cleanSearchMembers;
+        // 검색 시에만 페이지를 1로 초기화 (새로운 검색 결과이므로)
         window.currentMemberPage = 1;
         
         // 검색 조건이 모두 비어있으면 전체 데이터 표시
@@ -500,6 +539,7 @@ async function searchMemberInfo() {
         }
         
         window.currentSearchResultsPage = 1;
+        // 검색 결과 표시 시에만 페이지를 1로 초기화
         window.currentMemberPage = 1;
         
         if (hasSearchCondition) {
@@ -569,11 +609,23 @@ async function resetMemberSearch() {
 
 // 공통: 회원 목록을 지정한 tbody에 그리는 함수 (전체회원·검색결과 동일 로직)
 function renderMembersIntoBody(membersToRender, tbody, options) {
+    console.log('🔵 renderMembersIntoBody 호출:', {
+        options: options,
+        optionsCurrentPage: options ? options.currentPage : 'undefined',
+        optionsType: typeof (options ? options.currentPage : 'undefined')
+    });
+    
     options = options || {};
     const membersPerPage = 10;
     const currentPage = options.currentPage != null ? options.currentPage : 1;
     const paginationElId = options.paginationElId || null;
     const isSearchResults = options.isSearchResults === true;
+    
+    console.log('🔵 renderMembersIntoBody 계산된 값:', {
+        currentPage: currentPage,
+        paginationElId: paginationElId,
+        isSearchResults: isSearchResults
+    });
 
     if (!tbody) return;
     var isMdAdmin = window.isMdAdmin === true;
@@ -597,6 +649,16 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
     const startIndex = (page - 1) * membersPerPage;
     const endIndex = Math.min(startIndex + membersPerPage, membersToRender.length);
     const pageMembers = membersToRender.slice(startIndex, endIndex);
+    
+    console.log('🔵 renderMembersIntoBody:', {
+        totalMembers: membersToRender.length,
+        currentPage: currentPage,
+        totalPages: totalPages,
+        actualPage: page,
+        startIndex: startIndex,
+        endIndex: endIndex,
+        pageMembers: pageMembers.length
+    });
 
     const escapeHtml = (str) => {
         if (!str) return '';
@@ -611,11 +673,19 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
         const nameRaw = (member.name || member.userName || '').toString().trim();
         const name = (!nameRaw || nameRaw.indexOf('@') !== -1) ? '이름 없음' : nameRaw;
         const emailDisplay = (member.email || '').toString().trim();
+        // 강제로 날짜 변환 - 기존 함수용
         let joinDate = '';
-        if (member.joinDate) joinDate = member.joinDate;
-        else if (member.createdAt) {
-            if (member.createdAt.seconds) joinDate = new Date(member.createdAt.seconds * 1000).toISOString().replace('T', ' ').substring(0, 19);
-            else if (member.createdAt.toDate) joinDate = member.createdAt.toDate().toISOString().replace('T', ' ').substring(0, 19);
+        if (member.joinDate && typeof member.joinDate === 'string' && member.joinDate.includes('년')) {
+            // 한국어 날짜 직접 변환
+            const match = member.joinDate.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+            if (match) {
+                const [, year, month, day] = match;
+                joinDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} 00:00:00`;
+            } else {
+                joinDate = '날짜변환실패';
+            }
+        } else {
+            joinDate = convertDateToStandard(member.joinDate || member.createdAt);
         }
         const referralCode = member.referralCode || member.recommender || '';
         if (isMdAdmin) {
@@ -675,10 +745,28 @@ function renderSearchResultsTable(membersToRender) {
 }
 
 // 테이블 렌더링 함수 (전체 회원용) — renderMembersIntoBody 공통 사용
-function renderMemberTable(membersToRender) {
+function renderMemberTable(membersToRender, forcePage) {
     const tbody = document.getElementById('memberTableBody');
-    if (!tbody) return;
-    const page = Math.max(1, parseInt(window.currentMemberPage, 10) || 1);
+    if (!tbody) {
+        console.error('❌ memberTableBody를 찾을 수 없습니다!');
+        return;
+    }
+    // forcePage가 있으면 사용, 없으면 window.currentMemberPage 사용
+    let page;
+    if (forcePage && forcePage > 0) {
+        page = forcePage;
+    } else {
+        page = Math.max(1, parseInt(window.currentMemberPage, 10) || 1);
+    }
+    
+    console.log('🔵 renderMemberTable 호출:', {
+        membersCount: membersToRender ? membersToRender.length : 0,
+        windowCurrentPage: window.currentMemberPage,
+        forcePage: forcePage,
+        finalPage: page,
+        forcePageType: typeof forcePage
+    });
+    
     renderMembersIntoBody(membersToRender, tbody, {
         currentPage: page,
         paginationElId: 'memberPagination',
@@ -712,18 +800,8 @@ function exportMembersToExcel() {
         const email = member.email || '';
         
         // 가입일 처리
-        let joinDate = '';
-        if (member.joinDate) {
-            joinDate = member.joinDate;
-        } else if (member.createdAt) {
-            if (member.createdAt.seconds) {
-                const date = new Date(member.createdAt.seconds * 1000);
-                joinDate = date.toISOString().split('T')[0];
-            } else if (member.createdAt.toDate) {
-                const date = member.createdAt.toDate();
-                joinDate = date.toISOString().split('T')[0];
-            }
-        }
+        const fullDate = convertDateToStandard(member.joinDate || member.createdAt);
+        const joinDate = fullDate ? fullDate.split(' ')[0] : ''; // 날짜 부분만 (YYYY-MM-DD)
         
         const referralCode = member.referralCode || member.recommender || '';
         const status = member.status || '정상';
@@ -790,20 +868,225 @@ window.changeSearchResultsPage = function(page) {
 
 // 전체 회원 페이지 변경 함수
 window.changeMemberPage = function(page) {
-    const dataToUse = window.allMembersData || [];
-    if (!dataToUse || dataToUse.length === 0) return;
+    console.log('🔵 changeMemberPage 호출됨:', page);
+    
+    // 현재 표시 중인 데이터 사용
+    const dataToUse = (window.filteredMembersData && window.filteredMembersData.length > 0) 
+        ? window.filteredMembersData 
+        : (window.allMembersData || []);
+    
+    if (!dataToUse || dataToUse.length === 0) {
+        console.warn('⚠️ 표시할 데이터가 없습니다');
+        return;
+    }
     
     const totalPages = Math.ceil(dataToUse.length / 10);
-    if (page < 1 || page > totalPages) return;
+    if (page < 1 || page > totalPages) {
+        console.warn('⚠️ 잘못된 페이지 번호:', page, '총 페이지:', totalPages);
+        return;
+    }
     
+    // 페이지 상태 업데이트
     window.currentMemberPage = page;
     
-    // 전체 회원 테이블 렌더링
-    renderMemberTable(dataToUse);
+    // 직접 테이블과 페이지네이션 렌더링
+    const tbody = document.getElementById('memberTableBody');
+    if (!tbody) {
+        console.error('❌ memberTableBody를 찾을 수 없습니다!');
+        return;
+    }
     
-    // 페이지 상단으로 스크롤
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 페이지별 데이터 계산
+    const startIndex = (page - 1) * 10;
+    const endIndex = Math.min(startIndex + 10, dataToUse.length);
+    const pageMembers = dataToUse.slice(startIndex, endIndex);
+    
+    console.log('🔵 페이지 데이터:', {
+        page: page,
+        startIndex: startIndex,
+        endIndex: endIndex,
+        pageMembers: pageMembers.length,
+        totalData: dataToUse.length
+    });
+    
+    // 테이블 HTML 직접 생성
+    renderTableRows(tbody, pageMembers, startIndex);
+    
+    // 페이지네이션 직접 생성
+    renderPaginationButtons(page, totalPages);
+    
 };
+
+// 모든 날짜 형식 변환 함수 (정리된 데이터 구조에 맞게 수정)
+function convertDateToStandard(dateValue) {
+    if (!dateValue) return '';
+    
+    console.log('🔵 날짜 변환 시도:', dateValue, typeof dateValue);
+    
+    // 정리된 Timestamp 객체 처리 {seconds: number, nanoseconds: number}
+    if (dateValue && typeof dateValue === 'object' && dateValue.seconds) {
+        const date = new Date(dateValue.seconds * 1000);
+        const result = date.getFullYear() + '-' + 
+               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+               String(date.getDate()).padStart(2, '0') + ' ' + 
+               String(date.getHours()).padStart(2, '0') + ':' + 
+               String(date.getMinutes()).padStart(2, '0') + ':' + 
+               String(date.getSeconds()).padStart(2, '0');
+        console.log('✅ Timestamp 변환 결과:', result);
+        return result;
+    }
+    
+    // ISO 문자열 처리 (toDate()로 변환된 것들)
+    if (typeof dateValue === 'string' && dateValue.includes('T') && dateValue.includes('Z')) {
+        const date = new Date(dateValue);
+        const result = date.getFullYear() + '-' + 
+               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+               String(date.getDate()).padStart(2, '0') + ' ' + 
+               String(date.getHours()).padStart(2, '0') + ':' + 
+               String(date.getMinutes()).padStart(2, '0') + ':' + 
+               String(date.getSeconds()).padStart(2, '0');
+        console.log('✅ ISO 문자열 변환 결과:', result);
+        return result;
+    }
+    
+    // 문자열 처리
+    if (typeof dateValue === 'string') {
+        // "2025년 10월 18일 AM 9시 0분 0초 UTC+9" 형식 처리
+        const koreanMatch = dateValue.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*(AM|PM)\s*(\d{1,2})시\s*(\d{1,2})분\s*(\d{1,2})초/);
+        
+        if (koreanMatch) {
+            const [, year, month, day, ampm, hour, minute, second] = koreanMatch;
+            let hour24 = parseInt(hour);
+            
+            // AM/PM 처리
+            if (ampm === 'PM' && hour24 !== 12) {
+                hour24 += 12;
+            } else if (ampm === 'AM' && hour24 === 12) {
+                hour24 = 0;
+            }
+            
+            const result = year + '-' + 
+                   month.padStart(2, '0') + '-' + 
+                   day.padStart(2, '0') + ' ' + 
+                   String(hour24).padStart(2, '0') + ':' + 
+                   minute.padStart(2, '0') + ':' + 
+                   second.padStart(2, '0');
+            console.log('✅ 한국어 날짜 변환 결과:', result);
+            return result;
+        }
+        
+        console.log('⚠️ 변환할 수 없는 문자열:', dateValue);
+        return dateValue; // 일반 문자열은 그대로 반환
+    }
+    
+    console.log('⚠️ 변환할 수 없는 형태:', dateValue);
+    return String(dateValue);
+}
+
+// 테이블 행 직접 렌더링 함수
+function renderTableRows(tbody, members, startIndex) {
+    const escapeHtml = (str) => {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, (m) => {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return map[m];
+        });
+    };
+
+    const formatTrix = (amount) => {
+        return Number(amount || 0).toLocaleString();
+    };
+
+    const tableHTML = members.map((member, index) => {
+        const memberId = member.userId || member.id || '';
+        const nameRaw = (member.name || member.userName || '').toString().trim();
+        const name = (!nameRaw || nameRaw.indexOf('@') !== -1) ? '이름 없음' : nameRaw;
+        const emailDisplay = (member.email || '').toString().trim();
+        const phone = member.phone || '';
+        
+        let joinDate = '';
+        
+        // 강제로 날짜 변환 - 디버깅용
+        console.log('원본 joinDate:', member.joinDate, typeof member.joinDate);
+        
+        if (member.joinDate && typeof member.joinDate === 'string' && member.joinDate.includes('년')) {
+            // 한국어 날짜 직접 변환
+            const match = member.joinDate.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+            if (match) {
+                const [, year, month, day] = match;
+                joinDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} 00:00:00`;
+            } else {
+                joinDate = '날짜변환실패';
+            }
+        } else {
+            joinDate = convertDateToStandard(member.joinDate || member.createdAt);
+        }
+        
+        console.log('변환된 joinDate:', joinDate);
+        
+        const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
+        const referralCode = member.referralCode || member.recommender || '';
+        const status = member.status || '정상';
+        const safeId = String(member.id || memberId).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        
+        const statusCell = status === 'withdrawn'
+            ? '<span class="badge badge-secondary">탈퇴</span>'
+            : `<select class="status-select" data-member-id="${safeId}" onchange="changeMemberStatus(this.dataset.memberId, this.value)">
+                <option value="정상" ${status === '정상' ? 'selected' : ''}>정상</option>
+                <option value="대기" ${status === '대기' ? 'selected' : ''}>대기</option>
+                <option value="정지" ${status === '정지' ? 'selected' : ''}>정지</option>
+               </select>`;
+        
+        return `<tr>
+            <td>${startIndex + index + 1}</td>
+            <td>${escapeHtml(emailDisplay)}</td>
+            <td>${escapeHtml(name)}</td>
+            <td>${escapeHtml(phone)}</td>
+            <td>${escapeHtml(joinDate)}</td>
+            <td>${escapeHtml(address)}</td>
+            <td>${escapeHtml(referralCode)}</td>
+            <td>${Number(member.purchaseAmount || 0).toLocaleString()}</td>
+            <td>${formatTrix(Number(member.supportAmount || 0))} trix</td>
+            <td>${statusCell}</td>
+            <td>
+                <button class="btn-icon btn-edit" data-member-id="${safeId}" onclick="editMemberInfo(this.dataset.memberId)" title="수정">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon btn-delete" data-member-id="${safeId}" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    tbody.innerHTML = tableHTML;
+}
+
+// 페이지네이션 버튼 직접 렌더링 함수
+function renderPaginationButtons(currentPage, totalPages) {
+    const paginationEl = document.getElementById('memberPagination');
+    if (!paginationEl) return;
+    
+    let html = `<button type="button" class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>
+        <i class="fas fa-chevron-left"></i>
+    </button>`;
+    
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<button type="button" class="page-num ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+    }
+    
+    html += `<button type="button" class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>
+        <i class="fas fa-chevron-right"></i>
+    </button>`;
+    
+    paginationEl.innerHTML = html;
+    
+    console.log('🔵 페이지네이션 렌더링 완료:', {
+        currentPage: currentPage,
+        totalPages: totalPages,
+        buttonsCount: totalPages + 2
+    });
+}
 
 // 회원 상태 변경 함수
 window.changeMemberStatus = async function(memberId, newStatus) {
@@ -1016,18 +1299,32 @@ console.log('✅ 회원 관리 함수 전역 등록 완료:', {
 // 페이지네이션 클릭 이벤트 위임 (버튼 눌러도 반응하도록)
 (function() {
     function handlePaginationClick(e) {
+        console.log('🔵 페이지네이션 클릭 이벤트 발생:', e.target);
         var btn = e.target.closest('button[data-page]');
-        if (!btn || btn.disabled) return;
+        console.log('🔵 클릭된 버튼:', btn);
+        if (!btn || btn.disabled) {
+            console.log('⚠️ 버튼이 없거나 비활성화됨');
+            return;
+        }
         var p = parseInt(btn.getAttribute('data-page'), 10);
-        if (isNaN(p) || p < 1) return;
+        console.log('🔵 요청된 페이지:', p);
+        if (isNaN(p) || p < 1) {
+            console.log('⚠️ 잘못된 페이지 번호');
+            return;
+        }
         var pagEl = e.target.closest('#memberPagination');
         var searchPagEl = e.target.closest('#searchResultsPagination');
+        console.log('🔵 페이지네이션 컨테이너:', pagEl ? 'memberPagination' : (searchPagEl ? 'searchResultsPagination' : 'none'));
         if (pagEl && typeof window.changeMemberPage === 'function') {
+            console.log('🔵 changeMemberPage 함수 호출:', p);
             e.preventDefault();
             window.changeMemberPage(p);
         } else if (searchPagEl && typeof window.changeSearchResultsPage === 'function') {
+            console.log('🔵 changeSearchResultsPage 함수 호출:', p);
             e.preventDefault();
             window.changeSearchResultsPage(p);
+        } else {
+            console.log('⚠️ 적절한 페이지 변경 함수를 찾을 수 없음');
         }
     }
     if (document.readyState === 'loading') {

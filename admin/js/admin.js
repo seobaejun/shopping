@@ -2105,16 +2105,13 @@ document.addEventListener('click', (e) => {
 // 회원정보 페이지 기능 (Firestore 연동)
 // ============================================
 
-// 페이지네이션 변수
-let currentMemberPage = 1;
+// 페이지네이션 변수 (member-search.js에서 관리)
 const membersPerPage = 10;
-let allMembersData = []; // 전체 회원 데이터
-let filteredMembersData = []; // 필터링된 회원 데이터
 
-// 전역으로도 export (member-search.js에서 사용)
-window.allMembersData = allMembersData;
-window.filteredMembersData = filteredMembersData;
-window.currentMemberPage = currentMemberPage;
+// 전역 변수 초기화 (member-search.js에서 사용)
+if (!window.allMembersData) window.allMembersData = [];
+if (!window.filteredMembersData) window.filteredMembersData = [];
+if (!window.currentMemberPage) window.currentMemberPage = 1;
 
 // 회원 검색 함수는 member-search.js로 이동됨
 // admin.js에서는 제거하고 member-search.js의 함수를 사용
@@ -2529,10 +2526,9 @@ function renderMemberPagination(totalMembers) {
 
 // 페이지 변경 (전체회원 테이블은 member-search.js의 changeMemberPage 사용 — 덮어쓰지 않음)
 function changeMemberPageLocal(page) {
-    const data = window.filteredMembersData || filteredMembersData || [];
+    const data = window.filteredMembersData || [];
     const totalPages = Math.ceil(data.length / membersPerPage);
     if (page < 1 || page > totalPages) return;
-    currentMemberPage = page;
     window.currentMemberPage = page;
     renderMemberInfoTable();
     window.scrollTo({ top: 0, behavior: 'smooth' });

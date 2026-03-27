@@ -1,0 +1,625 @@
+마이그레이션 시작: 2026-03-27T03:01:27.030Z
+[2026-03-27T03:01:27.031Z] 📊 엑셀 파일 읽는 중...
+[2026-03-27T03:01:27.158Z] 📋 총 172개 회원 데이터 로드됨
+[2026-03-27T03:01:27.160Z] ✅ 유효한 데이터: 172개
+[2026-03-27T03:01:27.161Z] 
+🔄 처리 중 1/172: admin
+[2026-03-27T03:01:28.593Z] ✅ Auth 계정 생성: admin -> CJmeJRGF93SppmJSLwGpxMS17XO2
+[2026-03-27T03:01:28.679Z] ✅ Firestore 문서 생성: admin -> CJmeJRGF93SppmJSLwGpxMS17XO2
+[2026-03-27T03:01:29.199Z] 
+🔄 처리 중 2/172: lesc0
+[2026-03-27T03:01:30.117Z] ✅ Auth 계정 생성: lesc0 -> zpxnBhLvwnMqVKDkKfmcyJ0exTo1
+[2026-03-27T03:01:30.173Z] ✅ Firestore 문서 생성: lesc0 -> zpxnBhLvwnMqVKDkKfmcyJ0exTo1
+[2026-03-27T03:01:30.680Z] 
+🔄 처리 중 3/172: lesc2733
+[2026-03-27T03:01:31.609Z] ✅ Auth 계정 생성: lesc2733 -> p9WGN3y6eUhwxup1ltFWGzeohdG3
+[2026-03-27T03:01:31.668Z] ✅ Firestore 문서 생성: lesc2733 -> p9WGN3y6eUhwxup1ltFWGzeohdG3
+[2026-03-27T03:01:32.185Z] 
+🔄 처리 중 4/172: song53
+[2026-03-27T03:01:32.292Z] ⏭️  기존 회원 스킵: song53 (thdtjdaus@naver.com)
+[2026-03-27T03:01:32.798Z] 
+🔄 처리 중 5/172: juni8009
+[2026-03-27T03:01:33.659Z] ✅ Auth 계정 생성: juni8009 -> GNSKhDA173SydGJkGEWfOkiKREe2
+[2026-03-27T03:01:33.712Z] ✅ Firestore 문서 생성: juni8009 -> GNSKhDA173SydGJkGEWfOkiKREe2
+[2026-03-27T03:01:34.255Z] 
+🔄 처리 중 6/172: dldudghk04
+[2026-03-27T03:01:35.182Z] ✅ Auth 계정 생성: dldudghk04 -> sdVWqIsrbQZP8INAHnzUqK1kbhb2
+[2026-03-27T03:01:35.248Z] ✅ Firestore 문서 생성: dldudghk04 -> sdVWqIsrbQZP8INAHnzUqK1kbhb2
+[2026-03-27T03:01:35.765Z] 
+🔄 처리 중 7/172: PL464900
+[2026-03-27T03:01:36.600Z] ✅ Auth 계정 생성: PL464900 -> BNJYUTJSneT7MnKlEqFlBu6ucT53
+[2026-03-27T03:01:36.648Z] ✅ Firestore 문서 생성: PL464900 -> BNJYUTJSneT7MnKlEqFlBu6ucT53
+[2026-03-27T03:01:37.153Z] 
+🔄 처리 중 8/172: jgj4399
+[2026-03-27T03:01:38.001Z] ✅ Auth 계정 생성: jgj4399 -> bed36n2XX7ayCThakcS7aepMRA83
+[2026-03-27T03:01:38.041Z] ✅ Firestore 문서 생성: jgj4399 -> bed36n2XX7ayCThakcS7aepMRA83
+[2026-03-27T03:01:38.550Z] 
+🔄 처리 중 9/172: ok7377
+[2026-03-27T03:01:39.444Z] ✅ Auth 계정 생성: ok7377 -> sQoCj7Eyybdw0DBG2bOlQOe0AAw2
+[2026-03-27T03:01:39.504Z] ✅ Firestore 문서 생성: ok7377 -> sQoCj7Eyybdw0DBG2bOlQOe0AAw2
+[2026-03-27T03:01:40.014Z] 
+🔄 처리 중 10/172: bizidea1
+[2026-03-27T03:01:40.955Z] ✅ Auth 계정 생성: bizidea1 -> cs4h9rbUtaULlBuK2wkPBOFDzRB3
+[2026-03-27T03:01:40.995Z] ✅ Firestore 문서 생성: bizidea1 -> cs4h9rbUtaULlBuK2wkPBOFDzRB3
+[2026-03-27T03:01:41.501Z] 
+🔄 처리 중 11/172: khm7571
+[2026-03-27T03:01:42.404Z] ✅ Auth 계정 생성: khm7571 -> wj1fo30rfdY5FaBSl4i2dEho6wE2
+[2026-03-27T03:01:42.451Z] ✅ Firestore 문서 생성: khm7571 -> wj1fo30rfdY5FaBSl4i2dEho6wE2
+[2026-03-27T03:01:42.962Z] 
+🔄 처리 중 12/172: sky9012
+[2026-03-27T03:01:43.818Z] ✅ Auth 계정 생성: sky9012 -> Rk1ziybMxPQN3qkdfjQpauxsvw63
+[2026-03-27T03:01:43.888Z] ✅ Firestore 문서 생성: sky9012 -> Rk1ziybMxPQN3qkdfjQpauxsvw63
+[2026-03-27T03:01:44.396Z] 
+🔄 처리 중 13/172: gic585800
+[2026-03-27T03:01:45.240Z] ✅ Auth 계정 생성: gic585800 -> MUrcPFVzlKej00tPQMeu2RlrzIE2
+[2026-03-27T03:01:45.271Z] ✅ Firestore 문서 생성: gic585800 -> MUrcPFVzlKej00tPQMeu2RlrzIE2
+[2026-03-27T03:01:45.777Z] 
+🔄 처리 중 14/172: moon05
+[2026-03-27T03:01:46.637Z] ✅ Auth 계정 생성: moon05 -> n9KYlZPdnPQp2y95Ux2yfs58zrd2
+[2026-03-27T03:01:46.685Z] ✅ Firestore 문서 생성: moon05 -> n9KYlZPdnPQp2y95Ux2yfs58zrd2
+[2026-03-27T03:01:47.189Z] 
+🔄 처리 중 15/172: yjjang042
+[2026-03-27T03:01:48.030Z] ✅ Auth 계정 생성: yjjang042 -> jgC3U7f8R8Pk13rw73NR0eDqhLB2
+[2026-03-27T03:01:48.060Z] ✅ Firestore 문서 생성: yjjang042 -> jgC3U7f8R8Pk13rw73NR0eDqhLB2
+[2026-03-27T03:01:48.568Z] 
+🔄 처리 중 16/172: jungkee99
+[2026-03-27T03:01:49.414Z] ✅ Auth 계정 생성: jungkee99 -> lLBDKge3mzQ04aw3X7YwRPaHnPZ2
+[2026-03-27T03:01:49.447Z] ✅ Firestore 문서 생성: jungkee99 -> lLBDKge3mzQ04aw3X7YwRPaHnPZ2
+[2026-03-27T03:01:49.952Z] 
+🔄 처리 중 17/172: Son2759
+[2026-03-27T03:01:50.822Z] ✅ Auth 계정 생성: Son2759 -> yPINlGv8VLUPZ3W7ledIdBYhYQf2
+[2026-03-27T03:01:50.864Z] ✅ Firestore 문서 생성: Son2759 -> yPINlGv8VLUPZ3W7ledIdBYhYQf2
+[2026-03-27T03:01:51.378Z] 
+🔄 처리 중 18/172: kst8008
+[2026-03-27T03:01:52.186Z] ✅ Auth 계정 생성: kst8008 -> DCabQSTpgZW0sY0b1NrdHoOcrVu2
+[2026-03-27T03:01:52.250Z] ✅ Firestore 문서 생성: kst8008 -> DCabQSTpgZW0sY0b1NrdHoOcrVu2
+[2026-03-27T03:01:52.753Z] 
+🔄 처리 중 19/172: akrasiel
+[2026-03-27T03:01:53.637Z] ✅ Auth 계정 생성: akrasiel -> JFTK1b6taFNJ4INh80PRIVD4Mli2
+[2026-03-27T03:01:53.684Z] ✅ Firestore 문서 생성: akrasiel -> JFTK1b6taFNJ4INh80PRIVD4Mli2
+[2026-03-27T03:01:54.196Z] 
+🔄 처리 중 20/172: Jefferson
+[2026-03-27T03:01:55.070Z] ✅ Auth 계정 생성: Jefferson -> JcWyWTVPBgamhETKcSAXYBOAZov1
+[2026-03-27T03:01:55.125Z] ✅ Firestore 문서 생성: Jefferson -> JcWyWTVPBgamhETKcSAXYBOAZov1
+[2026-03-27T03:01:55.633Z] 
+🔄 처리 중 21/172: kmj0048
+[2026-03-27T03:01:56.558Z] ✅ Auth 계정 생성: kmj0048 -> sH24U0cet3OxcDr7VHV1Qaiy3mw2
+[2026-03-27T03:01:56.619Z] ✅ Firestore 문서 생성: kmj0048 -> sH24U0cet3OxcDr7VHV1Qaiy3mw2
+[2026-03-27T03:01:57.126Z] 
+🔄 처리 중 22/172: like816
+[2026-03-27T03:01:57.994Z] ✅ Auth 계정 생성: like816 -> mpbZYnMwIUTdVzUxPpeuvUngokN2
+[2026-03-27T03:01:58.024Z] ✅ Firestore 문서 생성: like816 -> mpbZYnMwIUTdVzUxPpeuvUngokN2
+[2026-03-27T03:01:58.543Z] 
+🔄 처리 중 23/172: jofk1130
+[2026-03-27T03:01:59.402Z] ✅ Auth 계정 생성: jofk1130 -> davYYWL3ZoOEHy4ewdTsYOyb29l2
+[2026-03-27T03:01:59.452Z] ✅ Firestore 문서 생성: jofk1130 -> davYYWL3ZoOEHy4ewdTsYOyb29l2
+[2026-03-27T03:01:59.964Z] 
+🔄 처리 중 24/172: jyooncho0718
+[2026-03-27T03:02:00.913Z] ✅ Auth 계정 생성: jyooncho0718 -> z0dQp53ZnQZGg3g6gwKjxV7CC0F3
+[2026-03-27T03:02:00.956Z] ✅ Firestore 문서 생성: jyooncho0718 -> z0dQp53ZnQZGg3g6gwKjxV7CC0F3
+[2026-03-27T03:02:01.463Z] 
+🔄 처리 중 25/172: jpg07004
+[2026-03-27T03:02:02.302Z] ✅ Auth 계정 생성: jpg07004 -> EAqxDdy9JmUUvEqY9laxjWJXyNk1
+[2026-03-27T03:02:02.351Z] ✅ Firestore 문서 생성: jpg07004 -> EAqxDdy9JmUUvEqY9laxjWJXyNk1
+[2026-03-27T03:02:02.865Z] 
+🔄 처리 중 26/172: koreambk
+[2026-03-27T03:02:03.749Z] ✅ Auth 계정 생성: koreambk -> P1xuozkzUcVxx0g1fNceI3ii1P22
+[2026-03-27T03:02:03.788Z] ✅ Firestore 문서 생성: koreambk -> P1xuozkzUcVxx0g1fNceI3ii1P22
+[2026-03-27T03:02:04.312Z] 
+🔄 처리 중 27/172: vbnm2233
+[2026-03-27T03:02:05.240Z] ✅ Auth 계정 생성: vbnm2233 -> Q4lvZqDLdyS7tdMpcZuKTByJrO83
+[2026-03-27T03:02:05.293Z] ✅ Firestore 문서 생성: vbnm2233 -> Q4lvZqDLdyS7tdMpcZuKTByJrO83
+[2026-03-27T03:02:05.799Z] 
+🔄 처리 중 28/172: htwins
+[2026-03-27T03:02:06.691Z] ✅ Auth 계정 생성: htwins -> 8HdI7BytUuWagV0zSkyAWVWjots2
+[2026-03-27T03:02:06.732Z] ✅ Firestore 문서 생성: htwins -> 8HdI7BytUuWagV0zSkyAWVWjots2
+[2026-03-27T03:02:07.239Z] 
+🔄 처리 중 29/172: can123
+[2026-03-27T03:02:08.070Z] ✅ Auth 계정 생성: can123 -> 5UpPomQRKPbzUptCOk6Bf5imwWk1
+[2026-03-27T03:02:08.116Z] ✅ Firestore 문서 생성: can123 -> 5UpPomQRKPbzUptCOk6Bf5imwWk1
+[2026-03-27T03:02:08.632Z] 
+🔄 처리 중 30/172: dorlqhd113
+[2026-03-27T03:02:09.479Z] ✅ Auth 계정 생성: dorlqhd113 -> RgfNf4M0o6Pzlwu4ig8hetSKkaW2
+[2026-03-27T03:02:09.534Z] ✅ Firestore 문서 생성: dorlqhd113 -> RgfNf4M0o6Pzlwu4ig8hetSKkaW2
+[2026-03-27T03:02:10.042Z] 
+🔄 처리 중 31/172: thdbs0216
+[2026-03-27T03:02:10.922Z] ✅ Auth 계정 생성: thdbs0216 -> RPplk2jvrUNgWFrtTkKAI9nHcnu1
+[2026-03-27T03:02:10.968Z] ✅ Firestore 문서 생성: thdbs0216 -> RPplk2jvrUNgWFrtTkKAI9nHcnu1
+[2026-03-27T03:02:11.482Z] 
+🔄 처리 중 32/172: tckeum11
+[2026-03-27T03:02:12.392Z] ✅ Auth 계정 생성: tckeum11 -> 0jqsBcF7JyOwuUXf7q0VPanQnDA2
+[2026-03-27T03:02:12.431Z] ✅ Firestore 문서 생성: tckeum11 -> 0jqsBcF7JyOwuUXf7q0VPanQnDA2
+[2026-03-27T03:02:12.950Z] 
+🔄 처리 중 33/172: truelub
+[2026-03-27T03:02:13.881Z] ✅ Auth 계정 생성: truelub -> 5fVAQoEPTsSBdaV3sa0d716bnP83
+[2026-03-27T03:02:13.919Z] ✅ Firestore 문서 생성: truelub -> 5fVAQoEPTsSBdaV3sa0d716bnP83
+[2026-03-27T03:02:14.429Z] 
+🔄 처리 중 34/172: onyour
+[2026-03-27T03:02:15.328Z] ✅ Auth 계정 생성: onyour -> 9NbX39nIFSW3qE1YUOlq7bzLM0j2
+[2026-03-27T03:02:15.370Z] ✅ Firestore 문서 생성: onyour -> 9NbX39nIFSW3qE1YUOlq7bzLM0j2
+[2026-03-27T03:02:15.871Z] 
+🔄 처리 중 35/172: 28nomuid
+[2026-03-27T03:02:16.749Z] ✅ Auth 계정 생성: 28nomuid -> qpU4QX9cXWP5yValzQwkaB1URYF3
+[2026-03-27T03:02:16.783Z] ✅ Firestore 문서 생성: 28nomuid -> qpU4QX9cXWP5yValzQwkaB1URYF3
+[2026-03-27T03:02:17.292Z] 
+🔄 처리 중 36/172: xxangq
+[2026-03-27T03:02:18.161Z] ✅ Auth 계정 생성: xxangq -> StKaPK64HHX7VupIn38Yz1k2vYC2
+[2026-03-27T03:02:18.198Z] ✅ Firestore 문서 생성: xxangq -> StKaPK64HHX7VupIn38Yz1k2vYC2
+[2026-03-27T03:02:18.727Z] 
+🔄 처리 중 37/172: kels2008
+[2026-03-27T03:02:19.644Z] ✅ Auth 계정 생성: kels2008 -> cfcYebuU5seuAIL7czicrRWNVPM2
+[2026-03-27T03:02:19.694Z] ✅ Firestore 문서 생성: kels2008 -> cfcYebuU5seuAIL7czicrRWNVPM2
+[2026-03-27T03:02:20.205Z] 
+🔄 처리 중 38/172: rudilim
+[2026-03-27T03:02:21.023Z] ✅ Auth 계정 생성: rudilim -> 4O4SYhSzMnQb1aaZ7GTdhlRMG8j1
+[2026-03-27T03:02:21.060Z] ✅ Firestore 문서 생성: rudilim -> 4O4SYhSzMnQb1aaZ7GTdhlRMG8j1
+[2026-03-27T03:02:21.580Z] 
+🔄 처리 중 39/172: Ho993465
+[2026-03-27T03:02:22.457Z] ✅ Auth 계정 생성: Ho993465 -> n2OAcULmFhTr8l43wE1uuUPeg7I2
+[2026-03-27T03:02:22.486Z] ✅ Firestore 문서 생성: Ho993465 -> n2OAcULmFhTr8l43wE1uuUPeg7I2
+[2026-03-27T03:02:22.989Z] 
+🔄 처리 중 40/172: nicewoo
+[2026-03-27T03:02:23.874Z] ✅ Auth 계정 생성: nicewoo -> Ku56WeCgYCax2ImxZn3ydvfo1dy1
+[2026-03-27T03:02:23.911Z] ✅ Firestore 문서 생성: nicewoo -> Ku56WeCgYCax2ImxZn3ydvfo1dy1
+[2026-03-27T03:02:24.419Z] 
+🔄 처리 중 41/172: qus6117
+[2026-03-27T03:02:25.289Z] ✅ Auth 계정 생성: qus6117 -> 1ze9Tv43NMWiQxU6h8QaNtt7tnA3
+[2026-03-27T03:02:25.327Z] ✅ Firestore 문서 생성: qus6117 -> 1ze9Tv43NMWiQxU6h8QaNtt7tnA3
+[2026-03-27T03:02:25.831Z] 
+🔄 처리 중 42/172: Lee2086
+[2026-03-27T03:02:26.705Z] ✅ Auth 계정 생성: Lee2086 -> 2xsybHXlarUPCmiBViEUjGW1s7A3
+[2026-03-27T03:02:26.742Z] ✅ Firestore 문서 생성: Lee2086 -> 2xsybHXlarUPCmiBViEUjGW1s7A3
+[2026-03-27T03:02:27.249Z] 
+🔄 처리 중 43/172: ces7869
+[2026-03-27T03:02:28.148Z] ✅ Auth 계정 생성: ces7869 -> KoYxd5XBlcR1vdHO9dSARD8dESm2
+[2026-03-27T03:02:28.223Z] ✅ Firestore 문서 생성: ces7869 -> KoYxd5XBlcR1vdHO9dSARD8dESm2
+[2026-03-27T03:02:28.731Z] 
+🔄 처리 중 44/172: jjh1555
+[2026-03-27T03:02:29.561Z] ✅ Auth 계정 생성: jjh1555 -> T67ztSOeGPag0ahqSrUCrZBoQQy2
+[2026-03-27T03:02:29.608Z] ✅ Firestore 문서 생성: jjh1555 -> T67ztSOeGPag0ahqSrUCrZBoQQy2
+[2026-03-27T03:02:30.122Z] 
+🔄 처리 중 45/172: sa6890
+[2026-03-27T03:02:30.942Z] ✅ Auth 계정 생성: sa6890 -> gaS20VkTVyRFqSD52pvX96byWqi2
+[2026-03-27T03:02:30.975Z] ✅ Firestore 문서 생성: sa6890 -> gaS20VkTVyRFqSD52pvX96byWqi2
+[2026-03-27T03:02:31.492Z] 
+🔄 처리 중 46/172: coner1002
+[2026-03-27T03:02:32.350Z] ✅ Auth 계정 생성: coner1002 -> 3jZwhTvoEZaK0yiQzK1clu0V8Ks2
+[2026-03-27T03:02:32.391Z] ✅ Firestore 문서 생성: coner1002 -> 3jZwhTvoEZaK0yiQzK1clu0V8Ks2
+[2026-03-27T03:02:32.894Z] 
+🔄 처리 중 47/172: mamawhdk88
+[2026-03-27T03:02:33.766Z] ✅ Auth 계정 생성: mamawhdk88 -> bw3sfiRQWISOooU1KLdvbhWIXX13
+[2026-03-27T03:02:33.804Z] ✅ Firestore 문서 생성: mamawhdk88 -> bw3sfiRQWISOooU1KLdvbhWIXX13
+[2026-03-27T03:02:34.310Z] 
+🔄 처리 중 48/172: editorj
+[2026-03-27T03:02:35.176Z] ✅ Auth 계정 생성: editorj -> WkHwUZk3SBgtwSieCKRNGVKRZNI3
+[2026-03-27T03:02:35.215Z] ✅ Firestore 문서 생성: editorj -> WkHwUZk3SBgtwSieCKRNGVKRZNI3
+[2026-03-27T03:02:35.729Z] 
+🔄 처리 중 49/172: dhgksquf
+[2026-03-27T03:02:36.596Z] ✅ Auth 계정 생성: dhgksquf -> Jf3Tzuw9rdew82Pm6LXqiIPwwaw1
+[2026-03-27T03:02:36.640Z] ✅ Firestore 문서 생성: dhgksquf -> Jf3Tzuw9rdew82Pm6LXqiIPwwaw1
+[2026-03-27T03:02:37.148Z] 
+🔄 처리 중 50/172: kms3811
+[2026-03-27T03:02:38.053Z] ✅ Auth 계정 생성: kms3811 -> 798kkyP509M9Au4Tz1o8zIGGhxy2
+[2026-03-27T03:02:38.085Z] ✅ Firestore 문서 생성: kms3811 -> 798kkyP509M9Au4Tz1o8zIGGhxy2
+[2026-03-27T03:02:38.596Z] 
+🔄 처리 중 51/172: ubcon21
+[2026-03-27T03:02:39.470Z] ✅ Auth 계정 생성: ubcon21 -> 3owVhzDcMqUx92rKwGc4tdkHKjd2
+[2026-03-27T03:02:39.505Z] ✅ Firestore 문서 생성: ubcon21 -> 3owVhzDcMqUx92rKwGc4tdkHKjd2
+[2026-03-27T03:02:40.077Z] 
+🔄 처리 중 52/172: soribee60
+[2026-03-27T03:02:40.895Z] ✅ Auth 계정 생성: soribee60 -> 66z1zFyxhNgfRWszR9kzEKIIRRv2
+[2026-03-27T03:02:40.937Z] ✅ Firestore 문서 생성: soribee60 -> 66z1zFyxhNgfRWszR9kzEKIIRRv2
+[2026-03-27T03:02:41.441Z] 
+🔄 처리 중 53/172: Ceokcu2588
+[2026-03-27T03:02:42.344Z] ✅ Auth 계정 생성: Ceokcu2588 -> f81JKkmzUpUrtlQZCctFYvqnvVa2
+[2026-03-27T03:02:42.379Z] ✅ Firestore 문서 생성: Ceokcu2588 -> f81JKkmzUpUrtlQZCctFYvqnvVa2
+[2026-03-27T03:02:42.892Z] 
+🔄 처리 중 54/172: baddagi
+[2026-03-27T03:02:43.801Z] ✅ Auth 계정 생성: baddagi -> t27YfBpLduc58QFP69oyU3Yoz023
+[2026-03-27T03:02:43.833Z] ✅ Firestore 문서 생성: baddagi -> t27YfBpLduc58QFP69oyU3Yoz023
+[2026-03-27T03:02:44.345Z] 
+🔄 처리 중 55/172: iamsonghm
+[2026-03-27T03:02:45.169Z] ✅ Auth 계정 생성: iamsonghm -> eUeSF4LMYheauerI5ZuE7sKIfvj2
+[2026-03-27T03:02:45.209Z] ✅ Firestore 문서 생성: iamsonghm -> eUeSF4LMYheauerI5ZuE7sKIfvj2
+[2026-03-27T03:02:45.719Z] 
+🔄 처리 중 56/172: ilove12384
+[2026-03-27T03:02:46.562Z] ✅ Auth 계정 생성: ilove12384 -> 2MSv6vSvLnRhKU1df9uobVKYUq83
+[2026-03-27T03:02:46.593Z] ✅ Firestore 문서 생성: ilove12384 -> 2MSv6vSvLnRhKU1df9uobVKYUq83
+[2026-03-27T03:02:47.098Z] 
+🔄 처리 중 57/172: adk0821
+[2026-03-27T03:02:47.993Z] ✅ Auth 계정 생성: adk0821 -> xOSAOBLWfFMkRNio0hcBArXy5wu2
+[2026-03-27T03:02:48.023Z] ✅ Firestore 문서 생성: adk0821 -> xOSAOBLWfFMkRNio0hcBArXy5wu2
+[2026-03-27T03:02:48.535Z] 
+🔄 처리 중 58/172: rustyexodus
+[2026-03-27T03:02:49.381Z] ✅ Auth 계정 생성: rustyexodus -> EcYOHTWu2RN8M3qEJEqaxOgOCUs1
+[2026-03-27T03:02:49.420Z] ✅ Firestore 문서 생성: rustyexodus -> EcYOHTWu2RN8M3qEJEqaxOgOCUs1
+[2026-03-27T03:02:49.932Z] 
+🔄 처리 중 59/172: c7ys007
+[2026-03-27T03:02:50.790Z] ✅ Auth 계정 생성: c7ys007 -> Z9Px9bZcGeRDQyFsKhDirBzUMYr1
+[2026-03-27T03:02:50.828Z] ✅ Firestore 문서 생성: c7ys007 -> Z9Px9bZcGeRDQyFsKhDirBzUMYr1
+[2026-03-27T03:02:51.345Z] 
+🔄 처리 중 60/172: power0920
+[2026-03-27T03:02:52.147Z] ✅ Auth 계정 생성: power0920 -> wgSCO33M6kbzht9hFNd8Hf71GY82
+[2026-03-27T03:02:52.183Z] ✅ Firestore 문서 생성: power0920 -> wgSCO33M6kbzht9hFNd8Hf71GY82
+[2026-03-27T03:02:52.699Z] 
+🔄 처리 중 61/172: jsj072
+[2026-03-27T03:02:53.525Z] ✅ Auth 계정 생성: jsj072 -> 2NeLEOs7odT1RezBZWBvXHG7vA83
+[2026-03-27T03:02:53.566Z] ✅ Firestore 문서 생성: jsj072 -> 2NeLEOs7odT1RezBZWBvXHG7vA83
+[2026-03-27T03:02:54.075Z] 
+🔄 처리 중 62/172: ekgus23
+[2026-03-27T03:02:54.912Z] ✅ Auth 계정 생성: ekgus23 -> 4HKckpNaj2ese2cihrTu3gs1cdH3
+[2026-03-27T03:02:54.953Z] ✅ Firestore 문서 생성: ekgus23 -> 4HKckpNaj2ese2cihrTu3gs1cdH3
+[2026-03-27T03:02:55.464Z] 
+🔄 처리 중 63/172: heeonne
+[2026-03-27T03:02:56.322Z] ✅ Auth 계정 생성: heeonne -> Kzye6ue2h8fJYGrHOjJTIsT0TiK2
+[2026-03-27T03:02:56.363Z] ✅ Firestore 문서 생성: heeonne -> Kzye6ue2h8fJYGrHOjJTIsT0TiK2
+[2026-03-27T03:02:56.871Z] 
+🔄 처리 중 64/172: bkan71
+[2026-03-27T03:02:57.748Z] ✅ Auth 계정 생성: bkan71 -> 9TzxlVP4e1eoCF2u8nY1GfFfXAU2
+[2026-03-27T03:02:57.788Z] ✅ Firestore 문서 생성: bkan71 -> 9TzxlVP4e1eoCF2u8nY1GfFfXAU2
+[2026-03-27T03:02:58.301Z] 
+🔄 처리 중 65/172: ccho4922
+[2026-03-27T03:02:59.174Z] ✅ Auth 계정 생성: ccho4922 -> YWTEHntcSwf2UMkGKnAyxQvLzCP2
+[2026-03-27T03:02:59.216Z] ✅ Firestore 문서 생성: ccho4922 -> YWTEHntcSwf2UMkGKnAyxQvLzCP2
+[2026-03-27T03:02:59.716Z] 
+🔄 처리 중 66/172: a64146741
+[2026-03-27T03:03:00.581Z] ✅ Auth 계정 생성: a64146741 -> uDzCJAot1gWbL8vIwB2W24MlKBV2
+[2026-03-27T03:03:00.628Z] ✅ Firestore 문서 생성: a64146741 -> uDzCJAot1gWbL8vIwB2W24MlKBV2
+[2026-03-27T03:03:01.139Z] 
+🔄 처리 중 67/172: chjy1027
+[2026-03-27T03:03:01.962Z] ✅ Auth 계정 생성: chjy1027 -> JqGUAWdkSiY12xhQhwWoTvgVgpx2
+[2026-03-27T03:03:02.006Z] ✅ Firestore 문서 생성: chjy1027 -> JqGUAWdkSiY12xhQhwWoTvgVgpx2
+[2026-03-27T03:03:02.519Z] 
+🔄 처리 중 68/172: sja3105
+[2026-03-27T03:03:03.367Z] ✅ Auth 계정 생성: sja3105 -> 9X5APEaIMnYzk9mbOzvhCqUARCv1
+[2026-03-27T03:03:03.400Z] ✅ Firestore 문서 생성: sja3105 -> 9X5APEaIMnYzk9mbOzvhCqUARCv1
+[2026-03-27T03:03:03.908Z] 
+🔄 처리 중 69/172: dni2015
+[2026-03-27T03:03:04.778Z] ✅ Auth 계정 생성: dni2015 -> n6NL71XP3bTNvrpp2dnX7euUwXl1
+[2026-03-27T03:03:04.817Z] ✅ Firestore 문서 생성: dni2015 -> n6NL71XP3bTNvrpp2dnX7euUwXl1
+[2026-03-27T03:03:05.320Z] 
+🔄 처리 중 70/172: Trinity
+[2026-03-27T03:03:06.183Z] ✅ Auth 계정 생성: Trinity -> oM5guqpIuIPCk7xDuH2PxMBEpUo2
+[2026-03-27T03:03:06.225Z] ✅ Firestore 문서 생성: Trinity -> oM5guqpIuIPCk7xDuH2PxMBEpUo2
+[2026-03-27T03:03:06.734Z] 
+🔄 처리 중 71/172: alsrud02
+[2026-03-27T03:03:07.595Z] ✅ Auth 계정 생성: alsrud02 -> fY2SBZoWsQds7X4C0jeiHeAP6so2
+[2026-03-27T03:03:07.625Z] ✅ Firestore 문서 생성: alsrud02 -> fY2SBZoWsQds7X4C0jeiHeAP6so2
+[2026-03-27T03:03:08.142Z] 
+🔄 처리 중 72/172: Qqwe2234
+[2026-03-27T03:03:08.992Z] ✅ Auth 계정 생성: Qqwe2234 -> OylwWlICSjdAKuHjPMqwlA35gJv2
+[2026-03-27T03:03:09.037Z] ✅ Firestore 문서 생성: Qqwe2234 -> OylwWlICSjdAKuHjPMqwlA35gJv2
+[2026-03-27T03:03:09.545Z] 
+🔄 처리 중 73/172: esh2789
+[2026-03-27T03:03:10.369Z] ✅ Auth 계정 생성: esh2789 -> Dq8dYjaMbybI20yjdFBMjgp6u5E2
+[2026-03-27T03:03:10.407Z] ✅ Firestore 문서 생성: esh2789 -> Dq8dYjaMbybI20yjdFBMjgp6u5E2
+[2026-03-27T03:03:10.921Z] 
+🔄 처리 중 74/172: Woo485858
+[2026-03-27T03:03:11.807Z] ✅ Auth 계정 생성: Woo485858 -> otxTN1LfADOQFTlv0y3fZADlLW63
+[2026-03-27T03:03:11.842Z] ✅ Firestore 문서 생성: Woo485858 -> otxTN1LfADOQFTlv0y3fZADlLW63
+[2026-03-27T03:03:12.343Z] 
+🔄 처리 중 75/172: mecca1231
+[2026-03-27T03:03:13.220Z] ✅ Auth 계정 생성: mecca1231 -> 8b8SaEyNGhVvUu1OOkINkTPXBec2
+[2026-03-27T03:03:13.250Z] ✅ Firestore 문서 생성: mecca1231 -> 8b8SaEyNGhVvUu1OOkINkTPXBec2
+[2026-03-27T03:03:13.755Z] 
+🔄 처리 중 76/172: 1
+[2026-03-27T03:03:14.179Z] ❌ 사용자 생성 실패 (1): Firebase: Password should be at least 6 characters (auth/weak-password).
+[2026-03-27T03:03:14.681Z] 
+🔄 처리 중 77/172: jintersales
+[2026-03-27T03:03:15.503Z] ✅ Auth 계정 생성: jintersales -> FaDOI0loOngD92zM0pNLSylRAun2
+[2026-03-27T03:03:15.552Z] ✅ Firestore 문서 생성: jintersales -> FaDOI0loOngD92zM0pNLSylRAun2
+[2026-03-27T03:03:16.056Z] 
+🔄 처리 중 78/172: ysh3213
+[2026-03-27T03:03:16.957Z] ✅ Auth 계정 생성: ysh3213 -> wfrRfkj90COy9bSRUOqxJ8OWW5E2
+[2026-03-27T03:03:17.005Z] ✅ Firestore 문서 생성: ysh3213 -> wfrRfkj90COy9bSRUOqxJ8OWW5E2
+[2026-03-27T03:03:17.520Z] 
+🔄 처리 중 79/172: kim0613
+[2026-03-27T03:03:18.386Z] ✅ Auth 계정 생성: kim0613 -> mU2zcxH4HhUoif1mMtZaBJtN9KI2
+[2026-03-27T03:03:18.423Z] ✅ Firestore 문서 생성: kim0613 -> mU2zcxH4HhUoif1mMtZaBJtN9KI2
+[2026-03-27T03:03:18.931Z] 
+🔄 처리 중 80/172: 10game
+[2026-03-27T03:03:19.730Z] ✅ Auth 계정 생성: 10game -> HeLC6KAAdFNmBa8BRZpw8wvCZ7z2
+[2026-03-27T03:03:19.765Z] ✅ Firestore 문서 생성: 10game -> HeLC6KAAdFNmBa8BRZpw8wvCZ7z2
+[2026-03-27T03:03:20.272Z] 
+🔄 처리 중 81/172: 1
+[2026-03-27T03:03:20.711Z] ❌ 사용자 생성 실패 (1): Firebase: Password should be at least 6 characters (auth/weak-password).
+[2026-03-27T03:03:21.218Z] 
+🔄 처리 중 82/172: kdb7208
+[2026-03-27T03:03:22.102Z] ✅ Auth 계정 생성: kdb7208 -> VCW8Cp5cMCX3KyxsM1VuDsvIs4H3
+[2026-03-27T03:03:22.148Z] ✅ Firestore 문서 생성: kdb7208 -> VCW8Cp5cMCX3KyxsM1VuDsvIs4H3
+[2026-03-27T03:03:22.656Z] 
+🔄 처리 중 83/172: wenzhe668
+[2026-03-27T03:03:23.507Z] ✅ Auth 계정 생성: wenzhe668 -> ZxmOuO1wOTM6EauOuhkIMhxxCTs1
+[2026-03-27T03:03:23.545Z] ✅ Firestore 문서 생성: wenzhe668 -> ZxmOuO1wOTM6EauOuhkIMhxxCTs1
+[2026-03-27T03:03:24.055Z] 
+🔄 처리 중 84/172: Ssb76296897
+[2026-03-27T03:03:24.938Z] ✅ Auth 계정 생성: Ssb76296897 -> YL7TPz8WgKe2Ol1l8SM1jsfmO0e2
+[2026-03-27T03:03:24.983Z] ✅ Firestore 문서 생성: Ssb76296897 -> YL7TPz8WgKe2Ol1l8SM1jsfmO0e2
+[2026-03-27T03:03:25.494Z] 
+🔄 처리 중 85/172: Young9k
+[2026-03-27T03:03:26.350Z] ✅ Auth 계정 생성: Young9k -> kWeF1BJJ1ZaQQUxmU1lOGTxO1c33
+[2026-03-27T03:03:26.387Z] ✅ Firestore 문서 생성: Young9k -> kWeF1BJJ1ZaQQUxmU1lOGTxO1c33
+[2026-03-27T03:03:26.893Z] 
+🔄 처리 중 86/172: gksgpals204
+[2026-03-27T03:03:27.708Z] ✅ Auth 계정 생성: gksgpals204 -> SMejHXbH33XNEr5FSnquSnEzPX42
+[2026-03-27T03:03:27.743Z] ✅ Firestore 문서 생성: gksgpals204 -> SMejHXbH33XNEr5FSnquSnEzPX42
+[2026-03-27T03:03:28.307Z] 
+🔄 처리 중 87/172: epi9000
+[2026-03-27T03:03:29.126Z] ✅ Auth 계정 생성: epi9000 -> eeVWcdAiVPUpGYGQGHtGqH9bG4A2
+[2026-03-27T03:03:29.160Z] ✅ Firestore 문서 생성: epi9000 -> eeVWcdAiVPUpGYGQGHtGqH9bG4A2
+[2026-03-27T03:03:29.674Z] 
+🔄 처리 중 88/172: lgh3454
+[2026-03-27T03:03:30.548Z] ✅ Auth 계정 생성: lgh3454 -> G0YOTaHUg5TqDkBtimkwNHTeDFf2
+[2026-03-27T03:03:30.582Z] ✅ Firestore 문서 생성: lgh3454 -> G0YOTaHUg5TqDkBtimkwNHTeDFf2
+[2026-03-27T03:03:31.100Z] 
+🔄 처리 중 89/172: ssmtkk
+[2026-03-27T03:03:31.933Z] ✅ Auth 계정 생성: ssmtkk -> elu96SuTnRcF00ekDCP5amJHp2H2
+[2026-03-27T03:03:31.965Z] ✅ Firestore 문서 생성: ssmtkk -> elu96SuTnRcF00ekDCP5amJHp2H2
+[2026-03-27T03:03:32.468Z] 
+🔄 처리 중 90/172: Wonchuuu
+[2026-03-27T03:03:33.349Z] ✅ Auth 계정 생성: Wonchuuu -> kwwgZWav90PBY967gHf08jWbuVt2
+[2026-03-27T03:03:33.384Z] ✅ Firestore 문서 생성: Wonchuuu -> kwwgZWav90PBY967gHf08jWbuVt2
+[2026-03-27T03:03:33.890Z] 
+🔄 처리 중 91/172: gisookhong
+[2026-03-27T03:03:34.802Z] ✅ Auth 계정 생성: gisookhong -> L79HEr2dYkQyZuWxrjsufiIXSml2
+[2026-03-27T03:03:34.860Z] ✅ Firestore 문서 생성: gisookhong -> L79HEr2dYkQyZuWxrjsufiIXSml2
+[2026-03-27T03:03:35.362Z] 
+🔄 처리 중 92/172: xowlscjswo1
+[2026-03-27T03:03:36.226Z] ✅ Auth 계정 생성: xowlscjswo1 -> 7koh2Ki5xsTe65ytKXtFraJmubl2
+[2026-03-27T03:03:36.259Z] ✅ Firestore 문서 생성: xowlscjswo1 -> 7koh2Ki5xsTe65ytKXtFraJmubl2
+[2026-03-27T03:03:36.783Z] 
+🔄 처리 중 93/172: hoihk84
+[2026-03-27T03:03:37.643Z] ✅ Auth 계정 생성: hoihk84 -> 6hIv6BIUHdeEx7ZHBz2BvwKR7hv2
+[2026-03-27T03:03:37.675Z] ✅ Firestore 문서 생성: hoihk84 -> 6hIv6BIUHdeEx7ZHBz2BvwKR7hv2
+[2026-03-27T03:03:38.187Z] 
+🔄 처리 중 94/172: hcsong60
+[2026-03-27T03:03:39.026Z] ✅ Auth 계정 생성: hcsong60 -> lqangJClbkcbOAEbrpKJlI7X6QB3
+[2026-03-27T03:03:39.065Z] ✅ Firestore 문서 생성: hcsong60 -> lqangJClbkcbOAEbrpKJlI7X6QB3
+[2026-03-27T03:03:39.581Z] 
+🔄 처리 중 95/172: kayakk
+[2026-03-27T03:03:40.407Z] ✅ Auth 계정 생성: kayakk -> NNiz8HGepxQU9mx9oFcRDtZMZT52
+[2026-03-27T03:03:40.442Z] ✅ Firestore 문서 생성: kayakk -> NNiz8HGepxQU9mx9oFcRDtZMZT52
+[2026-03-27T03:03:40.949Z] 
+🔄 처리 중 96/172: glsw1212
+[2026-03-27T03:03:41.761Z] ✅ Auth 계정 생성: glsw1212 -> pK36Y7xPJQNl0kDlMxdpmqaSyU23
+[2026-03-27T03:03:41.802Z] ✅ Firestore 문서 생성: glsw1212 -> pK36Y7xPJQNl0kDlMxdpmqaSyU23
+[2026-03-27T03:03:42.314Z] 
+🔄 처리 중 97/172: kajh6120
+[2026-03-27T03:03:43.140Z] ✅ Auth 계정 생성: kajh6120 -> v7DyydaRqzXxzSZ7cOEE00rGhgI2
+[2026-03-27T03:03:43.174Z] ✅ Firestore 문서 생성: kajh6120 -> v7DyydaRqzXxzSZ7cOEE00rGhgI2
+[2026-03-27T03:03:43.687Z] 
+🔄 처리 중 98/172: admin2
+[2026-03-27T03:03:44.621Z] ✅ Auth 계정 생성: admin2 -> cnG7BOjy0yTvF9DPwEu55DZjAPC3
+[2026-03-27T03:03:44.656Z] ✅ Firestore 문서 생성: admin2 -> cnG7BOjy0yTvF9DPwEu55DZjAPC3
+[2026-03-27T03:03:45.167Z] 
+🔄 처리 중 99/172: ggilggilmarket
+[2026-03-27T03:03:46.064Z] ✅ Auth 계정 생성: ggilggilmarket -> Ujk7mKk0WThWUPKG1tqQahOf0L23
+[2026-03-27T03:03:46.097Z] ✅ Firestore 문서 생성: ggilggilmarket -> Ujk7mKk0WThWUPKG1tqQahOf0L23
+[2026-03-27T03:03:46.602Z] 
+🔄 처리 중 100/172: newsss123
+[2026-03-27T03:03:47.452Z] ✅ Auth 계정 생성: newsss123 -> h7mRT0MU1hSf6RgunORVggAfurx1
+[2026-03-27T03:03:47.483Z] ✅ Firestore 문서 생성: newsss123 -> h7mRT0MU1hSf6RgunORVggAfurx1
+[2026-03-27T03:03:47.986Z] 
+🔄 처리 중 101/172: ho3134
+[2026-03-27T03:03:48.881Z] ✅ Auth 계정 생성: ho3134 -> pSUj0RqJsiSZBD9ZR9h0VjNwZPJ3
+[2026-03-27T03:03:48.913Z] ✅ Firestore 문서 생성: ho3134 -> pSUj0RqJsiSZBD9ZR9h0VjNwZPJ3
+[2026-03-27T03:03:49.416Z] 
+🔄 처리 중 102/172: binibini0519
+[2026-03-27T03:03:49.873Z] ❌ 사용자 생성 실패 (binibini0519): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:50.376Z] 
+🔄 처리 중 103/172: heunkyu76
+[2026-03-27T03:03:50.796Z] ❌ 사용자 생성 실패 (heunkyu76): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:51.304Z] 
+🔄 처리 중 104/172: 0
+[2026-03-27T03:03:51.696Z] ❌ 사용자 생성 실패 (0): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:52.202Z] 
+🔄 처리 중 105/172: jipok846
+[2026-03-27T03:03:52.673Z] ❌ 사용자 생성 실패 (jipok846): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:53.175Z] 
+🔄 처리 중 106/172: ytysdw
+[2026-03-27T03:03:53.656Z] ❌ 사용자 생성 실패 (ytysdw): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:54.170Z] 
+🔄 처리 중 107/172: wjdals4662
+[2026-03-27T03:03:54.603Z] ❌ 사용자 생성 실패 (wjdals4662): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:55.104Z] 
+🔄 처리 중 108/172: tkxkd45
+[2026-03-27T03:03:55.556Z] ❌ 사용자 생성 실패 (tkxkd45): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:56.065Z] 
+🔄 처리 중 109/172: cm639720
+[2026-03-27T03:03:56.507Z] ❌ 사용자 생성 실패 (cm639720): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:57.010Z] 
+🔄 처리 중 110/172: zxz2302
+[2026-03-27T03:03:57.445Z] ❌ 사용자 생성 실패 (zxz2302): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:57.951Z] 
+🔄 처리 중 111/172: jhm1900
+[2026-03-27T03:03:58.379Z] ❌ 사용자 생성 실패 (jhm1900): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:58.881Z] 
+🔄 처리 중 112/172: 1
+[2026-03-27T03:03:59.317Z] ❌ 사용자 생성 실패 (1): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:03:59.825Z] 
+🔄 처리 중 113/172: zzzdog
+[2026-03-27T03:04:00.302Z] ❌ 사용자 생성 실패 (zzzdog): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:00.816Z] 
+🔄 처리 중 114/172: dydrkfltjems
+[2026-03-27T03:04:01.305Z] ❌ 사용자 생성 실패 (dydrkfltjems): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:01.810Z] 
+🔄 처리 중 115/172: dyd3000
+[2026-03-27T03:04:02.307Z] ❌ 사용자 생성 실패 (dyd3000): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:02.816Z] 
+🔄 처리 중 116/172: artmania
+[2026-03-27T03:04:03.278Z] ❌ 사용자 생성 실패 (artmania): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:03.786Z] 
+🔄 처리 중 117/172: xbcvz
+[2026-03-27T03:04:04.257Z] ❌ 사용자 생성 실패 (xbcvz): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:04.764Z] 
+🔄 처리 중 118/172: wndrms1362
+[2026-03-27T03:04:05.249Z] ❌ 사용자 생성 실패 (wndrms1362): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:05.756Z] 
+🔄 처리 중 119/172: Rf4y5y
+[2026-03-27T03:04:06.225Z] ❌ 사용자 생성 실패 (Rf4y5y): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:06.736Z] 
+🔄 처리 중 120/172: ath23
+[2026-03-27T03:04:07.217Z] ❌ 사용자 생성 실패 (ath23): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:07.719Z] 
+🔄 처리 중 121/172: wjddbs6662
+[2026-03-27T03:04:08.137Z] ❌ 사용자 생성 실패 (wjddbs6662): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:08.653Z] 
+🔄 처리 중 122/172: 1
+[2026-03-27T03:04:09.071Z] ❌ 사용자 생성 실패 (1): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:09.574Z] 
+🔄 처리 중 123/172: bfgdvs
+[2026-03-27T03:04:10.052Z] ❌ 사용자 생성 실패 (bfgdvs): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:10.557Z] 
+🔄 처리 중 124/172: aew09
+[2026-03-27T03:04:11.041Z] ❌ 사용자 생성 실패 (aew09): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:11.551Z] 
+🔄 처리 중 125/172: jommussy
+[2026-03-27T03:04:12.025Z] ❌ 사용자 생성 실패 (jommussy): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:12.533Z] 
+🔄 처리 중 126/172: jtsjoung
+[2026-03-27T03:04:13.013Z] ❌ 사용자 생성 실패 (jtsjoung): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:13.516Z] 
+🔄 처리 중 127/172: kyukyu00
+[2026-03-27T03:04:14.029Z] ❌ 사용자 생성 실패 (kyukyu00): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:14.540Z] 
+🔄 처리 중 128/172: minchul050304
+[2026-03-27T03:04:14.995Z] ❌ 사용자 생성 실패 (minchul050304): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:15.505Z] 
+🔄 처리 중 129/172: tigerlion4
+[2026-03-27T03:04:15.981Z] ❌ 사용자 생성 실패 (tigerlion4): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:16.485Z] 
+🔄 처리 중 130/172: myhoney11
+[2026-03-27T03:04:16.917Z] ❌ 사용자 생성 실패 (myhoney11): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:17.421Z] 
+🔄 처리 중 131/172: seung09
+[2026-03-27T03:04:17.841Z] ❌ 사용자 생성 실패 (seung09): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:18.353Z] 
+🔄 처리 중 132/172: 1
+[2026-03-27T03:04:18.795Z] ❌ 사용자 생성 실패 (1): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:19.301Z] 
+🔄 처리 중 133/172: sprk5829
+[2026-03-27T03:04:19.763Z] ❌ 사용자 생성 실패 (sprk5829): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:20.270Z] 
+🔄 처리 중 134/172: lch872800
+[2026-03-27T03:04:20.736Z] ❌ 사용자 생성 실패 (lch872800): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:21.245Z] 
+🔄 처리 중 135/172: killeon
+[2026-03-27T03:04:21.705Z] ❌ 사용자 생성 실패 (killeon): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:22.209Z] 
+🔄 처리 중 136/172: nykim9796
+[2026-03-27T03:04:22.666Z] ❌ 사용자 생성 실패 (nykim9796): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:23.184Z] 
+🔄 처리 중 137/172: white3631
+[2026-03-27T03:04:23.637Z] ❌ 사용자 생성 실패 (white3631): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:24.137Z] 
+🔄 처리 중 138/172: marf3927
+[2026-03-27T03:04:24.610Z] ❌ 사용자 생성 실패 (marf3927): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:25.111Z] 
+🔄 처리 중 139/172: oldkwanjul
+[2026-03-27T03:04:25.594Z] ❌ 사용자 생성 실패 (oldkwanjul): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:26.110Z] 
+🔄 처리 중 140/172: gongjin123
+[2026-03-27T03:04:26.572Z] ❌ 사용자 생성 실패 (gongjin123): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:27.075Z] 
+🔄 처리 중 141/172: heowin
+[2026-03-27T03:04:27.556Z] ❌ 사용자 생성 실패 (heowin): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:28.070Z] 
+🔄 처리 중 142/172: dypark
+[2026-03-27T03:04:28.546Z] ❌ 사용자 생성 실패 (dypark): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:29.075Z] 
+🔄 처리 중 143/172: rootous
+[2026-03-27T03:04:29.532Z] ❌ 사용자 생성 실패 (rootous): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:30.047Z] 
+🔄 처리 중 144/172: jinyoyoyo
+[2026-03-27T03:04:30.494Z] ❌ 사용자 생성 실패 (jinyoyoyo): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:31.003Z] 
+🔄 처리 중 145/172: kbh8102
+[2026-03-27T03:04:31.450Z] ❌ 사용자 생성 실패 (kbh8102): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:31.951Z] 
+🔄 처리 중 146/172: ipray0105
+[2026-03-27T03:04:32.426Z] ❌ 사용자 생성 실패 (ipray0105): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:32.930Z] 
+🔄 처리 중 147/172: syuring13
+[2026-03-27T03:04:33.403Z] ❌ 사용자 생성 실패 (syuring13): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:33.914Z] 
+🔄 처리 중 148/172: jjy1004v
+[2026-03-27T03:04:34.377Z] ❌ 사용자 생성 실패 (jjy1004v): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:34.881Z] 
+🔄 처리 중 149/172: lees5183
+[2026-03-27T03:04:35.368Z] ❌ 사용자 생성 실패 (lees5183): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:35.872Z] 
+🔄 처리 중 150/172: Musazin11
+[2026-03-27T03:04:36.373Z] ❌ 사용자 생성 실패 (Musazin11): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:36.874Z] 
+🔄 처리 중 151/172: sso3802
+[2026-03-27T03:04:37.340Z] ❌ 사용자 생성 실패 (sso3802): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:37.841Z] 
+🔄 처리 중 152/172: traver99
+[2026-03-27T03:04:38.315Z] ❌ 사용자 생성 실패 (traver99): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:38.827Z] 
+🔄 처리 중 153/172: realspot27
+[2026-03-27T03:04:39.288Z] ❌ 사용자 생성 실패 (realspot27): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:39.792Z] 
+🔄 처리 중 154/172: yoj33605390
+[2026-03-27T03:04:40.251Z] ❌ 사용자 생성 실패 (yoj33605390): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:40.756Z] 
+🔄 처리 중 155/172: pureangel1
+[2026-03-27T03:04:41.210Z] ❌ 사용자 생성 실패 (pureangel1): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:41.717Z] 
+🔄 처리 중 156/172: damee531
+[2026-03-27T03:04:42.186Z] ❌ 사용자 생성 실패 (damee531): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:42.689Z] 
+🔄 처리 중 157/172: after8385
+[2026-03-27T03:04:43.160Z] ❌ 사용자 생성 실패 (after8385): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:43.668Z] 
+🔄 처리 중 158/172: gvstar
+[2026-03-27T03:04:44.126Z] ❌ 사용자 생성 실패 (gvstar): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:44.630Z] 
+🔄 처리 중 159/172: jjhs15s
+[2026-03-27T03:04:45.081Z] ❌ 사용자 생성 실패 (jjhs15s): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:45.586Z] 
+🔄 처리 중 160/172: yellowriver
+[2026-03-27T03:04:46.071Z] ❌ 사용자 생성 실패 (yellowriver): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:46.575Z] 
+🔄 처리 중 161/172: delee2
+[2026-03-27T03:04:47.035Z] ❌ 사용자 생성 실패 (delee2): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:47.538Z] 
+🔄 처리 중 162/172: choco49213
+[2026-03-27T03:04:48.030Z] ❌ 사용자 생성 실패 (choco49213): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:48.545Z] 
+🔄 처리 중 163/172: ydy125
+[2026-03-27T03:04:49.026Z] ❌ 사용자 생성 실패 (ydy125): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:49.537Z] 
+🔄 처리 중 164/172: nkh66633
+[2026-03-27T03:04:49.963Z] ❌ 사용자 생성 실패 (nkh66633): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:50.478Z] 
+🔄 처리 중 165/172: gdemonicg
+[2026-03-27T03:04:50.963Z] ❌ 사용자 생성 실패 (gdemonicg): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:51.470Z] 
+🔄 처리 중 166/172: chn8537
+[2026-03-27T03:04:51.929Z] ❌ 사용자 생성 실패 (chn8537): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:52.439Z] 
+🔄 처리 중 167/172: opera
+[2026-03-27T03:04:52.853Z] ❌ 사용자 생성 실패 (opera): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:53.369Z] 
+🔄 처리 중 168/172: bummy123
+[2026-03-27T03:04:53.845Z] ❌ 사용자 생성 실패 (bummy123): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:54.361Z] 
+🔄 처리 중 169/172: 1020game
+[2026-03-27T03:04:54.820Z] ❌ 사용자 생성 실패 (1020game): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:55.324Z] 
+🔄 처리 중 170/172: gldldls
+[2026-03-27T03:04:55.801Z] ❌ 사용자 생성 실패 (gldldls): Firebase: Error (auth/too-many-requests).
+[2026-03-27T03:04:56.312Z] 
+🔄 처리 중 171/172: sprince1004
+[2026-03-27T03:04:56.373Z] ⏭️  기존 회원 스킵: sprince1004 (sprince1004@naver.com)
+[2026-03-27T03:04:56.874Z] 
+🔄 처리 중 172/172: abced
+[2026-03-27T03:04:56.920Z] ⏭️  기존 회원 스킵: abced (mecca1231@naver.com)
+[2026-03-27T03:04:56.921Z] 
+🎉 마이그레이션 완료!
+[2026-03-27T03:04:56.921Z] ✅ 성공: 98명
+[2026-03-27T03:04:56.922Z] ⏭️  스킵: 3명
+[2026-03-27T03:04:56.922Z] ❌ 실패: 71명
+[2026-03-27T03:04:56.922Z] 📊 총 처리: 172명
+[2026-03-27T03:04:56.923Z] 마이그레이션 프로세스 종료
