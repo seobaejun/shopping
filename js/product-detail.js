@@ -216,6 +216,16 @@ function initOptionSelect() {
         var selectedOpt = e.target.options[e.target.selectedIndex];
         var selectedValue = e.target.value;
         if (!selectedValue) return;
+        
+        // 로그인 체크: 옵션 선택 시 가격이 표시되므로 로그인 필요
+        if (!isPriceVisible()) {
+            alert('먼저 로그인해주세요.');
+            e.target.selectedIndex = 0;
+            // 로그인 페이지로 이동
+            window.location.href = '/login.html';
+            return;
+        }
+        
         var exists = selectedOptionsData.some(function (opt) { return opt.value === selectedValue; });
         if (exists) {
             alert('이미 선택된 옵션입니다.');
@@ -2874,6 +2884,16 @@ function initPaymentMethod() {
     
     if (paymentSelect) {
         paymentSelect.addEventListener('change', function() {
+            // 로그인 체크: 결제 방법 선택 시 가격이 표시되므로 로그인 필요
+            if (!isPriceVisible()) {
+                alert('먼저 로그인해주세요.');
+                this.selectedIndex = 0;
+                selectedPaymentMethod = '';
+                // 로그인 페이지로 이동
+                window.location.href = '/login.html';
+                return;
+            }
+            
             selectedPaymentMethod = this.value;
             
             if (this.value === 'trix') {
@@ -2919,8 +2939,14 @@ function updatePriceDisplay() {
     const priceEl = document.getElementById('totalPrice');
     const trixPriceEl = document.getElementById('totalTrixPrice');
     
+    // 로그인하지 않으면 가격 표시 안함
+    if (!isPriceVisible()) {
+        if (priceSection) priceSection.style.display = 'none';
+        return;
+    }
+    
     if (!selectedPaymentMethod) {
-        priceSection.style.display = 'none';
+        if (priceSection) priceSection.style.display = 'none';
         return;
     }
     
