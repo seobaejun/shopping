@@ -395,17 +395,59 @@ function _deliverySummary(rec, phone, postcode, address, detail) {
     return topLine + '\n' + bottomLine;
 }
 
+// 주소만 표시하는 함수 (기본 배송지용)
+function _addressOnlySummary(postcode, address, detail) {
+    var addr = [postcode, address, detail].filter(Boolean).join(' ');
+    return addr || '등록된 주소가 없습니다.';
+}
+
 // 받는사람/연락처 입력란에 선택한 옵션 기본값 채우기
 function fillDeliveryRecipientAndPhone() {
+    console.log('=== 받는사람/연락처 채우기 ===');
     var member = _buyNowMember;
     var source = document.querySelector('input[name="deliverySource"]:checked');
     var sourceVal = source ? source.value : 'profile';
     var recEl = document.getElementById('deliveryRecipient');
     var phoneEl = document.getElementById('deliveryPhone');
-    if (!recEl || !phoneEl) return;
+    
+    console.log('member 데이터:', member);
+    console.log('선택된 배송지 소스:', sourceVal);
+    console.log('받는사람 입력란:', recEl);
+    console.log('연락처 입력란:', phoneEl);
+    
+    if (!recEl || !phoneEl) {
+        console.error('입력란 요소를 찾을 수 없음');
+        return;
+    }
+    
     if (sourceVal === 'profile' && member) {
-        recEl.value = member.name || '';
-        phoneEl.value = member.phone || '';
+        console.log('회원 정보에서 받는사람/연락처 설정');
+        console.log('설정할 이름:', member.name);
+        console.log('설정할 연락처:', member.phone);
+        console.log('받는사람 입력란 요소:', recEl);
+        console.log('연락처 입력란 요소:', phoneEl);
+        
+        // 강제로 값 설정
+        const nameValue = member.name || '이름 없음';
+        const phoneValue = member.phone || '연락처 없음';
+        
+        recEl.value = nameValue;
+        phoneEl.value = phoneValue;
+        
+        // 여러 방법으로 값 설정 시도
+        recEl.setAttribute('value', nameValue);
+        phoneEl.setAttribute('value', phoneValue);
+        
+        console.log('설정 후 받는사람 값:', recEl.value);
+        console.log('설정 후 연락처 값:', phoneEl.value);
+        console.log('설정 후 받는사람 attribute:', recEl.getAttribute('value'));
+        console.log('설정 후 연락처 attribute:', phoneEl.getAttribute('value'));
+        
+        // 1초 후 재확인
+        setTimeout(() => {
+            console.log('1초 후 받는사람 값:', recEl.value);
+            console.log('1초 후 연락처 값:', phoneEl.value);
+        }, 1000);
     } else if (sourceVal === 'default' && member && member.addresses) {
         var def = member.addresses.find(function (a) { return a.isDefault === true; });
         if (def) {
@@ -423,33 +465,90 @@ function fillDeliveryRecipientAndPhone() {
 
 // 바로구매: 배송지 선택 모달 열기
 function openBuyNowDeliveryModal(member, loginUser) {
+    console.log('=== 배송지 모달 열기 ===');
+    console.log('받은 member 데이터:', member);
+    console.log('받은 loginUser 데이터:', loginUser);
+    
     _buyNowMember = member;
     _buyNowLoginUser = loginUser;
+    
     var profileSummary = document.getElementById('deliveryOptionProfileSummary');
     var defaultSummary = document.getElementById('deliveryOptionDefaultSummary');
+    
+    console.log('회원 정보 주소 표시 시도...');
+    console.log('name:', member.name);
+    console.log('phone:', member.phone);
+    console.log('postcode:', member.postcode);
+    console.log('address:', member.address);
+    console.log('detailAddress:', member.detailAddress);
+    
     if (profileSummary) {
-        profileSummary.textContent = _deliverySummary(
-            member.name,
-            member.phone,
-            member.postcode,
-            member.address,
-            member.detailAddress
+        // 회원정보: 마이페이지와 동일하게 최상위 필드 우선 사용
+        console.log('회원정보 주소 데이터 확인:');
+        console.log('member.postcode:', member.postcode);
+        console.log('member.address:', member.address);
+        console.log('member.detailAddress:', member.detailAddress);
+        
+        const summaryText = _addressOnlySummary(
+            member.postcode || '',
+            member.address || '',
+            member.detailAddress || ''
         );
+        
+        console.log('생성된 주소 요약 텍스트:', summaryText);
+        console.log('profileSummary 요소:', profileSummary);
+        
+        // 여러 방법으로 텍스트 설정 시도
+        profileSummary.textContent = summaryText;
+        profileSummary.innerText = summaryText;
+        profileSummary.innerHTML = summaryText.replace(/\n/g, '<br>');
+        
+        console.log('설정 직후 textContent:', profileSummary.textContent);
+        console.log('설정 직후 innerText:', profileSummary.innerText);
+        console.log('설정 직후 innerHTML:', profileSummary.innerHTML);
+        
+        // 강제로 표시 확인
+        setTimeout(() => {
+            console.log('1초 후 실제 표시된 텍스트:', profileSummary.textContent);
+            console.log('1초 후 요소 스타일:', window.getComputedStyle(profileSummary).display);
+            console.log('1초 후 요소 위치:', profileSummary.getBoundingClientRect());
+        }, 1000);
+    } else {
+        console.error('profileSummary 요소를 찾을 수 없음');
     }
-    var addresses = (member && member.addresses && Array.isArray(member.addresses)) ? member.addresses : [];
-    var defaultAddr = addresses.find(function (a) { return a.isDefault === true; });
+    // 기본 배송지 처리: 마이페이지와 동일하게 최상위 필드 우선 사용
+    console.log('기본 배송지 처리 시작...');
+    console.log('최상위 필드 - postcode:', member.postcode, 'address:', member.address, 'detailAddress:', member.detailAddress);
+    console.log('addresses 배열:', member.addresses);
+    
     if (defaultSummary) {
-        if (defaultAddr) {
-            defaultSummary.textContent = _deliverySummary(
-                defaultAddr.recipientName,
-                defaultAddr.phone,
-                defaultAddr.postcode,
-                defaultAddr.address,
-                defaultAddr.detailAddress
+        // 1순위: 최상위 필드 확인 (마이페이지와 동일)
+        if (member.postcode || member.address || member.detailAddress) {
+            console.log('✅ 최상위 필드에서 주소 정보 사용 (마이페이지 방식)');
+            defaultSummary.textContent = _addressOnlySummary(
+                member.postcode || '',
+                member.address || '',
+                member.detailAddress || ''
             );
         } else {
-            defaultSummary.textContent = '등록된 기본 배송지가 없습니다.';
+            // 2순위: addresses 배열에서 기본 배송지 찾기
+            var addresses = (member && member.addresses && Array.isArray(member.addresses)) ? member.addresses : [];
+            var defaultAddr = addresses.find(function (a) { return a.isDefault === true; });
+            
+            if (defaultAddr) {
+                console.log('✅ addresses 배열에서 기본 배송지 찾음:', defaultAddr);
+                defaultSummary.textContent = _addressOnlySummary(
+                    defaultAddr.postcode,
+                    defaultAddr.address,
+                    defaultAddr.detailAddress
+                );
+            } else {
+                console.log('❌ 주소 정보 없음');
+                defaultSummary.textContent = '등록된 기본 배송지가 없습니다.';
+            }
         }
+        
+        console.log('최종 기본 배송지 표시:', defaultSummary.textContent);
     }
     document.querySelector('input[name="deliverySource"][value="profile"]').checked = true;
     document.getElementById('deliveryNewForm').style.display = 'none';
@@ -657,39 +756,159 @@ function initBuyActions() {
                 return;
             }
 
-            var isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            var loginUserJson = localStorage.getItem('loginUser');
-            if (!isLoggedIn || !loginUserJson) {
-                alert('로그인 후 구매할 수 있습니다.');
-                window.location.href = 'login.html?return=' + encodeURIComponent(window.location.href);
-                return;
+            console.log('=== 로그인 상태 확인 ===');
+            
+            // Firebase Auth 상태 확인
+            console.log('Firebase Auth 객체:', firebase.auth());
+            const currentUser = firebase.auth().currentUser;
+            console.log('현재 Firebase 사용자:', currentUser);
+            
+            if (!currentUser) {
+                console.log('Firebase Auth 사용자가 없음, Auth 상태 변경 대기...');
+                // Auth 상태 변경을 기다려보기
+                await new Promise((resolve) => {
+                    const unsubscribe = firebase.auth().onAuthStateChanged((user) => {
+                        console.log('Auth 상태 변경됨:', user);
+                        unsubscribe();
+                        resolve();
+                    });
+                    
+                    // 3초 후 타임아웃
+                    setTimeout(() => {
+                        unsubscribe();
+                        resolve();
+                    }, 3000);
+                });
+                
+                const retryUser = firebase.auth().currentUser;
+                console.log('재시도 후 사용자:', retryUser);
+                
+                if (!retryUser) {
+                    alert('로그인 후 구매할 수 있습니다.');
+                    window.location.href = 'login.html?return=' + encodeURIComponent(window.location.href);
+                    return;
+                }
             }
+            
+            const finalUser = firebase.auth().currentUser;
+            console.log('최종 확인된 사용자:', finalUser);
+            console.log('사용자 이메일:', finalUser.email);
+            console.log('사용자 UID:', finalUser.uid);
 
-            var loginUser = JSON.parse(loginUserJson);
-            var docId = loginUser.docId || loginUser.userId;
-            if (!docId) {
-                alert('회원 정보를 확인할 수 없습니다.');
-                return;
-            }
+            // 사용자 ID 추출 (이메일에서 @ 앞부분)
+            const docId = finalUser.email ? finalUser.email.split('@')[0] : finalUser.uid;
+            console.log('추출된 문서 ID:', docId);
 
             try {
+                // Firebase 초기화 확실히 기다리기
+                if (typeof firebase === 'undefined' || !firebase.firestore) {
+                    console.log('Firebase 초기화 대기 중...');
+                    await new Promise(resolve => {
+                        var attempts = 0;
+                        var checkFirebase = setInterval(() => {
+                            attempts++;
+                            if (typeof firebase !== 'undefined' && firebase.firestore) {
+                                clearInterval(checkFirebase);
+                                resolve();
+                            }
+                            if (attempts > 50) { // 5초 대기
+                                clearInterval(checkFirebase);
+                                resolve();
+                            }
+                        }, 100);
+                    });
+                }
+                
                 if (typeof firebase === 'undefined' || !firebase.firestore) {
                     alert('결제 시스템을 불러올 수 없습니다. 잠시 후 다시 시도해주세요.');
                     return;
                 }
+                
+                console.log('회원 정보 로딩 시작:', docId);
                 var db = firebase.firestore();
+                
+                // 먼저 해당 사용자 문서가 존재하는지 확인
+                console.log('Firestore 연결 테스트...');
+                try {
+                    const testQuery = await db.collection('members').limit(1).get();
+                    console.log('Firestore 연결 성공, members 컬렉션 접근 가능');
+                } catch (testError) {
+                    console.error('Firestore 연결 실패:', testError);
+                    alert('데이터베이스 연결에 실패했습니다.');
+                    return;
+                }
+                
                 var memberSnap = await db.collection('members').doc(docId).get();
-                var member = memberSnap.exists ? { id: memberSnap.id, ...memberSnap.data() } : null;
-                if (!member) {
+                console.log('회원 문서 존재 여부:', memberSnap.exists);
+                
+                if (!memberSnap.exists) {
+                    console.log('문서가 없음, 다른 방법으로 사용자 찾기 시도...');
+                    // 이메일로 검색
+                    const emailQuery = await db.collection('members').where('email', '==', finalUser.email).limit(1).get();
+                    if (!emailQuery.empty) {
+                        memberSnap = emailQuery.docs[0];
+                        console.log('이메일로 찾은 문서 ID:', memberSnap.id);
+                    } else {
+                        console.log('이메일로도 사용자를 찾을 수 없음');
+                    }
+                }
+                
+                var member = null;
+                var loginUser = {
+                    userId: docId,
+                    email: currentUser.email,
+                    uid: currentUser.uid
+                };
+                
+                if (memberSnap.exists) {
+                    const memberData = memberSnap.data();
+                    console.log('=== Firestore 원본 데이터 ===');
+                    console.log('전체 데이터:', memberData);
+                    console.log('addresses 배열:', memberData.addresses);
+                    
+                    // 주소 정보: 마이페이지와 동일하게 최상위 필드 우선 사용
+                    const addresses = memberData.addresses || [];
+                    const defaultAddress = addresses.find(addr => addr.isDefault === true) || addresses[0] || {};
+                    
+                    console.log('최상위 필드 주소:', {
+                        postcode: memberData.postcode,
+                        address: memberData.address,
+                        detailAddress: memberData.detailAddress
+                    });
+                    console.log('addresses 배열 기본 배송지:', defaultAddress);
+                    
                     member = {
-                        name: loginUser.name,
-                        phone: loginUser.phone || '',
+                        id: memberSnap.id,
+                        name: memberData.name || '',
+                        phone: memberData.phone || '',
+                        // 마이페이지와 동일: 최상위 필드 우선, 없으면 addresses 배열 사용
+                        postcode: memberData.postcode || defaultAddress.postcode || '',
+                        address: memberData.address || defaultAddress.address || '',
+                        detailAddress: memberData.detailAddress || defaultAddress.detailAddress || '',
+                        addresses: addresses
+                    };
+                    
+                    // loginUser 정보도 업데이트
+                    loginUser.name = member.name;
+                    loginUser.phone = member.phone;
+                    
+                    console.log('=== 정리된 회원 정보 ===');
+                    console.log('최종 member 객체:', member);
+                    console.log('기본 배송지 주소:', member.postcode, member.address, member.detailAddress);
+                } else {
+                    // 회원 문서가 없으면 기본값으로 생성
+                    member = {
+                        id: docId,
+                        name: '',
+                        phone: '',
                         postcode: '',
                         address: '',
                         detailAddress: '',
                         addresses: []
                     };
+                    console.log('회원 문서가 없어서 기본값 사용');
                 }
+                
                 openBuyNowDeliveryModal(member, loginUser);
             } catch (err) {
                 console.error('회원 정보 로드 오류:', err);
@@ -735,7 +954,7 @@ function initBuyNowDeliveryModal() {
                 if (sourceVal === 'new') {
                     alert('주소를 입력해주세요.');
                 } else {
-                    alert('등록된 배송지에 주소가 없습니다. 마이페이지에서 주소를 등록하거나, 배송지에서「직접 입력」을 선택해 주소를 입력해주세요.');
+                    alert('등록된 배송지에 주소가 없습니다. 마이페이지에서 주소를 등록하거나, 배송지에서「신규 배송지」를 선택해 주소를 입력해주세요.');
                 }
                 return;
             }
