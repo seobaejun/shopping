@@ -806,7 +806,8 @@ function renderOrderList(orders) {
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
     function statusLabel(o) {
-        if (o.status === 'cancelled') return '취소';
+        if (o.status === 'cancelled') return '취소완료';
+        if (o.status === 'cancel_requested') return '취소 요청중';
         if (o.deliveryStatus === 'complete') return '배송완료';
         if (o.deliveryStatus === 'shipping') return '배송중';
         if (o.deliveryStatus === 'ready') return '배송준비';
@@ -815,9 +816,31 @@ function renderOrderList(orders) {
     }
     var html = '';
     pageOrders.forEach(function (o) {
+        // 디버깅용 로그
+        console.log('주문 데이터:', {
+            id: o.id,
+            price: o.price,
+            amount: o.amount,
+            cashAmount: o.cashAmount,
+            trixAmount: o.trixAmount,
+            totalPrice: o.totalPrice,
+            paymentMethod: o.paymentMethod
+        });
+        
         var date = formatDate(o.createdAt || o.orderDate);
         var name = (o.productName || o.productTitle || o.title || '-').replace(/</g, '&lt;');
-        var priceNum = o.price != null ? o.price : (o.amount != null ? o.amount : 0);
+        // 금액 필드 우선순위: cashAmount > price > amount > totalPrice > 0
+        var priceNum = 0;
+        if (o.cashAmount != null) {
+            priceNum = o.cashAmount;
+        } else if (o.price != null) {
+            priceNum = o.price;
+        } else if (o.amount != null) {
+            priceNum = o.amount;
+        } else if (o.totalPrice != null) {
+            priceNum = o.totalPrice;
+        }
+        
         var price = (typeof priceNum === 'number' ? priceNum : Number(priceNum) || 0).toLocaleString();
         var supportNum = o.supportAmount != null ? o.supportAmount : (o.support != null ? o.support : 0);
         var support = formatTrix(typeof supportNum === 'number' ? supportNum : Number(supportNum) || 0);
@@ -829,9 +852,18 @@ function renderOrderList(orders) {
             '</button>' +
             '<div class="order-accordion-body">' +
             '<div class="order-detail-row"><span class="order-detail-label">주문일</span><span class="order-detail-value">' + (date || '-') + '</span></div>' +
-            '<div class="order-detail-row"><span class="order-detail-label">금액</span><span class="order-detail-value">' + price + '원</span></div>' +
+            '<div class="order-detail-row"><span class="order-detail-label">금액</span><span class="order-detail-value">' + 
+            (o.paymentMethod === 'trix' && o.trixAmount ? 
+                (Number(o.trixAmount) || 0).toLocaleString() + ' TRIX' : 
+                price + '원') + 
+            '</span></div>' +
             '<div class="order-detail-row"><span class="order-detail-label">지원금</span><span class="order-detail-value">' + support + ' trix</span></div>' +
-            '<div class="order-detail-row"><span class="order-detail-label">상태</span><span class="order-detail-value order-detail-status">' + (status || '-') + '</span></div>' +
+            '<div class="order-detail-row"><span class="order-detail-label">상태</span><span class="order-detail-value order-detail-status">' + (status || '-') + '</span>' +
+            (canCancelOrder(o) ? 
+                '<button type="button" class="btn-cancel-order" onclick="cancelOrder(\'' + (o.id || '') + '\')" style="margin-left: 10px; padding: 4px 8px; font-size: 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">주문 취소</button>' +
+                '<button type="button" onclick="debugUserInfo()" style="margin-left: 5px; padding: 4px 8px; font-size: 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">디버그</button>'
+                : '') +
+            '</div>' +
             '</div>' +
             '</li>';
     });
@@ -3437,8 +3469,389 @@ function showCartSection() {
     }
 }
 
+// 주문 취소 가능 여부 판단
+function canCancelOrder(order) {
+    if (!order) return false;
+    var status = order.status || '';
+    // 승인 후에는 취소 불가
+    if (status === 'approved' || status === 'shipped' || status === 'delivered' || status === 'cancelled') {
+        return false;
+    }
+    // 승인 대기 중이거나 결제 대기 중이거나 취소 요청 중인 경우 취소 가능
+    return status === 'pending' || status === 'payment_pending' || status === 'waiting' || status === 'cancel_requested';
+}
+
+// 디버깅: 현재 사용자 정보 확인
+async function debugUserInfo() {
+    console.log('=== 현재 사용자 정보 디버깅 ===');
+    
+    // Firebase Auth 사용자
+    const currentUser = firebase.auth().currentUser;
+    console.log('Firebase Auth 사용자:', currentUser);
+    
+    // localStorage 사용자
+    try {
+        const loginUser = localStorage.getItem('loginUser');
+        console.log('localStorage loginUser (raw):', loginUser);
+        if (loginUser) {
+            const parsedUser = JSON.parse(loginUser);
+            console.log('localStorage loginUser (parsed):', parsedUser);
+        }
+    } catch (e) {
+        console.error('localStorage 파싱 오류:', e);
+    }
+    
+    // members 컬렉션의 모든 문서 ID 확인
+    try {
+        const membersSnapshot = await firebase.firestore().collection('members').limit(10).get();
+        console.log('members 컬렉션 문서 ID들:');
+        membersSnapshot.docs.forEach(doc => {
+            console.log('- 문서 ID:', doc.id, '데이터:', doc.data());
+        });
+    } catch (e) {
+        console.error('members 컬렉션 조회 오류:', e);
+    }
+    
+    console.log('=== 디버깅 완료 ===');
+}
+
+// 주문 취소 함수
+async function cancelOrder(orderId) {
+    console.log('=== 주문 취소 시작 ===');
+    console.log('주문 ID:', orderId);
+    
+    // 먼저 사용자 정보 디버깅
+    await debugUserInfo();
+    
+    if (!orderId) {
+        alert('주문 ID가 없습니다.');
+        return;
+    }
+
+    try {
+        // 주문 정보 조회
+        console.log('주문 정보 조회 중...');
+        const orderDoc = await firebase.firestore().collection('orders').doc(orderId).get();
+        if (!orderDoc.exists) {
+            console.error('주문 문서가 존재하지 않음');
+            alert('주문을 찾을 수 없습니다.');
+            return;
+        }
+
+        const order = orderDoc.data();
+        console.log('주문 데이터:', order);
+        
+        const paymentMethod = order.paymentMethod || 'cash';
+        const isDeposited = order.isDeposited || false;
+        const status = order.status || '';
+        
+        console.log('결제 방법:', paymentMethod);
+        console.log('입금 여부:', isDeposited);
+        console.log('주문 상태:', status);
+
+        // 승인 후에는 취소 불가
+        if (status === 'approved' || status === 'shipped' || status === 'delivered') {
+            alert('승인된 주문은 취소할 수 없습니다.');
+            return;
+        }
+
+        // 이미 취소된 주문
+        if (status === 'cancelled') {
+            alert('이미 취소된 주문입니다.');
+            return;
+        }
+
+        let confirmMessage = '';
+        let shouldProceed = false;
+
+        if (paymentMethod === 'trix') {
+            // TRIX 결제: 자동 환불
+            confirmMessage = '트릭스는 자동으로 트릭스가 충전되며 환불처리가 완료됩니다.\n주문을 취소하시겠습니까?';
+            shouldProceed = confirm(confirmMessage);
+        } else {
+            // 원화 결제: 승인 대기 중이면 취소 요청
+            if (status === 'pending' || status === 'payment_pending' || status === 'waiting') {
+                confirmMessage = '취소 요청을 하시겠습니까? 관리자 승인 후 취소됩니다.';
+                shouldProceed = confirm(confirmMessage);
+            } else if (isDeposited) {
+                // 입금 완료된 경우
+                alert('원화는 입금을 완료했으면 1:1문의를 통해 환불을 요청하세요.');
+                return;
+            } else {
+                // 입금 전
+                confirmMessage = '주문을 취소하시겠습니까?';
+                shouldProceed = confirm(confirmMessage);
+            }
+        }
+
+        if (!shouldProceed) return;
+
+        // 주문 상태 업데이트
+        let newStatus = 'cancelled';
+        let updateData = {
+            cancelledAt: firebase.firestore.FieldValue.serverTimestamp(),
+            cancelledBy: 'user'
+        };
+        
+        // 원화 결제이고 승인 대기 중이면 취소 요청 상태로 변경
+        if (paymentMethod !== 'trix' && (status === 'pending' || status === 'payment_pending' || status === 'waiting')) {
+            newStatus = 'cancel_requested';
+            updateData.cancelRequestedAt = firebase.firestore.FieldValue.serverTimestamp();
+            updateData.cancelRequestedBy = 'user';
+        }
+        
+        updateData.status = newStatus;
+        
+        console.log('주문 상태를', newStatus, '로 변경 중...');
+        await orderDoc.ref.update(updateData);
+        console.log('주문 상태 변경 완료');
+
+        // TRIX 결제인 경우 환불 처리
+        if (paymentMethod === 'trix' && order.trixAmount) {
+            console.log('=== 사용자 ID 찾기 시작 ===');
+            
+            // 1. 주문 데이터에서 사용자 ID 찾기
+            let userId = order.userId || order.uid || order.memberId || order.user_id || order.email;
+            console.log('주문에서 찾은 사용자 ID:', userId);
+            
+            // 2. 현재 로그인 사용자에서 가져오기
+            if (!userId) {
+                console.log('Firebase Auth에서 사용자 정보 가져오기 시도...');
+                const currentUser = firebase.auth().currentUser;
+                console.log('현재 Firebase 사용자:', currentUser);
+                
+                if (currentUser) {
+                    if (currentUser.email) {
+                        userId = currentUser.email.split('@')[0];
+                        console.log('이메일에서 추출한 사용자 ID:', userId);
+                    } else {
+                        userId = currentUser.uid;
+                        console.log('UID 사용:', userId);
+                    }
+                }
+            }
+            
+            // 3. localStorage에서도 시도
+            if (!userId) {
+                console.log('localStorage에서 사용자 정보 가져오기 시도...');
+                try {
+                    const loginUser = JSON.parse(localStorage.getItem('loginUser') || '{}');
+                    console.log('localStorage 사용자 정보:', loginUser);
+                    userId = loginUser.userId || loginUser.uid || loginUser.email;
+                    if (userId && userId.includes('@')) {
+                        userId = userId.split('@')[0];
+                    }
+                    console.log('localStorage에서 찾은 사용자 ID:', userId);
+                } catch (e) {
+                    console.error('localStorage 파싱 오류:', e);
+                }
+            }
+            
+            // 4. 모든 members 문서에서 이메일로 찾기 (최후 수단)
+            if (!userId) {
+                console.log('Firestore에서 사용자 검색 시도...');
+                const currentUser = firebase.auth().currentUser;
+                if (currentUser && currentUser.email) {
+                    try {
+                        const membersQuery = await firebase.firestore().collection('members')
+                            .where('email', '==', currentUser.email)
+                            .limit(1)
+                            .get();
+                        
+                        if (!membersQuery.empty) {
+                            userId = membersQuery.docs[0].id;
+                            console.log('Firestore에서 찾은 사용자 ID:', userId);
+                        }
+                    } catch (searchError) {
+                        console.error('Firestore 검색 오류:', searchError);
+                    }
+                }
+            }
+            
+            console.log('최종 사용자 ID:', userId);
+            console.log('=== 사용자 ID 찾기 완료 ===');
+            
+            console.log('=== TRIX 환불 처리 시작 ===');
+            console.log('주문 ID:', orderId);
+            console.log('사용자 ID:', userId);
+            console.log('환불 금액:', order.trixAmount);
+            
+            if (!userId) {
+                console.error('사용자 ID를 찾을 수 없습니다');
+                alert('사용자 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            if (!order.trixAmount || Number(order.trixAmount) <= 0) {
+                console.error('환불할 TRIX 금액이 없습니다:', order.trixAmount);
+                alert('환불할 TRIX 금액이 없습니다.');
+                return;
+            }
+            
+            try {
+                console.log('=== 사용자 문서 조회 시작 ===');
+                console.log('조회할 사용자 ID:', userId);
+                
+                let userDoc = null;
+                let userRef = null;
+                
+                // 1. 직접 문서 ID로 조회
+                userRef = firebase.firestore().collection('members').doc(userId);
+                userDoc = await userRef.get();
+                console.log('직접 조회 결과:', userDoc.exists);
+                
+                // 2. 문서가 없으면 이메일로 검색
+                if (!userDoc.exists) {
+                    console.log('이메일로 사용자 검색 시도...');
+                    const currentUser = firebase.auth().currentUser;
+                    if (currentUser && currentUser.email) {
+                        const emailQuery = await firebase.firestore().collection('members')
+                            .where('email', '==', currentUser.email)
+                            .limit(1)
+                            .get();
+                        
+                        if (!emailQuery.empty) {
+                            userDoc = emailQuery.docs[0];
+                            userRef = userDoc.ref;
+                            console.log('이메일로 찾은 사용자 ID:', userDoc.id);
+                        }
+                    }
+                }
+                
+                // 3. 여전히 없으면 userId 필드로 검색
+                if (!userDoc || !userDoc.exists) {
+                    console.log('userId 필드로 사용자 검색 시도...');
+                    const userIdQuery = await firebase.firestore().collection('members')
+                        .where('userId', '==', userId)
+                        .limit(1)
+                        .get();
+                    
+                    if (!userIdQuery.empty) {
+                        userDoc = userIdQuery.docs[0];
+                        userRef = userDoc.ref;
+                        console.log('userId 필드로 찾은 문서 ID:', userDoc.id);
+                    }
+                }
+                
+                if (!userDoc || !userDoc.exists) {
+                    console.error('모든 방법으로 사용자 문서를 찾을 수 없음');
+                    console.error('시도한 사용자 ID:', userId);
+                    alert('사용자 정보를 찾을 수 없습니다. 관리자에게 문의하세요.');
+                    return;
+                }
+                
+                console.log('사용자 문서 찾기 성공!');
+                console.log('=== 사용자 문서 조회 완료 ===');
+                
+                const userData = userDoc.data();
+                console.log('사용자 데이터:', userData);
+                
+                const refundAmount = Number(order.trixAmount);
+                console.log('환불 금액:', refundAmount);
+                
+                // 현재 잔액 확인 및 업데이트
+                const currentTokenBalance = Number(userData.tokenBalance) || 0;
+                const newTokenBalance = currentTokenBalance + refundAmount;
+                
+                console.log('현재 tokenBalance:', currentTokenBalance);
+                console.log('새로운 tokenBalance:', newTokenBalance);
+                
+                // TRIX 잔액 업데이트
+                await userRef.update({
+                    tokenBalance: newTokenBalance
+                });
+                
+                console.log('tokenBalance 업데이트 완료');
+
+                // TRIX 내역 추가
+                const historyRef = await firebase.firestore().collection('trixHistory').add({
+                    userId: userId,
+                    type: 'refund',
+                    amount: refundAmount,
+                    description: '주문 취소 환불',
+                    orderId: orderId,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                console.log('TRIX 내역 추가 완료:', historyRef.id);
+                console.log('=== TRIX 환불 처리 완료 ===');
+                
+            } catch (trixError) {
+                console.error('TRIX 환불 처리 오류:', trixError);
+                alert('TRIX 환불 처리 중 오류가 발생했습니다: ' + trixError.message);
+                return;
+            }
+        }
+
+        // 성공 메시지
+        if (paymentMethod === 'trix') {
+            alert('트릭스는 자동으로 트릭스가 충전되며 환불처리가 완료됩니다.');
+        } else if (newStatus === 'cancel_requested') {
+            alert('취소 요청이 완료되었습니다. 관리자 승인 후 취소됩니다.');
+        } else {
+            alert('주문이 취소되었습니다.');
+        }
+
+        // 주문 목록 새로고침
+        if (typeof renderOrderList === 'function') {
+            // 현재 주문 목록에서 취소된 주문의 상태 업데이트
+            if (window._mypageOrders) {
+                const orderIndex = window._mypageOrders.findIndex(o => o.id === orderId);
+                if (orderIndex !== -1) {
+                    window._mypageOrders[orderIndex].status = newStatus;
+                }
+            }
+            renderOrderList();
+        }
+        
+        // TRIX 환불인 경우 잔액 새로고침
+        if (paymentMethod === 'trix') {
+            // 잠시 후 잔액 새로고침
+            setTimeout(async () => {
+                try {
+                    // 상단 토큰 표시 업데이트
+                    const tokenElements = document.querySelectorAll('#wishlistCount, #cartCount, .stat-item strong');
+                    
+                    // 사용자 정보 다시 가져오기
+                    const currentUser = firebase.auth().currentUser;
+                    if (currentUser) {
+                        const userId = currentUser.email ? currentUser.email.split('@')[0] : currentUser.uid;
+                        const userDoc = await firebase.firestore().collection('members').doc(userId).get();
+                        
+                        if (userDoc.exists) {
+                            const userData = userDoc.data();
+                            const newBalance = userData.tokenBalance || userData.supportAmount || userData.trixBalance || 0;
+                            
+                            // 보유 토큰 표시 업데이트
+                            const tokenBalanceEl = document.querySelector('.user-info .user-balance');
+                            if (tokenBalanceEl) {
+                                tokenBalanceEl.textContent = newBalance.toLocaleString() + ' TRIX';
+                            }
+                            
+                            console.log('UI 업데이트 완료, 새 잔액:', newBalance);
+                        }
+                    }
+                    
+                    // 마이페이지 TRIX 잔액 로딩 함수 호출
+                    if (typeof loadUserTrixBalance === 'function') {
+                        loadUserTrixBalance();
+                    }
+                } catch (error) {
+                    console.error('잔액 UI 업데이트 오류:', error);
+                }
+            }, 500);
+        }
+
+    } catch (error) {
+        console.error('주문 취소 오류:', error);
+        alert('주문 취소 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
+}
+
 // 전역 함수로 노출
 window.showSection = showSection;
+window.cancelOrder = cancelOrder;
+window.debugUserInfo = debugUserInfo;
 window.showNotificationPanel = showNotificationPanel;
 window.showWishlistSection = showWishlistSection;
 window.showCartSection = showCartSection;

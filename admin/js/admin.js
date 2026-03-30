@@ -784,10 +784,11 @@ function renderPurchaseRequestTable(orders) {
             <td>${price}</td>
             <td>${support} trix</td>
             <td>${date}</td>
-            <td><span class="badge badge-warning">승인대기</span> ${paymentBadge}</td>
+            <td><span class="badge badge-warning">승인대기</span> ${paymentBadge} ${order.status === 'cancel_requested' ? '<span class="badge badge-danger">취소요청</span>' : ''}</td>
             <td>
                 <button class="btn btn-sm btn-primary btn-approve-order" data-order-id="${orderId}" type="button">승인</button>
                 <button class="btn btn-sm btn-secondary btn-reject-order" data-order-id="${orderId}" type="button">구매취소</button>
+                ${order.status === 'cancel_requested' ? '<button class="btn btn-sm btn-warning btn-cancel-approve" data-order-id="' + orderId + '" type="button">취소승인</button>' : ''}
             </td>
         </tr>`;
     }).join('');
@@ -832,7 +833,7 @@ function renderPurchaseRequestApprovedTable(orders) {
             '<option value="cancelled">취소</option></select>';
         return '<tr data-order-id="' + orderId + '"><td>' + globalIndex + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
             _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + ' trix</td><td>' + date +
-            '</td><td><span class="badge badge-success">승인</span> ' + paymentBadge + '</td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
+            '</td><td><span class="badge ' + (order.status === 'cancelled' ? 'badge-secondary">취소완료' : 'badge-success">승인') + '</span> ' + paymentBadge + '</td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
     }).join('');
     tbody.innerHTML = rows;
     renderPurchaseRequestPagination('approved', orders.length);
@@ -875,7 +876,7 @@ function renderPurchaseRequestCancelledTable(orders) {
             '<option value="cancelled" selected>취소</option></select>';
         return '<tr data-order-id="' + orderId + '"><td>' + globalIndex + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
             _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + ' trix</td><td>' + date +
-            '</td><td><span class="badge badge-secondary">취소</span> ' + paymentBadge + '</td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
+            '</td><td><span class="badge badge-secondary">취소완료</span> ' + paymentBadge + '</td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
     }).join('');
     tbody.innerHTML = rows;
     renderPurchaseRequestPagination('cancelled', orders.length);
@@ -976,7 +977,7 @@ async function approvePageOrders() {
                 var orderDoc = await window.firebaseAdmin.collections.orders().doc(orderId).get();
                 if (orderDoc.exists) {
                     var uid = orderDoc.data().userId;
-                    if (uid) await createNotificationForUser(uid, 'order_approved', '주문이 승인되었습니다', '구매 요청이 승인되었습니다. 입금 확인 후 배송이 시작됩니다.', 'mypage.html?section=orders');
+                    if (uid) await createNotificationForUser(uid, 'order_approved', '구매요청이 승인되었습니다', '구매요청이 승인되었습니다. 곧 추첨이 시작됩니다.', 'mypage.html?section=orders');
                 }
             } catch (e) {}
             count++;
@@ -1006,7 +1007,7 @@ async function approveAllOrders() {
                 var orderDoc = await window.firebaseAdmin.collections.orders().doc(orderId).get();
                 if (orderDoc.exists) {
                     var uid = orderDoc.data().userId;
-                    if (uid) await createNotificationForUser(uid, 'order_approved', '주문이 승인되었습니다', '구매 요청이 승인되었습니다. 입금 확인 후 배송이 시작됩니다.', 'mypage.html?section=orders');
+                    if (uid) await createNotificationForUser(uid, 'order_approved', '구매요청이 승인되었습니다', '구매요청이 승인되었습니다. 곧 추첨이 시작됩니다.', 'mypage.html?section=orders');
                 }
             } catch (e) {}
             count++;
@@ -1040,7 +1041,7 @@ async function loadPurchaseRequests() {
             return;
         }
         const allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
-        const pendingOrders = allOrders.filter(function (o) { return o.status === 'pending' || o.status === '대기'; });
+        const pendingOrders = allOrders.filter(function (o) { return o.status === 'pending' || o.status === '대기' || o.status === 'cancel_requested'; });
         const approvedOrders = allOrders.filter(function (o) { return o.status === 'approved'; });
         const cancelledOrders = allOrders.filter(function (o) { return o.status === 'cancelled'; });
         window._purchaseRequestPendingOrders = pendingOrders;
@@ -1723,9 +1724,10 @@ function applyPurchaseRequestSearch() {
             '<td>' + price + '</td>' +
             '<td>' + support + ' trix</td>' +
             '<td>' + date + '</td>' +
-            '<td><span class="badge badge-warning">승인대기</span> ' + paymentBadge + '</td>' +
+            '<td><span class="badge badge-warning">승인대기</span> ' + paymentBadge + (order.status === 'cancel_requested' ? ' <span class="badge badge-danger">취소요청</span>' : '') + '</td>' +
             '<td><button class="btn btn-sm btn-primary btn-approve-order" data-order-id="' + orderId + '" type="button">승인</button> ' +
-            '<button class="btn btn-sm btn-secondary btn-reject-order" data-order-id="' + orderId + '" type="button">구매취소</button></td></tr>';
+            '<button class="btn btn-sm btn-secondary btn-reject-order" data-order-id="' + orderId + '" type="button">구매취소</button>' +
+            (order.status === 'cancel_requested' ? ' <button class="btn btn-sm btn-warning btn-cancel-approve" data-order-id="' + orderId + '" type="button">취소승인</button>' : '') + '</td></tr>';
     }).join('');
     searchTbody.innerHTML = rows;
     searchContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2045,7 +2047,7 @@ document.addEventListener('click', (e) => {
                             var orderData = orderDoc.data();
                             var userId = orderData.userId;
                             if (userId) {
-                                await createNotificationForUser(userId, 'order_approved', '주문이 승인되었습니다', '구매 요청이 승인되었습니다. 입금 확인 후 배송이 시작됩니다.', 'mypage.html?section=orders');
+                                await createNotificationForUser(userId, 'order_approved', '구매요청이 승인되었습니다', '구매요청이 승인되었습니다. 곧 추첨이 시작됩니다.', 'mypage.html?section=orders');
                             }
                         }
                     } catch (notifError) {
@@ -2058,6 +2060,52 @@ document.addEventListener('click', (e) => {
             } catch (err) {
                 console.error(err);
                 alert('승인 처리 중 오류가 발생했습니다.');
+            }
+        })();
+        return;
+    }
+    if (e.target.closest('.btn-cancel-approve')) {
+        const btn = e.target.closest('.btn-cancel-approve');
+        const orderId = btn.getAttribute('data-order-id');
+        if (!orderId) return;
+        if (!confirm('이 취소 요청을 승인하시겠습니까?')) return;
+        (async () => {
+            try {
+                if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
+                    // 주문 상태를 cancelled로 변경
+                    await window.firebaseAdmin.orderService.updateOrder(orderId, {
+                        status: 'cancelled',
+                        cancelledAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        cancelledBy: 'admin'
+                    });
+                    
+                    // 사용자에게 알림 생성
+                    try {
+                        const order = await window.firebaseAdmin.orderService.getOrder(orderId);
+                        if (order && order.userId) {
+                            const isDeposited = order.isDeposited || false;
+                            const notificationMessage = isDeposited 
+                                ? '구매가 취소되었습니다. 곧 환불이 완료됩니다.'
+                                : '구매가 취소되었습니다.';
+                            
+                            await createNotificationForUser(
+                                order.userId, 
+                                'order_cancelled', 
+                                '구매 취소 완료', 
+                                notificationMessage, 
+                                'mypage.html?section=orders'
+                            );
+                        }
+                    } catch (notifError) {
+                        console.error('알림 생성 오류:', notifError);
+                    }
+                    
+                    alert('취소 요청이 승인되었습니다.');
+                    await loadPurchaseRequests();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('취소 승인 처리 중 오류가 발생했습니다.');
             }
         })();
         return;

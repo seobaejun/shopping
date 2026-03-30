@@ -14,7 +14,8 @@
 
     // 알림 타입
     const NOTIFICATION_TYPES = {
-        ORDER_APPROVED: 'order_approved',      // 주문 승인
+        ORDER_APPROVED: 'order_approved',
+    ORDER_CANCELLED: 'order_cancelled',      // 주문 승인
         ORDER_SHIPPED: 'order_shipped',        // 배송 시작
         ORDER_DELIVERED: 'order_delivered',    // 배송 완료
         INQUIRY_ANSWERED: 'inquiry_answered',  // 1:1문의 답변
@@ -25,7 +26,8 @@
 
     // 알림 타입별 제목 템플릿
     const NOTIFICATION_TITLES = {
-        [NOTIFICATION_TYPES.ORDER_APPROVED]: '주문이 승인되었습니다',
+        [NOTIFICATION_TYPES.ORDER_APPROVED]: '구매요청이 승인되었습니다',
+        [NOTIFICATION_TYPES.ORDER_CANCELLED]: '구매 취소 완료',
         [NOTIFICATION_TYPES.ORDER_SHIPPED]: '배송이 시작되었습니다',
         [NOTIFICATION_TYPES.ORDER_DELIVERED]: '배송이 완료되었습니다',
         [NOTIFICATION_TYPES.INQUIRY_ANSWERED]: '1:1문의에 답변이 등록되었습니다',

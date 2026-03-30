@@ -1618,6 +1618,27 @@
     border-bottom-color: #333;
 }
 
+/* 주문 취소 버튼 */
+.btn-cancel-order {
+    margin-left: 10px !important;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    background: #dc3545 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    transition: background 0.2s !important;
+}
+
+.btn-cancel-order:hover {
+    background: #c82333 !important;
+}
+
+.btn-cancel-order:active {
+    background: #bd2130 !important;
+}
+
 /* 주문/배송조회 아코디언 - 한 주문당 하나의 칸(카드), 상품명만 보이고 펼치면 상세 */
 .content-section[data-section="orders"] {
     overflow-x: hidden;
