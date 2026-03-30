@@ -769,6 +769,13 @@ function renderPurchaseRequestTable(orders) {
         const support = (order.supportAmount || 0).toLocaleString();
         const date = _orderFormatDate(order.createdAt);
         const orderId = _orderEscapeHtml(order.id);
+        
+        // 결제 방법 표시
+        const paymentMethod = order.paymentMethod || 'cash';
+        const paymentBadge = paymentMethod === 'trix' 
+            ? '<span class="badge badge-info">트릭스</span>' 
+            : '<span class="badge badge-primary">원화</span>';
+        
         return `<tr data-order-id="${orderId}">
             <td>${globalIndex}</td>
             <td>${name}</td>
@@ -777,7 +784,7 @@ function renderPurchaseRequestTable(orders) {
             <td>${price}</td>
             <td>${support} trix</td>
             <td>${date}</td>
-            <td><span class="badge badge-warning">승인대기</span></td>
+            <td><span class="badge badge-warning">승인대기</span> ${paymentBadge}</td>
             <td>
                 <button class="btn btn-sm btn-primary btn-approve-order" data-order-id="${orderId}" type="button">승인</button>
                 <button class="btn btn-sm btn-secondary btn-reject-order" data-order-id="${orderId}" type="button">구매취소</button>
@@ -812,13 +819,20 @@ function renderPurchaseRequestApprovedTable(orders) {
         const support = (order.supportAmount || 0).toLocaleString();
         const date = _orderFormatDate(order.createdAt);
         const orderId = _orderEscapeHtml(order.id);
+        
+        // 결제 방법 표시
+        const paymentMethod = order.paymentMethod || 'cash';
+        const paymentBadge = paymentMethod === 'trix' 
+            ? '<span class="badge badge-info">트릭스</span>' 
+            : '<span class="badge badge-primary">원화</span>';
+        
         const select = '<select class="form-control order-status-select" data-order-id="' + orderId + '" style="width:100px;display:inline-block;padding:4px 8px;">' +
             '<option value="pending">승인대기</option>' +
             '<option value="approved" selected>승인</option>' +
             '<option value="cancelled">취소</option></select>';
         return '<tr data-order-id="' + orderId + '"><td>' + globalIndex + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
             _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + ' trix</td><td>' + date +
-            '</td><td><span class="badge badge-success">승인</span></td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
+            '</td><td><span class="badge badge-success">승인</span> ' + paymentBadge + '</td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
     }).join('');
     tbody.innerHTML = rows;
     renderPurchaseRequestPagination('approved', orders.length);
@@ -848,13 +862,20 @@ function renderPurchaseRequestCancelledTable(orders) {
         const support = (order.supportAmount || 0).toLocaleString();
         const date = _orderFormatDate(order.createdAt);
         const orderId = _orderEscapeHtml(order.id);
+        
+        // 결제 방법 표시
+        const paymentMethod = order.paymentMethod || 'cash';
+        const paymentBadge = paymentMethod === 'trix' 
+            ? '<span class="badge badge-info">트릭스</span>' 
+            : '<span class="badge badge-primary">원화</span>';
+        
         const select = '<select class="form-control order-status-select" data-order-id="' + orderId + '" style="width:100px;display:inline-block;padding:4px 8px;">' +
             '<option value="pending">승인대기</option>' +
             '<option value="approved">승인</option>' +
             '<option value="cancelled" selected>취소</option></select>';
         return '<tr data-order-id="' + orderId + '"><td>' + globalIndex + '</td><td>' + name + '</td><td>' + accountNumber + '</td><td>' +
             _orderEscapeHtml(order.productName || '-') + '</td><td>' + price + '</td><td>' + support + ' trix</td><td>' + date +
-            '</td><td><span class="badge badge-secondary">취소</span></td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
+            '</td><td><span class="badge badge-secondary">취소</span> ' + paymentBadge + '</td><td>' + select + ' <button type="button" class="btn btn-sm btn-outline-primary btn-change-order-status" data-order-id="' + orderId + '">변경</button></td></tr>';
     }).join('');
     tbody.innerHTML = rows;
     renderPurchaseRequestPagination('cancelled', orders.length);
@@ -1687,6 +1708,13 @@ function applyPurchaseRequestSearch() {
         var support = (order.supportAmount || 0).toLocaleString();
         var date = _orderFormatDate(order.createdAt);
         var orderId = _orderEscapeHtml(order.id);
+        
+        // 결제 방법 표시
+        var paymentMethod = order.paymentMethod || 'cash';
+        var paymentBadge = paymentMethod === 'trix' 
+            ? '<span class="badge badge-info">트릭스</span>' 
+            : '<span class="badge badge-primary">원화</span>';
+        
         return '<tr data-order-id="' + orderId + '">' +
             '<td>' + (index + 1) + '</td>' +
             '<td>' + nameStr + '</td>' +
@@ -1695,7 +1723,7 @@ function applyPurchaseRequestSearch() {
             '<td>' + price + '</td>' +
             '<td>' + support + ' trix</td>' +
             '<td>' + date + '</td>' +
-            '<td><span class="badge badge-warning">승인대기</span></td>' +
+            '<td><span class="badge badge-warning">승인대기</span> ' + paymentBadge + '</td>' +
             '<td><button class="btn btn-sm btn-primary btn-approve-order" data-order-id="' + orderId + '" type="button">승인</button> ' +
             '<button class="btn btn-sm btn-secondary btn-reject-order" data-order-id="' + orderId + '" type="button">구매취소</button></td></tr>';
     }).join('');
@@ -2042,8 +2070,59 @@ document.addEventListener('click', (e) => {
         (async () => {
             try {
                 if (window.firebaseAdmin && window.firebaseAdmin.orderService) {
-                    await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'cancelled' });
-                    alert('구매가 취소되었습니다.');
+                    // 주문 정보 조회
+                    const order = await window.firebaseAdmin.orderService.getOrder(orderId);
+                    
+                    // 트릭스 결제인 경우 잔액 복구
+                    if (order && order.paymentMethod === 'trix' && order.trixAmount > 0) {
+                        const db = window.firebaseAdmin.getDb();
+                        if (db) {
+                            await db.runTransaction(async (transaction) => {
+                                // 사용자 문서 조회
+                                const userQuery = await db.collection('members')
+                                    .where('userId', '==', order.userId)
+                                    .limit(1)
+                                    .get();
+                                
+                                if (!userQuery.empty) {
+                                    const userDoc = userQuery.docs[0];
+                                    const userData = userDoc.data();
+                                    const currentBalance = userData.trixBalance || 0;
+                                    const newBalance = currentBalance + order.trixAmount;
+                                    
+                                    // 트릭스 잔액 복구
+                                    transaction.update(userDoc.ref, {
+                                        trixBalance: newBalance,
+                                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                    });
+                                    
+                                    // 트릭스 내역 추가
+                                    const historyRef = db.collection('trixHistory').doc();
+                                    transaction.set(historyRef, {
+                                        userId: order.userId,
+                                        type: 'refund',
+                                        amount: order.trixAmount,
+                                        balance: newBalance,
+                                        description: `구매 취소 환불: ${order.productName}`,
+                                        orderId: orderId,
+                                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                                    });
+                                }
+                                
+                                // 주문 상태 변경
+                                const orderRef = db.collection('orders').doc(orderId);
+                                transaction.update(orderRef, { 
+                                    status: 'cancelled',
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                            });
+                        }
+                    } else {
+                        // 원화 결제인 경우 기존 로직
+                        await window.firebaseAdmin.orderService.updateOrder(orderId, { status: 'cancelled' });
+                    }
+                    
+                    alert('구매가 취소되었습니다.' + (order && order.paymentMethod === 'trix' ? ' 트릭스가 환불되었습니다.' : ''));
                     await loadPurchaseRequests();
                 }
             } catch (err) {
@@ -2643,26 +2722,135 @@ function renderMemberTable(data) {
 
 async function editMember(memberId) {
     try {
+        console.log('editMember 시작, memberId:', memberId);
+        
         // Firestore에서 회원 정보 가져오기
         const members = await window.firebaseAdmin.memberService.getMembers();
+        console.log('회원 목록 조회 완료, 총', members.length, '명');
+        
         const member = members.find(m => m.id === memberId || m.userId === memberId);
+        console.log('찾은 회원:', member);
         
         if (member) {
-            // 수정 모달 열기 (추후 구현)
-            const newName = prompt('이름을 입력하세요:', member.name);
-            if (newName) {
-                await window.firebaseAdmin.memberService.updateMember(memberId, {
-                    name: newName
-                });
-                alert('회원 정보가 수정되었습니다.');
-                searchMembers(); // 목록 새로고침
+            // 보유 트릭스 계산 (tokenBalance 우선, 없으면 trixBalance, supportAmount 순)
+            const trixBalance = member.tokenBalance || member.trixBalance || member.supportAmount || 0;
+            const trixFormatted = formatTrix(trixBalance) + ' TRIX';
+            console.log('트릭스 잔액:', trixBalance, '→', trixFormatted);
+            
+            // 모달 필드에 회원 정보 설정 (안전하게)
+            try {
+                const setFieldValue = (id, value) => {
+                    try {
+                        const element = document.getElementById(id);
+                        if (element && element !== null) {
+                            element.value = value || '';
+                            console.log(`${id} 설정 완료:`, value);
+                        } else {
+                            console.warn(`${id} 요소를 찾을 수 없음`);
+                        }
+                    } catch (e) {
+                        console.error(`${id} 설정 중 에러:`, e);
+                    }
+                };
+                
+                // 각 필드를 개별적으로 안전하게 설정 (실제 HTML ID에 맞춤)
+                try { setFieldValue('editMemberName', member.name); } catch(e) { console.error('Name 설정 실패:', e); }
+                try { setFieldValue('editMemberUserId', member.userId); } catch(e) { console.error('UserId 설정 실패:', e); }
+                try { setFieldValue('editMemberPhone', member.phone); } catch(e) { console.error('Phone 설정 실패:', e); }
+                try { setFieldValue('editMemberPostcode', member.postcode); } catch(e) { console.error('Postcode 설정 실패:', e); }
+                try { setFieldValue('editMemberAddress', member.address); } catch(e) { console.error('Address 설정 실패:', e); }
+                try { setFieldValue('editMemberDetailAddress', member.detailAddress); } catch(e) { console.error('DetailAddress 설정 실패:', e); }
+                try { setFieldValue('editMemberReferralCode', member.recommender || member.referralCode); } catch(e) { console.error('ReferralCode 설정 실패:', e); }
+                try { setFieldValue('editMemberBank', member.bank); } catch(e) { console.error('Bank 설정 실패:', e); }
+                try { setFieldValue('editMemberAccountNumber', member.accountNumber); } catch(e) { console.error('AccountNumber 설정 실패:', e); }
+                try { setFieldValue('editMemberWalletAddress', member.walletAddress); } catch(e) { console.error('WalletAddress 설정 실패:', e); }
+                try { setFieldValue('editMemberTrixBalance', trixFormatted); } catch(e) { console.error('TrixBalance 설정 실패:', e); }
+                
+                // 상태 설정
+                const statusSelect = document.getElementById('editMemberStatus');
+                if (statusSelect) {
+                    statusSelect.value = member.status || '정상';
+                    console.log('상태 설정 완료:', member.status);
+                } else {
+                    console.warn('editMemberStatus 요소를 찾을 수 없음');
+                }
+                
+                console.log('모든 필드 설정 완료');
+            } catch (fieldError) {
+                console.error('필드 설정 중 에러:', fieldError);
+                throw fieldError;
             }
+            
+            // 모달 열기
+            const modal = document.getElementById('editMemberModal');
+            if (modal) {
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                console.log('모달 열기 완료');
+            } else {
+                console.error('editMemberModal을 찾을 수 없음');
+            }
+            
+            // 현재 편집 중인 회원 ID 저장
+            window.currentEditingMemberId = memberId;
+            
         } else {
+            console.error('회원을 찾을 수 없음:', memberId);
             alert(`${memberId} 회원을 찾을 수 없습니다.`);
         }
     } catch (error) {
-        console.error('회원 수정 오류:', error);
-        alert('회원 정보 수정 중 오류가 발생했습니다.');
+        console.error('회원 수정 오류 상세:', error);
+        console.error('에러 스택:', error.stack);
+        alert('회원 정보 수정 중 오류가 발생했습니다: ' + error.message);
+    }
+}
+
+// editMemberInfo 함수 (아이콘 버튼용)
+async function editMemberInfo(memberId) {
+    // editMember 함수와 동일한 로직
+    await editMember(memberId);
+}
+
+// 회원 수정 모달 닫기
+function closeEditMemberModal() {
+    const modal = document.getElementById('editMemberModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+    }
+    window.currentEditingMemberId = null;
+}
+
+// 회원 정보 저장
+async function saveEditMember() {
+    try {
+        const memberId = window.currentEditingMemberId;
+        if (!memberId) {
+            alert('회원 ID를 찾을 수 없습니다.');
+            return;
+        }
+        
+        const name = document.getElementById('editMemberName').value.trim();
+        if (!name) {
+            alert('이름을 입력해주세요.');
+            return;
+        }
+        
+        const status = document.getElementById('editMemberStatus').value;
+        
+        // 회원 정보 업데이트 (이름과 상태만 수정 가능)
+        await window.firebaseAdmin.memberService.updateMember(memberId, {
+            name: name,
+            status: status
+        });
+        
+        alert('회원 정보가 수정되었습니다.');
+        closeEditMemberModal();
+        searchMembers(); // 목록 새로고침
+        
+    } catch (error) {
+        console.error('회원 정보 저장 오류:', error);
+        alert('회원 정보 저장 중 오류가 발생했습니다.');
     }
 }
 
@@ -6322,6 +6510,11 @@ window.addDetailRow = addDetailRow;
 window.removeDetailRow = removeDetailRow;
 window.addProductOptionRow = addProductOptionRow;
 window.fileToBase64 = fileToBase64;
+window.editMemberInfo = editMemberInfo;
+window.editMember = editMember;
+window.deleteMember = deleteMember;
+window.closeEditMemberModal = closeEditMemberModal;
+window.saveEditMember = saveEditMember;
 
 // 초기화
 console.log('10쇼핑게임 관리자 페이지 로드 완료');

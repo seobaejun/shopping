@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실제 데이터 마이그레이션</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f5f5f5; padding: 10px; height: 400px; overflow-y: scroll; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        .skip { color: orange; }
+        button { padding: 10px 20px; margin: 10px 0; font-size: 16px; }
+        .status { margin: 10px 0; padding: 10px; background: #e7f3ff; border-left: 4px solid #2196F3; }
+        .progress { width: 100%; background-color: #f0f0f0; border-radius: 5px; margin: 10px 0; }
+        .progress-bar { height: 20px; background-color: #4CAF50; border-radius: 5px; text-align: center; line-height: 20px; color: white; }
+    </style>
+</head>
+<body>
+    <h1>실제 회원 데이터 마이그레이션</h1>
+    
+    <div class="status" id="status">준비 중...</div>
+    
+    <div class="progress">
+        <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+    </div>
+    
+    <button onclick="startMigration()" id="startBtn">마이그레이션 시작</button>
+    <button onclick="checkStatus()" id="checkBtn">현재 상태 확인</button>
+    
+    <h2>진행 로그</h2>
+    <div class="log" id="log"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGQdEiVOl_49oVfb8TPWkc47uaFxV55Xg",
+            authDomain: "shopping-31dce.firebaseapp.com",
+            projectId: "shopping-31dce",
+            storageBucket: "shopping-31dce.firebasestorage.app",
+            messagingSenderId: "344605730776",
+            appId: "1:344605730776:web:925f9d6206b1ff2e0374ad",
+            measurementId: "G-B7V6HK8Z7X"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let stats = { success: 0, skip: 0, error: 0 };
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'skip' ? 'skip' : '';
+            logDiv.innerHTML += \`<div class="\${className}">[\${timestamp}] \${message}</div>\`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateProgress(current, total) {
+            const percentage = Math.round((current / total) * 100);
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = \`\${percentage}% (\${current}/\${total})\`;
+        }
+
+        // 실제 회원 데이터 (50명 샘플)
+        const realUsers = [
+            { userId: 'lesc0', name: '이상철', email: 'ssang9087@gmail.com', phone: '010-3024-2083', joinDate: '2025-10-17' },
+            { userId: 'lesc2733', name: '이상철2', email: 'lesc2733@gmail.com', phone: '010-3024-2084', joinDate: '2025-09-29' },
+            { userId: 'song53', name: '송원우', email: 'thdtjdaus@naver.com', phone: '010-3749-2700', joinDate: '2025-09-29' },
+            { userId: 'juni8009', name: '이승준', email: '', phone: '010-3138-1230', joinDate: '2025-04-18' },
+            { userId: 'dldudghk04', name: '이영화', email: '', phone: '010-7380-8805', joinDate: '2025-09-17' },
+            { userId: 'PL464900', name: '조용훈', email: '', phone: '010-9346-5291', joinDate: '2025-05-20' },
+            { userId: 'jgj4399', name: '정규정', email: '', phone: '010-4066-4399', joinDate: '2025-05-07' },
+            { userId: 'ok7377', name: '이계정', email: '', phone: '010-5169-7377', joinDate: '2025-04-10' },
+            { userId: 'bizidea1', name: '박종원', email: 'bizidea@kipa.org', phone: '010-5840-9881', joinDate: '2025-10-15' },
+            { userId: 'khm7571', name: '김현미', email: '', phone: '010-7900-7571', joinDate: '2025-06-29' },
+            { userId: 'sky9012', name: '이윤주', email: '', phone: '010-2795-0912', joinDate: '2025-06-18' },
+            { userId: 'gic585800', name: '홍정미', email: '', phone: '010-7785-9987', joinDate: '2025-04-21' },
+            { userId: 'moon05', name: '문종택', email: '', phone: '010-4247-2757', joinDate: '2025-04-28' },
+            { userId: 'yjjang042', name: '장영주', email: '', phone: '010-8384-2734', joinDate: '2025-05-16' },
+            { userId: 'jungkee99', name: '홍정기', email: '', phone: '010-6606-0128', joinDate: '2025-08-07' },
+            { userId: 'Son2759', name: '손정숙', email: '', phone: '010-2863-2759', joinDate: '2025-04-28' },
+            { userId: 'kst8008', name: '김국태', email: '', phone: '010-8008-4848', joinDate: '2025-04-10' },
+            { userId: 'akrasiel', name: '김새별', email: '', phone: '010-4763-5536', joinDate: '2025-04-14' },
+            { userId: 'Jefferson', name: '김건형', email: '', phone: '010-2388-0470', joinDate: '2025-09-26' },
+            { userId: 'kmj0048', name: '김민주', email: '', phone: '010-7256-0048', joinDate: '2025-04-15' },
+            { userId: 'like816', name: '이정은', email: '', phone: '010-9076-1673', joinDate: '2025-04-04' },
+            { userId: 'jofk1130', name: '이요한', email: '', phone: '010-7702-7702', joinDate: '2025-04-10' },
+            { userId: 'jyooncho0718', name: '조재윤', email: '', phone: '010-4499-2518', joinDate: '2025-04-17' },
+            { userId: 'jpg07004', name: '김은혜', email: '', phone: '010-4279-1434', joinDate: '2025-07-04' },
+            { userId: 'koreambk', name: '민복기', email: '', phone: '010-7226-4589', joinDate: '2025-09-16' },
+            { userId: 'vbnm2233', name: '박귀환', email: '', phone: '010-6866-8179', joinDate: '2025-07-04' },
+            { userId: 'htwins', name: '재성', email: '', phone: '010-6404-6439', joinDate: '2025-09-26' },
+            { userId: 'can123', name: '이기태', email: '', phone: '010-7572-3788', joinDate: '2025-04-17' },
+            { userId: 'dorlqhd113', name: '김기순', email: '', phone: '010-8865-4286', joinDate: '2025-06-19' },
+            { userId: 'thdbs0216', name: '황소윤', email: '', phone: '010-5592-9439', joinDate: '2025-04-23' },
+            { userId: 'tckeum11', name: '김태철', email: '', phone: '010-5840-0046', joinDate: '2025-04-25' },
+            { userId: 'truelub', name: '박만섭', email: 'truelub@daum.net', phone: '010-4998-4865', joinDate: '2025-06-05' },
+            { userId: 'onyour', name: '유창우', email: '', phone: '010-3400-7604', joinDate: '2025-04-18' },
+            { userId: '28nomuid', name: '고재웅', email: '', phone: '010-5882-2555', joinDate: '2025-07-15' },
+            { userId: 'xxangq', name: '최장환', email: '', phone: '010-5409-6336', joinDate: '2025-07-16' },
+            { userId: 'kels2008', name: '하승수', email: '', phone: '010-6391-9830', joinDate: '2025-04-27' },
+            { userId: 'rudilim', name: '임상규', email: '', phone: '010-2783-8787', joinDate: '2025-09-20' },
+            { userId: 'Ho993465', name: '김만호', email: '', phone: '010-9955-4245', joinDate: '2025-05-07' },
+            { userId: 'nicewoo', name: '최연우', email: '', phone: '010-6268-2879', joinDate: '2025-06-18' },
+            { userId: 'qus6117', name: '변미선', email: '', phone: '010-5319-7035', joinDate: '2025-06-13' },
+            { userId: 'Lee2086', name: 'Leeyoungnam', email: '', phone: '010-6463-2086', joinDate: '2025-09-11' },
+            { userId: 'ces7869', name: '최은순', email: '', phone: '010-2476-7869', joinDate: '2025-05-07' },
+            { userId: 'jjh1555', name: '전종훈', email: '', phone: '010-5741-0238', joinDate: '2025-09-11' },
+            { userId: 'sa6890', name: '심화옥', email: '', phone: '010-6890-8291', joinDate: '2025-04-23' },
+            { userId: 'coner1002', name: '우병호', email: '', phone: '010-4515-0345', joinDate: '2025-08-19' },
+            { userId: 'mamawhdk88', name: '양해정', email: '', phone: '010-5389-8367', joinDate: '2025-04-15' },
+            { userId: 'editorj', name: '조준영', email: '', phone: '010-6276-0077', joinDate: '2025-09-23' },
+            { userId: 'dhgksquf', name: '오한별', email: '', phone: '010-2980-6112', joinDate: '2025-07-08' },
+            { userId: 'kms3811', name: '강민수', email: '', phone: '010-8337-3811', joinDate: '2025-04-11' }
+        ];
+
+        function generateTempPassword(userId, phone) {
+            const phoneDigits = (phone || '').replace(/\\D/g, '');
+            const last4 = phoneDigits.slice(-4) || '0000';
+            return \`\${userId}\${last4}\`;
+        }
+
+        async function checkExistingUser(userId, email) {
+            try {
+                const userQuery = await db.collection('members').where('userId', '==', userId).limit(1).get();
+                return !userQuery.empty;
+            } catch (error) {
+                log(\`기존 회원 확인 오류 (\${userId}): \${error.message}\`, 'error');
+                return true;
+            }
+        }
+
+        async function migrateUser(userData) {
+            const { userId, name, joinDate, email, phone } = userData;
+
+            try {
+                const exists = await checkExistingUser(userId, email);
+                if (exists) {
+                    log(\`⏭️  기존 회원 스킵: \${userId}\`, 'skip');
+                    stats.skip++;
+                    return { success: true, skipped: true };
+                }
+
+                const tempPassword = generateTempPassword(userId, phone);
+
+                const memberData = {
+                    userId: userId,
+                    email: email || '',
+                    name: name || '',
+                    userName: name || '',
+                    phone: phone || '',
+                    tempPassword: tempPassword,
+                    status: '정상',
+                    joinDate: joinDate ? new Date(joinDate) : new Date(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    purchaseAmount: 0,
+                    supportAmount: 0,
+                    referralCode: '',
+                    recommender: '관리자',
+                    mdCode: '',
+                    address: '',
+                    detailAddress: '',
+                    postcode: '',
+                    accountNumber: ''
+                };
+
+                const docRef = db.collection('members').doc();
+                await docRef.set(memberData);
+
+                log(\`✅ 회원 생성: \${userId} (\${name})\`, 'success');
+                stats.success++;
+                return { success: true };
+
+            } catch (error) {
+                log(\`❌ 생성 실패: \${userId} - \${error.message}\`, 'error');
+                stats.error++;
+                return { success: false };
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const membersSnapshot = await db.collection('members').get();
+                const memberCount = membersSnapshot.size;
+                
+                document.getElementById('status').innerHTML = \`
+                    현재 Firestore members: <strong>\${memberCount}명</strong> | 
+                    성공: <span class="success">\${stats.success}</span> | 
+                    스킵: <span class="skip">\${stats.skip}</span> | 
+                    실패: <span class="error">\${stats.error}</span>
+                \`;
+                
+                log(\`📊 현재 상태 - Firestore: \${memberCount}명\`);
+            } catch (error) {
+                log(\`상태 확인 오류: \${error.message}\`, 'error');
+            }
+        }
+
+        async function startMigration() {
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = true;
+            startBtn.textContent = '마이그레이션 진행 중...';
+
+            try {
+                log(\`🚀 \${realUsers.length}명 마이그레이션 시작\`);
+
+                for (let i = 0; i < realUsers.length; i++) {
+                    const userData = realUsers[i];
+                    
+                    log(\`🔄 \${i + 1}/\${realUsers.length}: \${userData.userId} (\${userData.name})\`);
+                    updateProgress(i + 1, realUsers.length);
+                    
+                    await migrateUser(userData);
+                    
+                    // API 제한 방지
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // 10명마다 상태 체크
+                    if ((i + 1) % 10 === 0) {
+                        await checkStatus();
+                    }
+                }
+
+                log(\`🎉 마이그레이션 완료!\`, 'success');
+                await checkStatus();
+
+            } catch (error) {
+                log(\`💥 마이그레이션 실패: \${error.message}\`, 'error');
+            } finally {
+                startBtn.disabled = false;
+                startBtn.textContent = '마이그레이션 시작';
+            }
+        }
+
+        window.addEventListener('load', () => {
+            log('🚀 마이그레이션 도구 준비 완료');
+            log(\`📋 대상 회원: \${realUsers.length}명\`);
+            checkStatus();
+        });
+    </script>
+</body>
+</html>

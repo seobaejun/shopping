@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase 상태 확인</title>
+</head>
+<body>
+    <h1>Firebase 상태 확인</h1>
+    <div id="status">로딩 중...</div>
+    <div id="results"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGQdEiVOl_49oVfb8TPWkc47uaFxV55Xg",
+            authDomain: "shopping-31dce.firebaseapp.com",
+            projectId: "shopping-31dce",
+            storageBucket: "shopping-31dce.firebasestorage.app",
+            messagingSenderId: "344605730776",
+            appId: "1:344605730776:web:925f9d6206b1ff2e0374ad",
+            measurementId: "G-B7V6HK8Z7X"
+        };
+
+        // Firebase 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function checkStatus() {
+            try {
+                const statusDiv = document.getElementById('status');
+                const resultsDiv = document.getElementById('results');
+                
+                statusDiv.innerHTML = 'Firebase 연결 중...';
+                
+                // Firestore 회원 수 확인
+                const membersSnapshot = await db.collection('members').get();
+                const memberCount = membersSnapshot.size;
+                
+                // 샘플 데이터 확인
+                const sampleMembers = [];
+                membersSnapshot.forEach((doc, index) => {
+                    if (index < 5) { // 처음 5개만
+                        const data = doc.data();
+                        sampleMembers.push({
+                            id: doc.id,
+                            userId: data.userId,
+                            name: data.name,
+                            email: data.email
+                        });
+                    }
+                });
+                
+                statusDiv.innerHTML = '✅ 연결 성공';
+                resultsDiv.innerHTML = `
+                    <h2>현재 상태</h2>
+                    <p><strong>Firestore members 컬렉션:</strong> ${memberCount}명</p>
+                    <h3>샘플 데이터 (처음 5개)</h3>
+                    <ul>
+                        ${sampleMembers.map(member => 
+                            `<li>${member.userId} - ${member.name} (${member.email})</li>`
+                        ).join('')}
+                    </ul>
+                `;
+                
+            } catch (error) {
+                document.getElementById('status').innerHTML = `❌ 오류: ${error.message}`;
+                console.error('Firebase 상태 확인 오류:', error);
+            }
+        }
+
+        // 페이지 로드 시 실행
+        checkStatus();
+    </script>
+</body>
+</html>

@@ -32,6 +32,125 @@ async function initFirebase() {
     });
 }
 
+// 트릭스 관련 함수들
+async function loadUserTrixBalance() {
+    try {
+        const user = window.mypageApi && typeof window.mypageApi.getLoginUser === 'function'
+            ? window.mypageApi.getLoginUser()
+            : (() => {
+                if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+                try {
+                    const raw = localStorage.getItem('loginUser');
+                    return raw ? JSON.parse(raw) : null;
+                } catch (e) { return null; }
+            })();
+            
+        if (!user || !user.uid) return 0;
+        
+        const db = await initFirebase();
+        if (!db) return 0;
+        
+        const userDoc = await db.collection('members').doc(user.uid).get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            
+            // 디버깅 로그 추가
+            console.log('🔍 마이페이지 트릭스 로드 디버깅:', {
+                uid: user.uid,
+                userId: userData.userId,
+                name: userData.name,
+                trixBalance: userData.trixBalance,
+                supportAmount: userData.supportAmount,
+                allFields: Object.keys(userData)
+            });
+            
+            // trixBalance 필드가 없으면 tokenBalance, supportAmount를 사용하거나 0으로 초기화
+            const trixBalance = userData.trixBalance || userData.tokenBalance || userData.supportAmount || 0;
+            
+            console.log('💰 최종 트릭스 잔액:', trixBalance);
+            
+            // UI 업데이트
+            const trixBalanceEl = document.getElementById('trixBalance');
+            const currentTrixBalanceEl = document.getElementById('currentTrixBalance');
+            const trixValueInWonEl = document.getElementById('trixValueInWon');
+            
+            if (trixBalanceEl) trixBalanceEl.textContent = formatTrix(trixBalance);
+            if (currentTrixBalanceEl) currentTrixBalanceEl.textContent = formatTrix(trixBalance);
+            if (trixValueInWonEl) trixValueInWonEl.textContent = (trixBalance * 100).toLocaleString();
+            
+            return trixBalance;
+        }
+        return 0;
+    } catch (error) {
+        console.error('트릭스 잔액 조회 오류:', error);
+        return 0;
+    }
+}
+
+async function loadTrixHistory() {
+    try {
+        const user = window.mypageApi && typeof window.mypageApi.getLoginUser === 'function'
+            ? window.mypageApi.getLoginUser()
+            : (() => {
+                if (localStorage.getItem('isLoggedIn') !== 'true') return null;
+                try {
+                    const raw = localStorage.getItem('loginUser');
+                    return raw ? JSON.parse(raw) : null;
+                } catch (e) { return null; }
+            })();
+            
+        if (!user || !user.userId) return;
+        
+        const db = await initFirebase();
+        if (!db) return;
+        
+        const historySnapshot = await db.collection('trixHistory')
+            .where('userId', '==', user.userId)
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get();
+            
+        const historyList = document.getElementById('trixHistoryList');
+        if (!historyList) return;
+        
+        if (historySnapshot.empty) {
+            historyList.innerHTML = '<div class="no-data">트릭스 사용 내역이 없습니다.</div>';
+            return;
+        }
+        
+        let historyHtml = '';
+        historySnapshot.forEach(doc => {
+            const history = doc.data();
+            const date = history.createdAt ? history.createdAt.toDate().toLocaleDateString() : '';
+            const amount = history.amount || 0;
+            const balance = history.balance || 0;
+            const description = history.description || '';
+            
+            const amountClass = amount >= 0 ? 'positive' : 'negative';
+            const amountPrefix = amount >= 0 ? '+' : '';
+            
+            historyHtml += `
+                <div class="trix-history-item">
+                    <div class="date">${date}</div>
+                    <div class="description">${description}</div>
+                    <div class="amount ${amountClass}">${amountPrefix}${formatTrix(amount)} TRIX</div>
+                    <div class="balance">${formatTrix(balance)} TRIX</div>
+                </div>
+            `;
+        });
+        
+        historyList.innerHTML = historyHtml;
+        
+    } catch (error) {
+        console.error('트릭스 내역 조회 오류:', error);
+        const historyList = document.getElementById('trixHistoryList');
+        if (historyList) {
+            historyList.innerHTML = '<div class="no-data">트릭스 내역을 불러오는 중 오류가 발생했습니다.</div>';
+        }
+    }
+}
+
+
 // 페이지 초기화 (DOM 준비 후 또는 이미 로드됐으면 즉시 실행)
 function runMypageInit() {
     (async function init() {
@@ -453,6 +572,7 @@ function updateWishlistAndCartCount() {
         var wishlistCountEl = document.getElementById('wishlistCount');
         if (wishlistCountEl) wishlistCountEl.textContent = (wishlist && wishlist.length) || 0;
     }
+    
 
     getCart.then(setCartCount).catch(function () { setCartCount([]); });
     getWishlist.then(setWishlistCount).catch(function () { setWishlistCount([]); });

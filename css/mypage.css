@@ -269,6 +269,98 @@
     visibility: visible;
 }
 
+/* 트릭스 관련 스타일 */
+.trix-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.current-balance {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.trix-value {
+    color: #666;
+    font-size: 12px;
+}
+
+.trix-history-container {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+.trix-history-header {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr 1fr;
+    gap: 15px;
+    padding: 15px 20px;
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.trix-history-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.trix-history-item {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr 1fr;
+    gap: 15px;
+    padding: 15px 20px;
+    border-bottom: 1px solid #f1f3f4;
+    font-size: 14px;
+    align-items: center;
+}
+
+.trix-history-item:last-child {
+    border-bottom: none;
+}
+
+.trix-history-item .date {
+    color: #666;
+    font-size: 13px;
+}
+
+.trix-history-item .description {
+    color: #333;
+}
+
+.trix-history-item .amount {
+    font-weight: 600;
+    text-align: right;
+}
+
+.trix-history-item .amount.positive {
+    color: #28a745;
+}
+
+.trix-history-item .amount.negative {
+    color: #dc3545;
+}
+
+.trix-history-item .balance {
+    color: #333;
+    font-weight: 500;
+    text-align: right;
+}
+
+.no-data {
+    padding: 40px 20px;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+}
+
 /* 쇼핑지원금 섹션 */
 .support-info-section {
     background: #fff;

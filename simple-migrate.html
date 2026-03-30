@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>간단 회원 마이그레이션</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f5f5f5; padding: 10px; height: 300px; overflow-y: scroll; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        .skip { color: orange; }
+        button { padding: 10px 20px; margin: 10px 0; font-size: 16px; }
+        .status { margin: 10px 0; padding: 10px; background: #e7f3ff; border-left: 4px solid #2196F3; }
+    </style>
+</head>
+<body>
+    <h1>회원 마이그레이션 (나머지 회원)</h1>
+    
+    <div class="status" id="status">준비 중...</div>
+    
+    <button onclick="startMigration()" id="startBtn">마이그레이션 시작</button>
+    <button onclick="checkStatus()" id="checkBtn">현재 상태 확인</button>
+    
+    <h2>진행 로그</h2>
+    <div class="log" id="log"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGQdEiVOl_49oVfb8TPWkc47uaFxV55Xg",
+            authDomain: "shopping-31dce.firebaseapp.com",
+            projectId: "shopping-31dce",
+            storageBucket: "shopping-31dce.firebasestorage.app",
+            messagingSenderId: "344605730776",
+            appId: "1:344605730776:web:925f9d6206b1ff2e0374ad",
+            measurementId: "G-B7V6HK8Z7X"
+        };
+
+        // Firebase 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let stats = { success: 0, skip: 0, error: 0 };
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'skip' ? 'skip' : '';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        // 샘플 회원 데이터 (실제로는 텍스트 파일에서 파싱)
+        const sampleUsers = [
+            { userId: 'lesc0', name: '이상철', email: 'ssang9087@gmail.com', phone: '010-3024-2083', joinDate: '2025-10-17' },
+            { userId: 'lesc2733', name: '이상철2', email: 'lesc2733@gmail.com', phone: '010-3024-2084', joinDate: '2025-09-29' },
+            { userId: 'song53', name: '송원우', email: 'thdtjdaus@naver.com', phone: '010-3749-2700', joinDate: '2025-09-29' },
+            { userId: 'juni8009', name: '이승준', email: '', phone: '010-3138-1230', joinDate: '2025-04-18' },
+            { userId: 'dldudghk04', name: '이영화', email: '', phone: '010-7380-8805', joinDate: '2025-09-17' },
+            { userId: 'PL464900', name: '조용훈', email: '', phone: '010-9346-5291', joinDate: '2025-05-20' },
+            { userId: 'jgj4399', name: '정규정', email: '', phone: '010-4066-4399', joinDate: '2025-05-07' },
+            { userId: 'ok7377', name: '이계정', email: '', phone: '010-5169-7377', joinDate: '2025-04-10' },
+            { userId: 'bizidea1', name: '박종원', email: 'bizidea@kipa.org', phone: '010-5840-9881', joinDate: '2025-10-15' },
+            { userId: 'kst8008', name: '김상태', email: '', phone: '010-8008-4848', joinDate: '2025-04-10' }
+        ];
+
+        // 임시 비밀번호 생성
+        function generateTempPassword(userId, phone) {
+            const phoneDigits = (phone || '').replace(/\\D/g, '');
+            const last4 = phoneDigits.slice(-4) || '0000';
+            return `${userId}${last4}`;
+        }
+
+        // 기존 회원 확인
+        async function checkExistingUser(userId, email) {
+            try {
+                const userQuery = await db.collection('members').where('userId', '==', userId).limit(1).get();
+                if (!userQuery.empty) {
+                    return true;
+                }
+                
+                if (email) {
+                    const emailQuery = await db.collection('members').where('email', '==', email).limit(1).get();
+                    if (!emailQuery.empty) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                log(`기존 회원 확인 오류 (${userId}): ${error.message}`, 'error');
+                return true;
+            }
+        }
+
+        // 단일 사용자 마이그레이션
+        async function migrateUser(userData) {
+            const { userId, name, joinDate, email, phone } = userData;
+
+            try {
+                const exists = await checkExistingUser(userId, email);
+                if (exists) {
+                    log(`⏭️  기존 회원 스킵: ${userId} (${email || 'no-email'})`, 'skip');
+                    stats.skip++;
+                    return { success: true, skipped: true };
+                }
+
+                const tempPassword = generateTempPassword(userId, phone);
+
+                const memberData = {
+                    userId: userId,
+                    email: email || '',
+                    name: name || '',
+                    userName: name || '',
+                    phone: phone || '',
+                    tempPassword: tempPassword,
+                    status: '정상',
+                    joinDate: joinDate ? new Date(joinDate) : new Date(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    purchaseAmount: 0,
+                    supportAmount: 0,
+                    referralCode: '',
+                    recommender: '관리자',
+                    mdCode: '',
+                    address: '',
+                    detailAddress: '',
+                    postcode: '',
+                    accountNumber: ''
+                };
+
+                const docRef = db.collection('members').doc();
+                await docRef.set(memberData);
+
+                log(`✅ 회원 생성 성공: ${userId} -> ${docRef.id}`, 'success');
+                stats.success++;
+                return { success: true, docId: docRef.id };
+
+            } catch (error) {
+                log(`❌ 회원 생성 실패 (${userId}): ${error.message}`, 'error');
+                stats.error++;
+                return { success: false, error: error.message };
+            }
+        }
+
+        // 현재 상태 확인
+        async function checkStatus() {
+            try {
+                const membersSnapshot = await db.collection('members').get();
+                const memberCount = membersSnapshot.size;
+                
+                document.getElementById('status').innerHTML = `
+                    현재 Firestore members: <strong>${memberCount}명</strong> | 
+                    성공: <span class="success">${stats.success}</span> | 
+                    스킵: <span class="skip">${stats.skip}</span> | 
+                    실패: <span class="error">${stats.error}</span>
+                `;
+                
+                log(`📊 현재 상태 - Firestore: ${memberCount}명, 성공: ${stats.success}, 스킵: ${stats.skip}, 실패: ${stats.error}`);
+            } catch (error) {
+                log(`상태 확인 오류: ${error.message}`, 'error');
+            }
+        }
+
+        // 마이그레이션 시작
+        async function startMigration() {
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = true;
+            startBtn.textContent = '마이그레이션 진행 중...';
+
+            try {
+                log(`📋 총 ${sampleUsers.length}개 회원 마이그레이션 시작`);
+
+                for (let i = 0; i < sampleUsers.length; i++) {
+                    const userData = sampleUsers[i];
+                    log(`🔄 ${i + 1}/${sampleUsers.length} 처리 중: ${userData.userId}`);
+                    
+                    await migrateUser(userData);
+                    
+                    // 각 사용자 처리 후 잠시 대기 (API 제한 방지)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // 5명마다 상태 업데이트
+                    if ((i + 1) % 5 === 0) {
+                        await checkStatus();
+                    }
+                }
+
+                log(`🎉 마이그레이션 완료! 총 ${stats.success + stats.skip + stats.error}명 처리`, 'success');
+                await checkStatus();
+
+            } catch (error) {
+                log(`💥 마이그레이션 전체 실패: ${error.message}`, 'error');
+            } finally {
+                startBtn.disabled = false;
+                startBtn.textContent = '마이그레이션 시작';
+            }
+        }
+
+        // 초기 상태 확인
+        window.addEventListener('load', () => {
+            log('🚀 마이그레이션 도구 준비 완료');
+            checkStatus();
+        });
+    </script>
+</body>
+</html>

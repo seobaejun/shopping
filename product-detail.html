@@ -163,9 +163,26 @@
                         <!-- 선택된 옵션이 여기에 표시됩니다 -->
                     </div>
 
-                    <div class="total-price">
+                    <!-- 결제 방법 선택 -->
+                    <div class="option-group">
+                        <label class="option-label">결제 방법</label>
+                        <select class="option-select payment-method-select" id="paymentMethodSelect">
+                            <option value="">결제 방법을 선택하세요</option>
+                            <option value="cash">원화 결제</option>
+                            <option value="trix">트릭스 결제</option>
+                        </select>
+                        <div class="user-trix-info" id="userTrixInfo" style="display: none;">
+                            <span class="trix-balance">보유: <span id="userTrixBalance">0</span> TRIX</span>
+                            <span class="trix-insufficient" id="trixInsufficient" style="display: none;">트릭스가 부족합니다</span>
+                        </div>
+                    </div>
+
+                    <div class="total-price" id="totalPriceSection" style="display: none;">
                         <span>총 상품금액</span>
-                        <span class="price" id="totalPrice">0원</span>
+                        <div class="price-display">
+                            <span class="price" id="totalPrice">0원</span>
+                            <span class="trix-price" id="totalTrixPrice" style="display: none;">0 TRIX</span>
+                        </div>
                     </div>
 
                     <div class="action-buttons">

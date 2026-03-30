@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자동 회원 마이그레이션</title>
+</head>
+<body>
+    <h1>회원 마이그레이션</h1>
+    <p>자동으로 처리됩니다...</p>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGQdEiVOl_49oVfb8TPWkc47uaFxV55Xg",
+            authDomain: "shopping-31dce.firebaseapp.com",
+            projectId: "shopping-31dce",
+            storageBucket: "shopping-31dce.firebasestorage.app",
+            messagingSenderId: "344605730776",
+            appId: "1:344605730776:web:925f9d6206b1ff2e0374ad",
+            measurementId: "G-B7V6HK8Z7X"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // 회원 데이터
+        const users = [
+            { userId: 'lesc0', name: '이상철', email: 'ssang9087@gmail.com', phone: '010-3024-2083', joinDate: '2025-10-17' },
+            { userId: 'lesc2733', name: '이상철2', email: 'lesc2733@gmail.com', phone: '010-3024-2084', joinDate: '2025-09-29' },
+            { userId: 'song53', name: '송원우', email: 'thdtjdaus@naver.com', phone: '010-3749-2700', joinDate: '2025-09-29' },
+            { userId: 'juni8009', name: '이승준', email: '', phone: '010-3138-1230', joinDate: '2025-04-18' },
+            { userId: 'dldudghk04', name: '이영화', email: '', phone: '010-7380-8805', joinDate: '2025-09-17' },
+            { userId: 'PL464900', name: '조용훈', email: '', phone: '010-9346-5291', joinDate: '2025-05-20' },
+            { userId: 'jgj4399', name: '정규정', email: '', phone: '010-4066-4399', joinDate: '2025-05-07' },
+            { userId: 'ok7377', name: '이계정', email: '', phone: '010-5169-7377', joinDate: '2025-04-10' },
+            { userId: 'bizidea1', name: '박종원', email: 'bizidea@kipa.org', phone: '010-5840-9881', joinDate: '2025-10-15' },
+            { userId: 'khm7571', name: '김현미', email: '', phone: '010-7900-7571', joinDate: '2025-06-29' }
+        ];
+
+        function generateTempPassword(userId, phone) {
+            const phoneDigits = (phone || '').replace(/\\D/g, '');
+            const last4 = phoneDigits.slice(-4) || '0000';
+            return \`\${userId}\${last4}\`;
+        }
+
+        async function checkExistingUser(userId) {
+            try {
+                const userQuery = await db.collection('members').where('userId', '==', userId).limit(1).get();
+                return !userQuery.empty;
+            } catch (error) {
+                console.log('기존 회원 확인 오류:', userId, error.message);
+                return true;
+            }
+        }
+
+        async function migrateUser(userData) {
+            const { userId, name, joinDate, email, phone } = userData;
+
+            try {
+                const exists = await checkExistingUser(userId);
+                if (exists) {
+                    console.log('기존 회원 스킵:', userId);
+                    return { success: true, skipped: true };
+                }
+
+                const tempPassword = generateTempPassword(userId, phone);
+
+                const memberData = {
+                    userId: userId,
+                    email: email || '',
+                    name: name || '',
+                    userName: name || '',
+                    phone: phone || '',
+                    tempPassword: tempPassword,
+                    status: '정상',
+                    joinDate: joinDate ? new Date(joinDate) : new Date(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    purchaseAmount: 0,
+                    supportAmount: 0,
+                    referralCode: '',
+                    recommender: '관리자',
+                    mdCode: '',
+                    address: '',
+                    detailAddress: '',
+                    postcode: '',
+                    accountNumber: ''
+                };
+
+                const docRef = db.collection('members').doc();
+                await docRef.set(memberData);
+
+                console.log('회원 생성 성공:', userId, name);
+                return { success: true };
+
+            } catch (error) {
+                console.log('회원 생성 실패:', userId, error.message);
+                return { success: false };
+            }
+        }
+
+        async function startMigration() {
+            console.log('마이그레이션 시작...');
+            
+            let success = 0;
+            let skip = 0;
+            let error = 0;
+
+            for (let i = 0; i < users.length; i++) {
+                const userData = users[i];
+                console.log(\`처리 중: \${i + 1}/\${users.length} - \${userData.userId} (\${userData.name})\`);
+                
+                const result = await migrateUser(userData);
+                
+                if (result.success) {
+                    if (result.skipped) {
+                        skip++;
+                    } else {
+                        success++;
+                    }
+                } else {
+                    error++;
+                }
+                
+                // 1초 대기
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            console.log('마이그레이션 완료!');
+            console.log('성공:', success, '스킵:', skip, '실패:', error);
+            
+            document.body.innerHTML = \`
+                <h1>마이그레이션 완료!</h1>
+                <p>성공: \${success}명</p>
+                <p>스킵: \${skip}명</p>
+                <p>실패: \${error}명</p>
+                <p>총 처리: \${success + skip + error}명</p>
+            \`;
+        }
+
+        // 페이지 로드 시 자동 시작
+        window.addEventListener('load', () => {
+            console.log('자동 마이그레이션 시작');
+            startMigration();
+        });
+    </script>
+</body>
+</html>

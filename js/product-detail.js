@@ -535,6 +535,12 @@ function submitBuyNowOrder(delivery) {
     if (!loginUser || !loginUser.userId || !PRODUCT_INFO || !PRODUCT_INFO.id) {
         return Promise.reject(new Error('로그인 정보 또는 상품 정보를 확인할 수 없습니다.'));
     }
+    
+    // 결제 방법 확인
+    if (!selectedPaymentMethod) {
+        return Promise.reject(new Error('결제 방법을 선택해주세요.'));
+    }
+    
     if (!isDeliveryAddressFilled(delivery)) {
         return Promise.reject(new Error('배송 주소가 없습니다. 주소를 입력한 뒤 다시 시도해주세요.'));
     }
@@ -567,13 +573,71 @@ function submitBuyNowOrder(delivery) {
         deliveryPhone: delivery.phone || '',
         deliveryPostcode: delivery.postcode || '',
         deliveryAddress: delivery.address || '',
-        deliveryDetailAddress: delivery.detailAddress || ''
+        deliveryDetailAddress: delivery.detailAddress || '',
+        // 결제 방법 정보 추가
+        paymentMethod: selectedPaymentMethod,
+        trixAmount: selectedPaymentMethod === 'trix' ? totalPrice / 100 : 0,
+        cashAmount: selectedPaymentMethod === 'cash' ? totalPrice : 0
     };
-    return firebase.firestore().collection('orders').add({
-        ...orderData,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    
+    // 트릭스 결제 시 트랜잭션으로 처리
+    if (selectedPaymentMethod === 'trix') {
+        const db = firebase.firestore();
+        return db.runTransaction(async (transaction) => {
+            // 사용자 문서 참조
+            const userRef = db.collection('members').doc(loginUser.uid);
+            const userDoc = await transaction.get(userRef);
+            
+            if (!userDoc.exists) {
+                throw new Error('사용자 정보를 찾을 수 없습니다.');
+            }
+            
+            const userData = userDoc.data();
+            const currentTrixBalance = userData.tokenBalance || userData.trixBalance || 0;
+            const requiredTrix = totalPrice / 100;
+            
+            // 잔액 재확인
+            if (currentTrixBalance < requiredTrix) {
+                throw new Error(`트릭스가 부족합니다. 필요: ${formatTrix(requiredTrix)} TRIX, 보유: ${formatTrix(currentTrixBalance)} TRIX`);
+            }
+            
+            // 주문 생성
+            const orderRef = db.collection('orders').doc();
+            transaction.set(orderRef, {
+                ...orderData,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // 사용자 트릭스 잔액 차감
+            const newBalance = currentTrixBalance - requiredTrix;
+            transaction.update(userRef, {
+                tokenBalance: newBalance,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // 트릭스 사용 내역 추가
+            const trixHistoryRef = db.collection('trixHistory').doc();
+            transaction.set(trixHistoryRef, {
+                userId: loginUser.userId,
+                type: 'purchase',
+                amount: -requiredTrix,
+                balance: newBalance,
+                description: `상품 구매: ${orderProductName}`,
+                orderId: orderRef.id,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            return orderRef;
+        });
+    } else {
+        // 원화 결제는 기존 방식
+        return firebase.firestore().collection('orders').add({
+            ...orderData,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
 }
 
 // 바로구매: 구매 버튼 클릭 시 배송지 모달 열기
@@ -693,7 +757,15 @@ function openBuyNowPaymentModal(delivery) {
             return (o.label || '') + (o.quantity > 1 ? ' x' + o.quantity : '');
         }).join(', ');
     }
-    var amountLine = totalPrice.toLocaleString() + '원' + (supportAmount > 0 ? ' (지원금 ' + supportAmount.toLocaleString() + ' trix)' : '');
+    // 결제 방법에 따라 다른 금액 표시
+    var amountLine;
+    if (selectedPaymentMethod === 'trix') {
+        const requiredTrix = totalPrice / 100;
+        amountLine = formatTrix(requiredTrix) + ' TRIX' + (supportAmount > 0 ? ' (지원금 ' + supportAmount.toLocaleString() + ' trix)' : '');
+    } else {
+        amountLine = totalPrice.toLocaleString() + '원' + (supportAmount > 0 ? ' (지원금 ' + supportAmount.toLocaleString() + ' trix)' : '');
+    }
+    
     var recipientLine = (delivery.recipientName || '-') + ' / ' + (delivery.phone || '-');
     var addressLine = [delivery.postcode, delivery.address, delivery.detailAddress].filter(Boolean).join(' ');
 
@@ -705,6 +777,27 @@ function openBuyNowPaymentModal(delivery) {
     if (amountEl) amountEl.textContent = amountLine;
     if (recipientEl) recipientEl.textContent = recipientLine;
     if (addressEl) addressEl.textContent = addressLine || '-';
+
+    // 트릭스 결제 시 입금 정보 섹션 숨기고 다른 메시지 표시
+    var bankSection = document.querySelector('.payment-bank-section');
+    if (bankSection) {
+        if (selectedPaymentMethod === 'trix') {
+            bankSection.innerHTML = `
+                <h4 class="payment-section-title">결제 안내</h4>
+                <p class="payment-info-line">보유하신 TRIX에서 자동 차감됩니다.</p>
+                <p class="payment-info-line" style="color: #666; font-size: 14px;">결제 완료 후 즉시 처리됩니다.</p>
+            `;
+        } else {
+            bankSection.innerHTML = `
+                <h4 class="payment-section-title">입금 정보</h4>
+                <p class="payment-info-line">하나은행 (주)딩펫씨큐리티</p>
+                <div class="payment-account-row">
+                    <span id="paymentAccountNumber" class="payment-account-number">670-910020-22804</span>
+                    <button type="button" class="btn-copy-account" id="btnCopyPaymentAccount">복사하기</button>
+                </div>
+            `;
+        }
+    }
 
     var footer = document.getElementById('buyNowPaymentModalFooter');
     var doneFooter = document.getElementById('buyNowPaymentDoneFooter');
@@ -2549,3 +2642,102 @@ window.goToReviewPage = goToReviewPage;
 window.goToInquiryPage = goToInquiryPage;
 window.deleteProductReview = deleteProductReview;
 window.deleteProductInquiryDetail = deleteProductInquiryDetail;
+
+// 트릭스 결제 기능 추가
+var userTrixBalance = 0;
+var selectedPaymentMethod = '';
+
+// 결제 방법 선택 처리
+function initPaymentMethod() {
+    const paymentSelect = document.getElementById('paymentMethodSelect');
+    const trixInfo = document.getElementById('userTrixInfo');
+    const trixBalance = document.getElementById('userTrixBalance');
+    
+    if (paymentSelect) {
+        paymentSelect.addEventListener('change', function() {
+            selectedPaymentMethod = this.value;
+            
+            if (this.value === 'trix') {
+                trixInfo.style.display = 'block';
+                
+                // Firebase에서 실제 트릭스 잔액 조회
+                const currentUser = firebase.auth().currentUser;
+                if (currentUser) {
+                    firebase.firestore().collection('members').doc(currentUser.uid).get()
+                        .then(doc => {
+                            if (doc.exists) {
+                                const userData = doc.data();
+                                const actualBalance = userData.tokenBalance || userData.trixBalance || userData.supportAmount || 0;
+                                userTrixBalance = actualBalance;
+                                trixBalance.textContent = formatTrix(actualBalance);
+                                console.log('실제 트릭스 잔액 로드:', actualBalance);
+                            } else {
+                                userTrixBalance = 0;
+                                trixBalance.textContent = '0';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('트릭스 잔액 조회 실패:', error);
+                            userTrixBalance = 0;
+                            trixBalance.textContent = '0';
+                        });
+                } else {
+                    userTrixBalance = 0;
+                    trixBalance.textContent = '0';
+                }
+            } else {
+                trixInfo.style.display = 'none';
+            }
+            
+            updatePriceDisplay();
+        });
+    }
+}
+
+// 가격 표시 업데이트
+function updatePriceDisplay() {
+    const priceSection = document.getElementById('totalPriceSection');
+    const priceEl = document.getElementById('totalPrice');
+    const trixPriceEl = document.getElementById('totalTrixPrice');
+    
+    if (!selectedPaymentMethod) {
+        priceSection.style.display = 'none';
+        return;
+    }
+    
+    // 실제 상품 가격 계산
+    if (!PRODUCT_INFO) {
+        console.error('PRODUCT_INFO가 없습니다');
+        return;
+    }
+    
+    // 기존 코드와 동일한 방식으로 총 가격 계산
+    var totalPrice = 0;
+    if (selectedOptionsData.length > 0) {
+        totalPrice = selectedOptionsData.reduce(function (sum, opt) { 
+            return sum + (opt.price || 0) * (opt.quantity || 1); 
+        }, 0);
+    } else {
+        totalPrice = PRODUCT_INFO.price || 0;
+    }
+    
+    console.log('계산된 총 가격:', totalPrice, '선택된 옵션 수:', selectedOptionsData.length);
+    
+    priceSection.style.display = 'block';
+    
+    if (selectedPaymentMethod === 'trix') {
+        priceEl.style.display = 'none';
+        trixPriceEl.style.display = 'block';
+        const requiredTrix = totalPrice / 100;
+        trixPriceEl.textContent = formatTrix(requiredTrix) + ' TRIX';
+    } else if (selectedPaymentMethod === 'cash') {
+        priceEl.style.display = 'block';
+        trixPriceEl.style.display = 'none';
+        priceEl.textContent = totalPrice.toLocaleString() + '원';
+    }
+}
+
+// DOM 로드 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    initPaymentMethod();
+});
