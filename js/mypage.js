@@ -3218,31 +3218,223 @@ function markNotificationAsRead(notificationId, link) {
 
 // 알림 패널 표시 (사이드바 알림 아이콘 클릭 시)
 function showNotificationPanel() {
-    showSection('notifications');
+    var isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+    
+    if (isMobile) {
+        // 모바일에서는 클릭한 요소 바로 밑에 표시
+        var notificationStatItem = document.getElementById('notificationStatItem');
+        var userStats = notificationStatItem.parentNode; // user-stats div
+        var slot = document.getElementById('mypage-mobile-slot');
+        var sectionEl = document.querySelector('.mypage-section[data-section="notifications"]');
+        
+        if (userStats && slot && sectionEl) {
+            // 기존 열린 패널 닫기
+            if (slot.firstChild) {
+                var prev = slot.firstChild;
+                var mypageContent = document.querySelector('.mypage-content');
+                if (mypageContent) mypageContent.appendChild(prev);
+            }
+            slot.classList.remove('open');
+            document.querySelectorAll('.mypage-nav li.mobile-panel-open').forEach(function (el) { el.classList.remove('mobile-panel-open'); });
+            
+            // user-stats div 바로 밑에 삽입 (전체 라인 밑)
+            userStats.parentNode.insertBefore(slot, userStats.nextSibling);
+            slot.appendChild(sectionEl);
+            slot.classList.add('open');
+            slot.setAttribute('aria-hidden', 'false');
+            
+            // 알림 데이터 로딩
+            setTimeout(function() {
+                // 알림 섹션 표시 확인
+                sectionEl.style.display = 'block';
+                
+                // 알림 데이터 로딩
+                if (typeof renderNotificationList === 'function') {
+                    renderNotificationList();
+                } else {
+                    console.log('알림 데이터 로딩 중...');
+                    // 직접 알림 로딩
+                    var user = window.currentUser || getCurrentUser();
+                    if (user && window.notificationService) {
+                        window.notificationService.getNotifications(user.userId, 50).then(function (notifications) {
+                            var listContainer = document.getElementById('notificationList');
+                            var emptyState = document.getElementById('notificationEmpty');
+                            
+                            if (!notifications || notifications.length === 0) {
+                                if (listContainer) listContainer.innerHTML = '';
+                                if (emptyState) emptyState.style.display = 'block';
+                            } else {
+                                if (emptyState) emptyState.style.display = 'none';
+                                if (listContainer) {
+                                    // 알림 목록 렌더링
+                                    listContainer.innerHTML = notifications.map(function(notif) {
+                                        return '<div class="notification-item">' +
+                                            '<div class="notification-content">' +
+                                            '<div class="notification-title">' + (notif.title || '') + '</div>' +
+                                            '<div class="notification-message">' + (notif.message || '') + '</div>' +
+                                            '<div class="notification-date">' + (notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : '') + '</div>' +
+                                            '</div>' +
+                                            '</div>';
+                                    }).join('');
+                                }
+                            }
+                        }).catch(function(e) {
+                            console.error('알림 로딩 실패:', e);
+                        });
+                    }
+                }
+            }, 100);
+        }
+    } else {
+        // 데스크톱에서는 기존 방식
+        showSection('notifications');
+    }
 }
 
 // 관심상품 섹션 표시 (사이드바 관심상품 아이콘 클릭 시)
 function showWishlistSection() {
-    showSection('wishlist-cart');
-    // 관심상품 탭 활성화
-    setTimeout(function() {
-        const wishlistTab = document.querySelector('.wishlist-cart-tab[data-tab="wishlist"]');
-        if (wishlistTab) {
-            wishlistTab.click();
+    var isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+    
+    if (isMobile) {
+        // 모바일에서는 클릭한 요소 바로 밑에 표시
+        var wishlistStatItem = document.getElementById('wishlistStatItem');
+        var userStats = wishlistStatItem.parentNode; // user-stats div
+        var slot = document.getElementById('mypage-mobile-slot');
+        var sectionEl = document.querySelector('.mypage-section[data-section="wishlist-cart"]');
+        
+        if (userStats && slot && sectionEl) {
+            // 기존 열린 패널 닫기
+            if (slot.firstChild) {
+                var prev = slot.firstChild;
+                var mypageContent = document.querySelector('.mypage-content');
+                if (mypageContent) mypageContent.appendChild(prev);
+            }
+            slot.classList.remove('open');
+            document.querySelectorAll('.mypage-nav li.mobile-panel-open').forEach(function (el) { el.classList.remove('mobile-panel-open'); });
+            
+            // user-stats div 바로 밑에 삽입 (전체 라인 밑)
+            userStats.parentNode.insertBefore(slot, userStats.nextSibling);
+            slot.appendChild(sectionEl);
+            slot.classList.add('open');
+            slot.setAttribute('aria-hidden', 'false');
+            
+            // 관심상품만 표시
+            setTimeout(function() {
+                // 탭 메뉴 숨기기
+                const tabsDiv = sectionEl.querySelector('.wishlist-cart-tabs');
+                if (tabsDiv) {
+                    tabsDiv.style.display = 'none';
+                }
+                
+                // 장바구니 내용 숨기기
+                const cartContent = sectionEl.querySelector('#cartTabContent');
+                if (cartContent) {
+                    cartContent.style.display = 'none';
+                }
+                
+                // 관심상품 내용만 표시
+                const wishlistContent = sectionEl.querySelector('#wishlistTabContent');
+                if (wishlistContent) {
+                    wishlistContent.style.display = 'block';
+                }
+                
+                // 제목 변경
+                const sectionTitle = sectionEl.querySelector('.section-title h3');
+                if (sectionTitle) {
+                    sectionTitle.textContent = '관심상품';
+                }
+                
+                // 관심상품 데이터 로딩
+                if (typeof renderWishlistList === 'function') {
+                    renderWishlistList();
+                } else {
+                    console.error('renderWishlistList 함수를 찾을 수 없습니다');
+                }
+            }, 100);
         }
-    }, 100);
+    } else {
+        // 데스크톱에서는 기존 방식
+        showSection('wishlist-cart');
+        setTimeout(function() {
+            const wishlistTab = document.querySelector('.wishlist-cart-tab[data-tab="wishlist"]');
+            if (wishlistTab) {
+                wishlistTab.click();
+            }
+        }, 100);
+    }
 }
 
 // 장바구니 섹션 표시 (사이드바 장바구니 아이콘 클릭 시)
 function showCartSection() {
-    showSection('wishlist-cart');
-    // 장바구니 탭 활성화
-    setTimeout(function() {
-        const cartTab = document.querySelector('.wishlist-cart-tab[data-tab="cart"]');
-        if (cartTab) {
-            cartTab.click();
+    var isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+    
+    if (isMobile) {
+        // 모바일에서는 클릭한 요소 바로 밑에 표시
+        var cartStatItem = document.getElementById('cartStatItem');
+        var userStats = cartStatItem.parentNode; // user-stats div
+        var slot = document.getElementById('mypage-mobile-slot');
+        var sectionEl = document.querySelector('.mypage-section[data-section="wishlist-cart"]');
+        
+        if (userStats && slot && sectionEl) {
+            // 기존 열린 패널 닫기
+            if (slot.firstChild) {
+                var prev = slot.firstChild;
+                var mypageContent = document.querySelector('.mypage-content');
+                if (mypageContent) mypageContent.appendChild(prev);
+            }
+            slot.classList.remove('open');
+            document.querySelectorAll('.mypage-nav li.mobile-panel-open').forEach(function (el) { el.classList.remove('mobile-panel-open'); });
+            
+            // user-stats div 바로 밑에 삽입 (전체 라인 밑)
+            userStats.parentNode.insertBefore(slot, userStats.nextSibling);
+            slot.appendChild(sectionEl);
+            slot.classList.add('open');
+            slot.setAttribute('aria-hidden', 'false');
+            
+            // 장바구니만 표시
+            setTimeout(function() {
+                // 탭 메뉴 숨기기
+                const tabsDiv = sectionEl.querySelector('.wishlist-cart-tabs');
+                if (tabsDiv) {
+                    tabsDiv.style.display = 'none';
+                }
+                
+                // 관심상품 내용 숨기기
+                const wishlistContent = sectionEl.querySelector('#wishlistTabContent');
+                if (wishlistContent) {
+                    wishlistContent.style.display = 'none';
+                }
+                
+                // 장바구니 내용만 표시
+                const cartContent = sectionEl.querySelector('#cartTabContent');
+                if (cartContent) {
+                    cartContent.style.display = 'block';
+                }
+                
+                // 제목 변경
+                const sectionTitle = sectionEl.querySelector('.section-title h3');
+                if (sectionTitle) {
+                    sectionTitle.textContent = '장바구니';
+                }
+                
+                // 장바구니 데이터 로딩
+                if (typeof renderCartList === 'function') {
+                    renderCartList();
+                } else {
+                    console.error('renderCartList 함수를 찾을 수 없습니다');
+                }
+            }, 100);
         }
-    }, 100);
+    } else {
+        // 데스크톱에서는 기존 방식
+        showSection('wishlist-cart');
+        setTimeout(function() {
+            const cartTab = document.querySelector('.wishlist-cart-tab[data-tab="cart"]');
+            if (cartTab) {
+                cartTab.click();
+            }
+        }, 100);
+    }
 }
 
 // 전역 함수로 노출

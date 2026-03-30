@@ -78,23 +78,25 @@
         listEl.innerHTML = '';
         emptyEl.style.display = list.length ? 'none' : 'block';
 
+        var htmlParts = [];
         list.forEach(function(p) {
-            var li = document.createElement('li');
-            li.className = 'faq-accordion-item';
-            li.setAttribute('data-faq-id', p.id || '');
             var title = (p.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             var content = (p.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-            li.innerHTML = '<div class="faq-accordion-q">' +
+            htmlParts.push(
+                '<li class="faq-accordion-item" data-faq-id="' + (p.id || '') + '" style="display: block; width: 100%; max-width: 100%; overflow: hidden; box-sizing: border-box;">' +
+                '<div class="faq-accordion-q" style="display: flex; width: 100%; max-width: 100%; overflow: hidden; box-sizing: border-box;">' +
                 '<span class="faq-q-icon">Q</span>' +
-                '<span class="faq-q-text">' + title + '</span>' +
+                '<span class="faq-q-text" style="display: block; width: 0; flex: 1 1 0%; min-width: 0; max-width: calc(100% - 80px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box; word-break: break-all;">' + title + '</span>' +
                 '<span class="faq-accordion-toggle"><i class="fas fa-chevron-down"></i></span>' +
                 '</div>' +
                 '<div class="faq-accordion-a" style="display: none;">' +
                 '<span class="faq-a-icon">A</span>' +
                 '<div class="faq-a-text">' + content + '</div>' +
-                '</div>';
-            listEl.appendChild(li);
+                '</div>' +
+                '</li>'
+            );
         });
+        listEl.innerHTML = htmlParts.join('\n');
     }
 
     /**
