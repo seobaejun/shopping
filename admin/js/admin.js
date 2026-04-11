@@ -4027,8 +4027,11 @@ document.addEventListener('click', (e) => {
 // trix 지원금 표시: 실제 값을 소수점 8자리까지 그대로 표시 (9번째 자리 버림)
 function formatTrix(value) {
     var num = Number(value) || 0;
+    if (num === 0) return '0';
     var truncated = Math.floor(num * 1e8) / 1e8;
-    return truncated.toFixed(8);
+    var str = truncated.toFixed(8);
+    str = str.replace(/0+$/, '').replace(/\.$/, '');
+    return str;
 }
 
 // 추첨 대기 데이터 — 승인(approved)된 주문 전체를 선착순 1개 대기열로 사용. 상품 구분 없음.

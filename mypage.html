@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>마이페이지 - 10쇼핑게임</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/mypage.css?v=22">
+    <link rel="stylesheet" href="css/mypage.css?v=23">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -94,6 +94,9 @@
                     <!-- 보유 토큰 정보 -->
                     <div class="support-info-section">
                         <button type="button" class="btn-token-action" id="btnTokenPurchase">토큰 구매하기</button>
+                        <button type="button" class="btn-token-action" id="btnTokenImport" style="background: #28a745; border-color: #28a745; margin-top: 8px;">
+                            <i class="fas fa-download"></i> 토큰가져오기
+                        </button>
                         <div class="support-row">
                             <span>보유 토큰</span>
                             <strong id="currentSupport">0 trix</strong>
@@ -236,6 +239,48 @@
                             <button type="button" class="btn btn-primary btn-token-submit" id="btnTokenPurchaseComplete"><i class="fas fa-check-circle"></i> 입금완료</button>
                         </div>
                     </div>
+                    
+                    <!-- 토큰가져오기 (토큰 구매하기 밑) -->
+                    <div class="content-section mypage-section token-section" data-section="token-import" id="mypageSectionTokenImport" style="display: none;">
+                        <div class="section-title">
+                            <h3><i class="fas fa-download"></i> 토큰가져오기</h3>
+                        </div>
+                        <div class="token-panel token-import-panel">
+                            <p class="token-desc">메타마스크 지갑에서 토큰을 가져올 수 있습니다.</p>
+                            
+                            <div class="token-form-group">
+                                <label for="tokenImportFromAddress">보낼 토큰지갑주소</label>
+                                <input type="text" id="tokenImportFromAddress" placeholder="지갑 주소 입력" class="form-control token-input">
+                            </div>
+                            
+                            <div class="token-form-group">
+                                <label for="tokenImportToAddress">받을 토큰지갑주소</label>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" id="tokenImportToAddress" placeholder="받을 지갑 주소 입력" class="form-control token-input" style="flex: 1;">
+                                    <button type="button" id="btnCopyWalletAddress" class="btn btn-secondary" onclick="
+                                        var toAddress = document.getElementById('tokenImportToAddress');
+                                        if (toAddress) {
+                                            toAddress.value = '0x00827b5bde95C93e87B74e1Bcd66b0Bf7884a10';
+                                            console.log('지갑주소 자동입력 완료');
+                                        }
+                                    " style="padding: 6px 12px; font-size: 13px; white-space: nowrap;">
+                                        복사하기
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="token-form-group">
+                                <label for="tokenImportAmount">수량</label>
+                                <input type="number" id="tokenImportAmount" placeholder="0000Trix" min="0" step="0.00000001" class="form-control token-input">
+                            </div>
+                            
+                            
+                            <button type="button" class="btn btn-success btn-token-submit" id="btnTokenImportSubmit">
+                                <i class="fas fa-download"></i> 토큰가져오기 요청
+                            </button>
+                        </div>
+                    </div>
+                    
                     <!-- 토큰 출금하기 (주문/배송조회 밑) -->
                     <div class="content-section mypage-section token-section" data-section="token-withdraw" id="mypageSectionTokenWithdraw" style="display: none;">
                         <div class="section-title">

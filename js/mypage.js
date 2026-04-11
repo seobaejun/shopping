@@ -448,6 +448,8 @@ function bindTokenModals() {
     var withdrawBalanceEl = document.getElementById('tokenWithdrawBalance');
     var btnWithdrawSubmit = document.getElementById('btnTokenWithdrawSubmit');
     var btnMaxWithdraw = document.getElementById('btnMaxWithdraw');
+    var btnTokenImport = document.getElementById('btnTokenImport');
+    var btnTokenImportSubmit = document.getElementById('btnTokenImportSubmit');
 
     if (btnPurchase) {
         btnPurchase.addEventListener('click', function () {
@@ -565,6 +567,49 @@ function bindTokenModals() {
             }).catch(function (err) {
                 alert(err && err.message ? err.message : '출금 요청에 실패했습니다.');
             });
+        });
+    }
+    
+    // 토큰가져오기 버튼 이벤트
+    if (btnTokenImport) {
+        btnTokenImport.addEventListener('click', function () {
+            console.log('토큰가져오기 버튼 클릭됨');
+            showTokenImportSection();
+        });
+    }
+    
+    // 토큰가져오기 요청 버튼 이벤트
+    if (btnTokenImportSubmit) {
+        btnTokenImportSubmit.addEventListener('click', function () {
+            var fromAddress = document.getElementById('tokenImportFromAddress');
+            var toAddress = document.getElementById('tokenImportToAddress');
+            var amount = document.getElementById('tokenImportAmount');
+            
+            var fromAddr = fromAddress ? fromAddress.value.trim() : '';
+            var toAddr = toAddress ? toAddress.value.trim() : '';
+            var qty = parseFloat(amount ? amount.value : 0) || 0;
+            
+            if (!fromAddr) {
+                alert('보낼 토큰지갑주소를 입력해주세요.');
+                return;
+            }
+            if (!toAddr) {
+                alert('받을 토큰지갑주소를 입력해주세요.');
+                return;
+            }
+            if (qty <= 0) {
+                alert('올바른 수량을 입력해주세요.');
+                return;
+            }
+            
+            console.log('토큰가져오기 요청:', {
+                from: fromAddr,
+                to: toAddr,
+                amount: qty
+            });
+            
+            alert('토큰가져오기 요청이 접수되었습니다. (기능 구현 예정)');
+            // TODO: 실제 토큰가져오기 기능 구현 예정
         });
     }
 }
@@ -3503,6 +3548,60 @@ function showCartSection() {
     }
 }
 
+function showTokenImportSection() {
+    var isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+    
+    if (isMobile) {
+        // 모바일에서는 토큰가져오기 버튼 바로 밑에 표시
+        var supportInfoSection = document.querySelector('.support-info-section');
+        var slot = document.getElementById('mypage-mobile-slot');
+        var sectionEl = document.querySelector('.mypage-section[data-section="token-import"]');
+        
+        if (supportInfoSection && slot && sectionEl) {
+            // 기존 열린 패널 닫기
+            if (slot.firstChild) {
+                var prev = slot.firstChild;
+                var mypageContent = document.querySelector('.mypage-content');
+                if (mypageContent) mypageContent.appendChild(prev);
+            }
+            slot.classList.remove('open');
+            document.querySelectorAll('.mypage-nav li.mobile-panel-open').forEach(function (el) { el.classList.remove('mobile-panel-open'); });
+            
+            // support-info-section 바로 밑에 삽입
+            supportInfoSection.parentNode.insertBefore(slot, supportInfoSection.nextSibling);
+            slot.appendChild(sectionEl);
+            slot.classList.add('open');
+            slot.setAttribute('aria-hidden', 'false');
+            
+            // 토큰가져오기 섹션 표시
+            setTimeout(function() {
+                sectionEl.style.display = 'block';
+                
+                // 입력 폼 초기화
+                var fromAddress = document.getElementById('tokenImportFromAddress');
+                var toAddress = document.getElementById('tokenImportToAddress');
+                var amount = document.getElementById('tokenImportAmount');
+                
+                if (fromAddress) fromAddress.value = '';
+                if (toAddress) toAddress.value = '';
+                if (amount) amount.value = '';
+            }, 100);
+        }
+    } else {
+        // 데스크톱에서는 기본 섹션 표시
+        showSection('token-import');
+        
+        // 입력 폼 초기화
+        var fromAddress = document.getElementById('tokenImportFromAddress');
+        var toAddress = document.getElementById('tokenImportToAddress');
+        var amount = document.getElementById('tokenImportAmount');
+        
+        if (fromAddress) fromAddress.value = '';
+        if (toAddress) toAddress.value = '';
+        if (amount) amount.value = '';
+    }
+}
+
 // 주문 취소 가능 여부 판단
 function canCancelOrder(order) {
     if (!order) return false;
@@ -3909,6 +4008,7 @@ window.debugUserInfo = debugUserInfo;
 window.showNotificationPanel = showNotificationPanel;
 window.showWishlistSection = showWishlistSection;
 window.showCartSection = showCartSection;
+window.showTokenImportSection = showTokenImportSection;
 window.deleteReview = deleteReview;
 window.deleteInquiry = deleteInquiry;
 window.removeFromWishlist = removeFromWishlist;

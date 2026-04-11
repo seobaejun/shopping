@@ -2791,3 +2791,35 @@
 .token-purchase-panel .token-deposit-notice {
     margin-top: 12px;
 }
+
+/* 토큰가져오기 섹션 */
+.token-import-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+}
+
+.token-import-info {
+    background: #f8f9fa !important;
+    padding: 15px !important;
+    border-radius: 8px !important;
+    margin: 15px 0 !important;
+    border: 1px solid #dee2e6;
+}
+
+.token-import-info h5 {
+    margin: 0 0 10px 0 !important;
+    color: #495057 !important;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.token-import-info p {
+    margin: 0 !important;
+    font-size: 14px !important;
+    color: #6c757d !important;
+    font-family: monospace;
+    word-break: break-all;
+}
