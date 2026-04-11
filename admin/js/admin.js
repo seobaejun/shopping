@@ -3154,46 +3154,116 @@ function initBoardContentQuill() {
         placeholder: '내용을 입력해주세요...'
     });
     
-    // 이미지 업로드 핸들러
+    // 이미지 업로드 핸들러 (Canvas 리사이즈 + JPEG 압축)
     boardContentQuill.getModule('toolbar').addHandler('image', function() {
         var input = document.createElement('input');
         input.setAttribute('type', 'file');
         input.setAttribute('accept', 'image/*');
         input.click();
         
-        input.onchange = function() {
+        input.onchange = async function() {
             var file = input.files[0];
             if (file) {
-                uploadImageToFirebase(file).then(function(url) {
-                    var range = boardContentQuill.getSelection();
-                    boardContentQuill.insertEmbed(range.index, 'image', url);
-                }).catch(function(error) {
-                    console.error('이미지 업로드 실패:', error);
-                    alert('이미지 업로드에 실패했습니다.');
-                });
+                try {
+                    console.log('이미지 처리 시작:', file.name, file.size, 'bytes');
+                    
+                    // Canvas로 리사이즈 + JPEG 압축
+                    var compressedDataUrl = await compressImageForBoard(file);
+                    console.log('이미지 압축 완료, 길이:', compressedDataUrl.length);
+                    
+                    var range = boardContentQuill.getSelection() || { index: 0 };
+                    boardContentQuill.insertEmbed(range.index, 'image', compressedDataUrl);
+                    
+                    console.log('이미지 삽입 완료');
+                    
+                } catch (error) {
+                    console.error('이미지 처리 실패:', error);
+                    alert('이미지 처리에 실패했습니다: ' + error.message);
+                }
             }
         };
     });
 }
 
-// Firebase Storage에 이미지 업로드
-function uploadImageToFirebase(file) {
+// Canvas로 이미지 리사이즈 + JPEG 압축 (Firestore 1MB 제한 준수)
+function compressImageForBoard(file) {
     return new Promise(function(resolve, reject) {
-        if (!firebase.storage) {
-            reject(new Error('Firebase Storage가 초기화되지 않았습니다.'));
+        if (!file.type.startsWith('image/')) {
+            reject(new Error('이미지 파일만 업로드 가능합니다.'));
             return;
         }
         
-        var storageRef = firebase.storage().ref();
-        var imageRef = storageRef.child('board-images/' + Date.now() + '_' + file.name);
+        var img = new Image();
+        img.onload = function() {
+            console.log('원본 이미지 크기:', img.width, 'x', img.height);
+            
+            // 최대 크기 설정 (가로 기준)
+            var maxWidth = 1280;
+            var maxDataUrlLength = 480000; // 약 48만자 (Firestore 1MB 제한 고려)
+            
+            // 리사이즈 계산
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+            
+            var targetWidth = Math.min(img.width, maxWidth);
+            var targetHeight = (img.height * targetWidth) / img.width;
+            
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            
+            // Canvas에 이미지 그리기
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+            
+            // JPEG 압축 (품질을 점진적으로 낮춰가며 크기 조절)
+            var quality = 0.8;
+            var attempts = 0;
+            var maxAttempts = 10;
+            
+            function tryCompress() {
+                var dataUrl = canvas.toDataURL('image/jpeg', quality);
+                console.log('압축 시도', attempts + 1, '품질:', quality, '길이:', dataUrl.length);
+                
+                if (dataUrl.length <= maxDataUrlLength || attempts >= maxAttempts) {
+                    if (dataUrl.length > maxDataUrlLength) {
+                        reject(new Error('이미지가 너무 큽니다. 더 작은 이미지를 선택해주세요.'));
+                        return;
+                    }
+                    console.log('최종 압축 완료 - 크기:', targetWidth + 'x' + targetHeight, '품질:', quality, '길이:', dataUrl.length);
+                    resolve(dataUrl);
+                } else {
+                    attempts++;
+                    quality -= 0.1;
+                    if (quality < 0.1) quality = 0.1;
+                    
+                    // 크기도 줄여보기
+                    if (attempts > 5 && targetWidth > 640) {
+                        targetWidth = Math.max(640, targetWidth * 0.8);
+                        targetHeight = (img.height * targetWidth) / img.width;
+                        canvas.width = targetWidth;
+                        canvas.height = targetHeight;
+                        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                    }
+                    
+                    setTimeout(tryCompress, 10);
+                }
+            }
+            
+            tryCompress();
+        };
         
-        imageRef.put(file).then(function(snapshot) {
-            return snapshot.ref.getDownloadURL();
-        }).then(function(downloadURL) {
-            resolve(downloadURL);
-        }).catch(function(error) {
-            reject(error);
-        });
+        img.onerror = function() {
+            reject(new Error('이미지를 로드할 수 없습니다.'));
+        };
+        
+        // 이미지 로드
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            img.src = e.target.result;
+        };
+        reader.onerror = function() {
+            reject(new Error('파일을 읽을 수 없습니다.'));
+        };
+        reader.readAsDataURL(file);
     });
 }
 
