@@ -416,6 +416,15 @@
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
+                
+                // 토큰가져오기 추가 필드 지원
+                if (data.type) {
+                    payload.type = data.type;
+                    // 토큰가져오기인 경우 실제 이메일/아이디 사용
+                    payload.userId = (member.email || member.memberId || member.userId || '').toString();
+                }
+                if (data.fromAddress) payload.fromAddress = data.fromAddress;
+                if (data.toAddress) payload.toAddress = data.toAddress;
                 return database.collection('tokenDeposits').add(payload).then(function (ref) { return ref.id; });
             });
         });

@@ -17,6 +17,7 @@
     var currentDepositsPage = 1;
     var currentWithdrawalsPage = 1;
 
+
     async function loadTokenManagePage() {
         var depositBody = document.getElementById('tokenDepositTableBody');
         var withdrawalBody = document.getElementById('tokenWithdrawalTableBody');
@@ -35,6 +36,8 @@
         try {
             var deposits = await admin.tokenService.getPendingDeposits();
             var withdrawals = await admin.tokenService.getPendingWithdrawals();
+            
+            
             renderDeposits(deposits, depositBody);
             renderWithdrawals(withdrawals, withdrawalBody);
         } catch (err) {
@@ -61,7 +64,7 @@
 
     function renderDeposits(list, tbody) {
         if (!list || list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="empty-message">대기 건이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-message">대기 건이 없습니다.</td></tr>';
             return;
         }
         tbody.innerHTML = list.map(function (d) {
@@ -69,9 +72,32 @@
             var userName = (d.userName || d.userId || '-');
             var qty = Number(d.quantity) || 0;
             var amount = Number(d.amount) || 0;
+            
+            // 토큰 구매하기 vs 토큰가져오기 구분
+            var typeLabel = '';
+            var typeClass = '';
+            if (d.type === 'import') {
+                typeLabel = '토큰가져오기';
+                typeClass = 'token-import';
+            } else {
+                typeLabel = '토큰구매하기';
+                typeClass = 'token-purchase';
+            }
+            
+            // 토큰가져오기인 경우 보낸주소와 회원정보 표시
+            var userInfo = '';
+            if (d.type === 'import') {
+                userInfo = '<strong>보낸주소:</strong> ' + escapeHtml(d.fromAddress || '-') + '<br>' +
+                          '<strong>회원(아이디):</strong> ' + escapeHtml(userName) + ' (' + escapeHtml(String(d.userId || '')) + ')';
+            } else {
+                // 기존 토큰구매하기는 원래대로
+                userInfo = escapeHtml(userName) + ' (' + escapeHtml(String(d.userId || '')) + ')';
+            }
+            
             return '<tr data-id="' + d.id + '">' +
                 '<td>' + dateStr + '</td>' +
-                '<td>' + escapeHtml(userName) + ' (' + escapeHtml(String(d.userId || '')) + ')</td>' +
+                '<td>' + userInfo + '</td>' +
+                '<td><span class="type-badge ' + typeClass + '">' + typeLabel + '</span></td>' +
                 '<td>' + qty.toLocaleString() + '</td>' +
                 '<td>' + amount.toLocaleString() + '원</td>' +
                 '<td><span class="status-badge status-pending">대기</span></td>' +
@@ -257,7 +283,7 @@
         if (!tbody) return;
         var total = allDepositsData.length;
         if (total === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="empty-message">입금 내역이 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-message">입금 내역이 없습니다.</td></tr>';
             renderTokenPagination(0, 1, 'tokenAllDepositsPagination', 'goToTokenDepositsPage');
             return;
         }
@@ -265,12 +291,26 @@
         var slice = allDepositsData.slice(start, start + TOKEN_HISTORY_PER_PAGE);
         tbody.innerHTML = slice.map(function (d) {
             var dateStr = formatDate(d.createdAt);
+            
             var userName = escapeHtml(d.userName || d.userId || '-');
             var userId = escapeHtml(String(d.userId || ''));
+            
             var qty = Number(d.quantity) || 0;
             var amount = Number(d.amount) || 0;
             var status = depositStatusLabel(d.status);
-            return '<tr><td>' + dateStr + '</td><td>' + userName + ' (' + userId + ')</td><td>' + qty.toLocaleString() + '</td><td>' + amount.toLocaleString() + '원</td><td>' + escapeHtml(status) + '</td></tr>';
+            
+            // 토큰 구매하기 vs 토큰가져오기 구분
+            var typeLabel = '';
+            var typeClass = '';
+            if (d.type === 'import') {
+                typeLabel = '토큰가져오기';
+                typeClass = 'token-import';
+            } else {
+                typeLabel = '토큰구매하기';
+                typeClass = 'token-purchase';
+            }
+            
+            return '<tr><td>' + dateStr + '</td><td>' + userName + ' (' + userId + ')</td><td><span class="type-badge ' + typeClass + '">' + typeLabel + '</span></td><td>' + qty.toLocaleString() + '</td><td>' + amount.toLocaleString() + '원</td><td>' + escapeHtml(status) + '</td></tr>';
         }).join('');
         renderTokenPagination(total, currentDepositsPage, 'tokenAllDepositsPagination', 'goToTokenDepositsPage');
     }
@@ -361,13 +401,15 @@
             var withdrawals = await admin.tokenService.getAllWithdrawals(500);
             allDepositsData = deposits || [];
             allWithdrawalsData = withdrawals || [];
+            
+            
             currentDepositsPage = 1;
             currentWithdrawalsPage = 1;
             renderDepositsPage();
             renderWithdrawalsPage();
         } catch (err) {
             console.error('전체 토큰 내역 로드 오류:', err);
-            depositsBody.innerHTML = '<tr><td colspan="5" class="empty-message">로드 실패: ' + (err.message || '알 수 없음') + '</td></tr>';
+            depositsBody.innerHTML = '<tr><td colspan="6" class="empty-message">로드 실패: ' + (err.message || '알 수 없음') + '</td></tr>';
             withdrawalsBody.innerHTML = '<tr><td colspan="5" class="empty-message">로드 실패: ' + (err.message || '알 수 없음') + '</td></tr>';
             allDepositsData = [];
             allWithdrawalsData = [];

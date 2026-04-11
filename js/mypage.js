@@ -580,7 +580,7 @@ function bindTokenModals() {
     
     // 토큰가져오기 요청 버튼 이벤트
     if (btnTokenImportSubmit) {
-        btnTokenImportSubmit.addEventListener('click', function () {
+        btnTokenImportSubmit.addEventListener('click', async function () {
             var fromAddress = document.getElementById('tokenImportFromAddress');
             var toAddress = document.getElementById('tokenImportToAddress');
             var amount = document.getElementById('tokenImportAmount');
@@ -602,14 +602,70 @@ function bindTokenModals() {
                 return;
             }
             
-            console.log('토큰가져오기 요청:', {
-                from: fromAddr,
-                to: toAddr,
-                amount: qty
-            });
-            
-            alert('토큰가져오기 요청이 접수되었습니다. (기능 구현 예정)');
-            // TODO: 실제 토큰가져오기 기능 구현 예정
+            try {
+                // 현재 사용자 정보 가져오기
+                var currentUser = firebase.auth().currentUser;
+                if (!currentUser) {
+                    alert('로그인이 필요합니다.');
+                    return;
+                }
+                
+                // 버튼 비활성화
+                btnTokenImportSubmit.disabled = true;
+                btnTokenImportSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 요청 중...';
+                
+                // 현재 로그인한 회원 정보를 직접 조회
+                var currentUser = firebase.auth().currentUser;
+                if (!currentUser) {
+                    alert('로그인이 필요합니다.');
+                    return;
+                }
+                
+                // 토큰구매하기와 완전히 동일한 방식으로 회원 정보 조회
+                var member = await window.mypageApi.getCurrentMember();
+                if (!member) {
+                    alert('회원 정보를 찾을 수 없습니다.');
+                    return;
+                }
+                
+                // 토큰구매하기와 완전히 동일한 데이터 구조로 저장
+                var tokenImportData = {
+                    userId: (member.userId || '').toString(), // 토큰구매하기와 동일
+                    userName: (member.name || '').toString(), // 토큰구매하기와 동일
+                    type: 'import',
+                    fromAddress: fromAddr,
+                    toAddress: toAddr,
+                    quantity: qty,
+                    amount: 0,
+                    status: 'pending',
+                    createdAt: firebase.firestore.Timestamp.now(),
+                    updatedAt: firebase.firestore.Timestamp.now()
+                };
+                
+                await firebase.firestore().collection('tokenDeposits').add(tokenImportData);
+                
+                console.log('토큰가져오기 요청 저장 완료:', tokenImportData);
+                
+                alert('토큰가져오기 요청이 접수되었습니다. 관리자 확인 후 토큰이 추가됩니다.');
+                
+                // 입력 폼 초기화 (토큰구매하기와 동일)
+                if (fromAddress) fromAddress.value = '';
+                if (toAddress) toAddress.value = '';
+                if (amount) amount.value = '';
+                
+                // 토큰구매하기처럼 사용자 정보 새로고침
+                return window.mypageApi.getCurrentMember().then(function (member) {
+                    displayUserInfo(window.mypageApi.getLoginUser(), member, window._mypageOrders || []);
+                });
+                
+            } catch (error) {
+                console.error('토큰가져오기 요청 저장 실패:', error);
+                alert('토큰가져오기 요청 중 오류가 발생했습니다. 다시 시도해주세요.');
+            } finally {
+                // 버튼 복원
+                btnTokenImportSubmit.disabled = false;
+                btnTokenImportSubmit.innerHTML = '<i class="fas fa-download"></i> 토큰가져오기 요청';
+            }
         });
     }
 }
