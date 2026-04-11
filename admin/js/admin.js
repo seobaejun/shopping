@@ -9,6 +9,9 @@ var _purchaseRequestPendingPage = 1;
 var _purchaseRequestApprovedPage = 1;
 var _purchaseRequestCancelledPage = 1;
 
+// Quill 에디터 전역 변수
+var boardContentQuill = null;
+
 // 조별추첨 전체구매자 대기 명단 페이징 (15명씩)
 const LOTTERY_WAITING_PAGE_SIZE = 15;
 var _lotteryWaitingPage = 1;
@@ -3126,6 +3129,74 @@ function switchBoardTab(boardType) {
     loadBoardPosts(boardType);
 }
 
+// Quill 에디터 초기화 함수
+function initBoardContentQuill() {
+    if (boardContentQuill) {
+        return; // 이미 초기화됨
+    }
+    
+    var editorElement = document.getElementById('boardPostContentEditor');
+    if (!editorElement) return;
+    
+    boardContentQuill = new Quill('#boardPostContentEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }],
+                ['link', 'image'],
+                ['clean']
+            ]
+        },
+        placeholder: '내용을 입력해주세요...'
+    });
+    
+    // 이미지 업로드 핸들러
+    boardContentQuill.getModule('toolbar').addHandler('image', function() {
+        var input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/*');
+        input.click();
+        
+        input.onchange = function() {
+            var file = input.files[0];
+            if (file) {
+                uploadImageToFirebase(file).then(function(url) {
+                    var range = boardContentQuill.getSelection();
+                    boardContentQuill.insertEmbed(range.index, 'image', url);
+                }).catch(function(error) {
+                    console.error('이미지 업로드 실패:', error);
+                    alert('이미지 업로드에 실패했습니다.');
+                });
+            }
+        };
+    });
+}
+
+// Firebase Storage에 이미지 업로드
+function uploadImageToFirebase(file) {
+    return new Promise(function(resolve, reject) {
+        if (!firebase.storage) {
+            reject(new Error('Firebase Storage가 초기화되지 않았습니다.'));
+            return;
+        }
+        
+        var storageRef = firebase.storage().ref();
+        var imageRef = storageRef.child('board-images/' + Date.now() + '_' + file.name);
+        
+        imageRef.put(file).then(function(snapshot) {
+            return snapshot.ref.getDownloadURL();
+        }).then(function(downloadURL) {
+            resolve(downloadURL);
+        }).catch(function(error) {
+            reject(error);
+        });
+    });
+}
+
 function openBoardPostModal(editId, boardType) {
     boardType = boardType || getCurrentBoardType();
     var modal = document.getElementById('boardPostModal');
@@ -3142,6 +3213,9 @@ function openBoardPostModal(editId, boardType) {
     var answerWrap = document.getElementById('boardPostAnswerWrap');
     var answerInput = document.getElementById('boardPostAnswer');
     if (!modal || !titleEl || !idEl || !titleInput) return;
+    
+    // Quill 에디터 초기화
+    initBoardContentQuill();
     idEl.value = editId || '';
     if (editId && window._boardPostsList) {
         var post = window._boardPostsList.find(function (p) { return p.id === editId; });
@@ -3156,11 +3230,9 @@ function openBoardPostModal(editId, boardType) {
                 titleInput.style.backgroundColor = '#f5f5f5';
                 titleInput.style.cursor = 'not-allowed';
                 
-                if (contentInput) {
-                    contentInput.value = post.content || '';
-                    contentInput.readOnly = true;
-                    contentInput.style.backgroundColor = '#f5f5f5';
-                    contentInput.style.cursor = 'not-allowed';
+                if (boardContentQuill) {
+                    boardContentQuill.root.innerHTML = post.content || '';
+                    boardContentQuill.disable();
                 }
                 
                 if (authorInput) {
@@ -3180,9 +3252,9 @@ function openBoardPostModal(editId, boardType) {
                 titleInput.style.backgroundColor = '';
                 titleInput.style.cursor = '';
                 
-                if (contentInput) {
-                    contentInput.value = post.content || '';
-                    contentInput.readOnly = false;
+                if (boardContentQuill) {
+                    boardContentQuill.root.innerHTML = post.content || '';
+                    boardContentQuill.enable();
                     contentInput.style.backgroundColor = '';
                     contentInput.style.cursor = '';
                 }
@@ -3218,7 +3290,10 @@ function openBoardPostModal(editId, boardType) {
             titleEl.textContent = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? '답변하기' : '글 수정';
             titleInput.value = '';
             authorInput.value = '관리자';
-            contentInput.value = '';
+            if (boardContentQuill) {
+                boardContentQuill.root.innerHTML = '';
+                boardContentQuill.enable();
+            }
             statusSelect.value = 'published';
             noticeCheck.checked = false;
             if (faqCategorySelect) faqCategorySelect.value = '상품구매';
@@ -3228,7 +3303,10 @@ function openBoardPostModal(editId, boardType) {
         titleEl.textContent = '글 작성';
         titleInput.value = '';
         authorInput.value = '관리자';
-        contentInput.value = '';
+        if (boardContentQuill) {
+            boardContentQuill.root.innerHTML = '';
+            boardContentQuill.enable();
+        }
         statusSelect.value = 'published';
         noticeCheck.checked = false;
         if (faqCategorySelect) faqCategorySelect.value = '상품구매';
@@ -3330,7 +3408,7 @@ async function saveBoardPost() {
             } else {
                 updateData.title = title;
                 updateData.authorName = (authorInput && authorInput.value) ? authorInput.value.trim() : '관리자';
-                updateData.content = (contentInput && contentInput.value) ? contentInput.value : '';
+                updateData.content = boardContentQuill ? boardContentQuill.root.innerHTML : '';
                 updateData.status = (statusSelect && statusSelect.value) || 'published';
                 updateData.isNotice = (noticeCheck && noticeCheck.checked) || false;
                 if (boardType === 'qna') updateData.faqCategory = faqCategory;
@@ -3368,7 +3446,7 @@ async function saveBoardPost() {
                 boardType: actualBoardType,
                 title: title,
                 authorName: (authorInput && authorInput.value) ? authorInput.value.trim() : '관리자',
-                content: (contentInput && contentInput.value) ? contentInput.value : '',
+                content: boardContentQuill ? boardContentQuill.root.innerHTML : '',
                 status: (statusSelect && statusSelect.value) || 'published',
                 isNotice: (noticeCheck && noticeCheck.checked) || false
             };

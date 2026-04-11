@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/admin/css/admin.css?v=20260219-25">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 </head>
 <body>
     <!-- 관리자 비밀번호 입력 화면 (첫 화면) -->
@@ -2696,7 +2697,8 @@
                     <label class="inquiry-label">
                         <span class="label-text">내용</span>
                     </label>
-                    <textarea class="inquiry-textarea" id="boardPostContent" rows="8" placeholder="내용을 입력해주세요"></textarea>
+                    <div id="boardPostContentEditor" style="height: 300px;"></div>
+                    <input type="hidden" id="boardPostContent">
                 </div>
                 <div class="inquiry-form-group" id="boardPostStatusWrap">
                     <label class="inquiry-label">
