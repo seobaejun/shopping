@@ -2705,6 +2705,51 @@
     background: #fff8e1;
     border: 1px solid #ffe082;
     border-radius: 8px;
+}
+
+/* PC/모바일 구분 표시 */
+.desktop-only {
+    display: block;
+}
+
+.mobile-only {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .desktop-only {
+        display: none;
+    }
+    
+    .mobile-only {
+        display: block;
+    }
+}
+
+/* 웹 다운로드 배지 스타일 */
+.web-download-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    color: #007bff;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.web-download-badge:hover {
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+}
+
+.web-download-badge i {
+    font-size: 18px;
+}
     margin: 15px 0;
 }
 .token-purchase-panel .payment-section-title {

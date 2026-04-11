@@ -707,7 +707,7 @@ function submitBuyNowOrder(delivery) {
             
             // 잔액 재확인
             if (currentTrixBalance < requiredTrix) {
-                throw new Error(`트릭스가 부족합니다. 필요: ${formatTrix(requiredTrix)} TRIX, 보유: ${formatTrix(currentTrixBalance)} TRIX`);
+                throw new Error('보유토큰이 부족합니다. 토큰을 충전해주세요.');
             }
             
             // 주문 생성
@@ -1019,9 +1019,9 @@ function openBuyNowPaymentModal(delivery) {
         } else {
             bankSection.innerHTML = `
                 <h4 class="payment-section-title">입금 정보</h4>
-                <p class="payment-info-line">하나은행 (주)딩펫씨큐리티</p>
+                <p class="payment-info-line">국민은행 송건회</p>
                 <div class="payment-account-row">
-                    <span id="paymentAccountNumber" class="payment-account-number">670-910020-22804</span>
+                    <span id="paymentAccountNumber" class="payment-account-number">455801-04-417746</span>
                     <button type="button" class="btn-copy-account" id="btnCopyPaymentAccount">복사하기</button>
                 </div>
             `;
@@ -1066,7 +1066,7 @@ function initBuyNowPaymentModal() {
     }
     if (copyBtn && accountEl) {
         copyBtn.addEventListener('click', function () {
-            var account = (accountEl && accountEl.textContent) ? accountEl.textContent.trim() : '670-910020-22804';
+            var account = (accountEl && accountEl.textContent) ? accountEl.textContent.trim() : '455801-04-417746';
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(account).then(function () {
                     alert('계좌번호가 복사되었습니다.');

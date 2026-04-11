@@ -447,6 +447,7 @@ function bindTokenModals() {
     var withdrawQty = document.getElementById('tokenWithdrawQty');
     var withdrawBalanceEl = document.getElementById('tokenWithdrawBalance');
     var btnWithdrawSubmit = document.getElementById('btnTokenWithdrawSubmit');
+    var btnMaxWithdraw = document.getElementById('btnMaxWithdraw');
 
     if (btnPurchase) {
         btnPurchase.addEventListener('click', function () {
@@ -459,7 +460,7 @@ function bindTokenModals() {
     var tokenAccountEl = document.getElementById('tokenAccountNumber');
     if (btnCopyTokenAccount && tokenAccountEl) {
         btnCopyTokenAccount.addEventListener('click', function () {
-            var account = (tokenAccountEl.textContent || '').trim() || '670-910020-22804';
+            var account = (tokenAccountEl.textContent || '').trim() || '455801-04-417746';
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(account).then(function () {
                     alert('계좌번호가 복사되었습니다.');
@@ -524,14 +525,27 @@ function bindTokenModals() {
             if (withdrawAddress) withdrawAddress.value = '';
             if (withdrawQty) withdrawQty.value = '';
             showSection('token-withdraw');
+            
+            // 출금 섹션 표시 후 MAX 버튼 확인
+            setTimeout(function() {
+                var maxBtn = document.getElementById('btnMaxWithdraw');
+                console.log('출금 섹션 표시 후 MAX 버튼 확인:', maxBtn);
+                if (maxBtn) {
+                    console.log('✅ MAX 버튼이 정상적으로 존재함');
+                } else {
+                    console.error('❌ MAX 버튼을 찾을 수 없음');
+                }
+            }, 100);
         });
     }
+    
+    // 최대출금 버튼 이벤트는 전역 함수로 처리
     if (btnWithdrawSubmit) {
         btnWithdrawSubmit.addEventListener('click', function () {
             var addr = withdrawAddress && withdrawAddress.value ? withdrawAddress.value.trim() : '';
-            var qty = parseInt(withdrawQty && withdrawQty.value ? withdrawQty.value : 0, 10) || 0;
+            var qty = parseFloat(withdrawQty && withdrawQty.value ? withdrawQty.value : 0) || 0;
             if (!addr) { alert('지갑 주소를 입력해주세요.'); return; }
-            if (qty <= 0) { alert('수량을 입력해주세요.'); return; }
+            if (qty <= 0 || isNaN(qty)) { alert('올바른 수량을 입력해주세요.'); return; }
             var balance = getCurrentSupportBalance();
             if (qty > balance) { alert('잔여 보유 토큰보다 많을 수 없습니다.'); return; }
             if (!window.mypageApi || !window.mypageApi.createTokenWithdrawal) {
@@ -3202,9 +3216,15 @@ function renderNotificationList() {
 
 // 알림 섹션 바인딩
 function bindNotificationSection() {
-    var btnMarkAllRead = document.getElementById('btnMarkAllRead');
-    if (btnMarkAllRead) {
-        btnMarkAllRead.addEventListener('click', function () {
+    // 이벤트 위임 방식으로 변경: document에서 이벤트를 캐치하여 DOM 이동에 영향받지 않음
+    document.addEventListener('click', function(e) {
+        // "모두읽음" 버튼 클릭 감지
+        if (e.target && (e.target.id === 'btnMarkAllRead' || e.target.closest('#btnMarkAllRead'))) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('모두읽음 버튼 클릭됨 (이벤트 위임)');
+            
             var user = getCurrentUser();
             if (!user || !user.userId) {
                 alert('로그인이 필요합니다.');
@@ -3212,7 +3232,9 @@ function bindNotificationSection() {
             }
 
             if (window.notificationService && typeof window.notificationService.markAllAsRead === 'function') {
+                console.log('모두읽음 처리 시작...');
                 window.notificationService.markAllAsRead(user.userId).then(function () {
+                    console.log('모두읽음 처리 완료');
                     renderNotificationList();
                     if (window.notificationService && typeof window.notificationService.getUnreadCount === 'function') {
                         window.notificationService.getUnreadCount(user.userId).then(function (count) {
@@ -3221,10 +3243,14 @@ function bindNotificationSection() {
                             }
                         });
                     }
+                }).catch(function(error) {
+                    console.error('모두읽음 처리 오류:', error);
                 });
+            } else {
+                console.error('notificationService.markAllAsRead 함수를 찾을 수 없음');
             }
-        });
-    }
+        }
+    });
 }
 
 // 알림 읽음 처리 및 링크 이동
@@ -3279,6 +3305,14 @@ function showNotificationPanel() {
             setTimeout(function() {
                 // 알림 섹션 표시 확인
                 sectionEl.style.display = 'block';
+                
+                // 모바일에서 모두읽음 버튼 확인 및 디버깅
+                var btnMarkAllRead = document.getElementById('btnMarkAllRead');
+                console.log('모바일 알림 패널 - 모두읽음 버튼 확인:', btnMarkAllRead);
+                if (btnMarkAllRead) {
+                    console.log('모두읽음 버튼 스타일:', window.getComputedStyle(btnMarkAllRead).display);
+                    console.log('모두읽음 버튼 클릭 가능:', !btnMarkAllRead.disabled);
+                }
                 
                 // 알림 데이터 로딩
                 if (typeof renderNotificationList === 'function') {
@@ -3848,6 +3882,26 @@ async function cancelOrder(orderId) {
     }
 }
 
+// 최대출금 함수 (전역에서 접근 가능하도록)
+function handleMaxWithdraw() {
+    console.log('🔥 MAX 버튼 클릭됨!');
+    
+    var balance = getCurrentSupportBalance();
+    var withdrawQty = document.getElementById('tokenWithdrawQty');
+    
+    console.log('현재 보유 잔액:', balance, 'TRIX');
+    console.log('수량 입력 요소:', withdrawQty);
+    
+    if (withdrawQty && balance > 0) {
+        withdrawQty.value = balance.toString();
+        console.log('✅ 최대 수량 자동 입력 완료:', balance, 'TRIX');
+    } else if (!withdrawQty) {
+        console.error('❌ 수량 입력 요소를 찾을 수 없음');
+    } else {
+        console.warn('⚠️ 보유 잔액이 0입니다');
+    }
+}
+
 // 전역 함수로 노출
 window.showSection = showSection;
 window.cancelOrder = cancelOrder;
@@ -3870,3 +3924,4 @@ window.openReviewModalForUsageEdit = openReviewModalForUsageEdit;
 window.deleteUsageReview = deleteUsageReview;
 window.markNotificationAsRead = markNotificationAsRead;
 window.showNotificationPanel = showNotificationPanel;
+window.handleMaxWithdraw = handleMaxWithdraw;

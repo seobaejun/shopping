@@ -100,13 +100,21 @@
                         </div>
                         <button type="button" class="btn-token-action" id="btnTokenWithdraw">토큰 출금하기</button>
                         <!-- 모바일에서 스토어 앱으로 바로 열리려면 data-play-store-id(패키지명), data-app-store-id(앱 ID) 입력 -->
-                        <p class="store-badges-label">팬텀 지갑 만들기 <i class="fas fa-chevron-down" aria-hidden="true"></i></p>
+                        <p class="store-badges-label">메타마스크 지갑 만들기 <i class="fas fa-chevron-down" aria-hidden="true"></i></p>
                         <div class="store-badges" id="storeBadges">
-                            <a href="https://play.google.com/store/apps/details?id=app.phantom&amp;hl=ko&amp;pli=1" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-play" id="storeLinkPlay" data-play-store-id="app.phantom" aria-label="Google Play에서 Phantom 지갑 다운로드">
+                            <!-- 모바일에서는 앱스토어 링크 -->
+                            <a href="https://play.google.com/store/apps/details?id=io.metamask&hl=ko" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-play mobile-only" id="storeLinkPlay" data-play-store-id="io.metamask" aria-label="Google Play에서 MetaMask 지갑 다운로드">
                                 <img src="image/7.png" alt="GET IT ON Google Play">
                             </a>
-                            <a href="https://apps.apple.com/kr/app/phantom-crypto-wallet/id1598432977" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-apple" id="storeLinkApple" data-app-store-id="1598432977" aria-label="App Store에서 Phantom 지갑 다운로드">
+                            <a href="https://apps.apple.com/kr/app/metamask/id1438144202" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-apple mobile-only" id="storeLinkApple" data-app-store-id="1438144202" aria-label="App Store에서 MetaMask 지갑 다운로드">
                                 <img src="image/8.png" alt="Download on the App Store">
+                            </a>
+                            <!-- PC에서는 웹사이트 링크 -->
+                            <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-web desktop-only" aria-label="MetaMask 웹사이트에서 다운로드">
+                                <div class="web-download-badge">
+                                    <i class="fas fa-globe"></i>
+                                    <span>웹사이트에서 다운로드</span>
+                                </div>
                             </a>
                         </div>
                     </div>
@@ -218,9 +226,9 @@
                             </div>
                             <div class="payment-bank-section token-deposit-bank">
                                 <h4 class="payment-section-title">입금 정보</h4>
-                                <p class="payment-info-line">하나은행 (주)딩펫씨큐리티</p>
+                                <p class="payment-info-line">국민은행 송건회</p>
                                 <div class="payment-account-row">
-                                    <span id="tokenAccountNumber" class="payment-account-number">670-910020-22804</span>
+                                    <span id="tokenAccountNumber" class="payment-account-number">455801-04-417746</span>
                                     <button type="button" class="btn-copy-account" id="btnCopyTokenAccount">복사하기</button>
                                 </div>
                                 <p class="bank-notice token-deposit-notice">입금 완료 후 입금완료 버튼을 눌러주세요</p>
@@ -241,20 +249,43 @@
                             </div>
                             <div class="token-form-group">
                                 <label for="tokenWithdrawQty">출금 수량 (trix)</label>
-                                <input type="number" id="tokenWithdrawQty" placeholder="수량" min="1" class="form-control token-input">
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="number" id="tokenWithdrawQty" placeholder="수량" min="0" step="0.00000001" class="form-control token-input" style="flex: 1;">
+                                    <button type="button" id="btnMaxWithdraw" class="btn btn-outline-primary" onclick="
+                                        console.log('MAX 버튼 클릭됨!');
+                                        var balance = getCurrentSupportBalance();
+                                        var withdrawQty = document.getElementById('tokenWithdrawQty');
+                                        console.log('보유잔액:', balance);
+                                        console.log('입력요소:', withdrawQty);
+                                        if (withdrawQty && balance > 0) {
+                                            withdrawQty.value = balance.toString();
+                                            console.log('자동입력 완료:', balance);
+                                        }
+                                    " style="padding: 6px 12px; font-size: 13px; font-weight: 600; white-space: nowrap; border: 2px solid #007bff; color: #007bff; background: white; cursor: pointer;">
+                                        <i class="fas fa-arrow-up"></i> MAX
+                                    </button>
+                                </div>
                             </div>
                             <div class="token-form-group token-balance-row">
                                 <span class="token-balance-label">보유 토큰</span>
                                 <span id="tokenWithdrawBalance" class="token-balance">0 trix</span>
                             </div>
                             <button type="button" class="btn btn-primary btn-token-submit" id="btnTokenWithdrawSubmit"><i class="fas fa-paper-plane"></i> 출금 요청</button>
-                            <p class="store-badges-label">팬텀 지갑 만들기 <i class="fas fa-chevron-down" aria-hidden="true"></i></p>
+                            <p class="store-badges-label">메타마스크 지갑 만들기 <i class="fas fa-chevron-down" aria-hidden="true"></i></p>
                             <div class="store-badges" id="storeBadgesContent">
-                                <a href="https://play.google.com/store/apps/details?id=app.phantom&amp;hl=ko&amp;pli=1" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-play" data-play-store-id="app.phantom" aria-label="Google Play에서 Phantom 지갑 다운로드">
+                                <!-- 모바일에서는 앱스토어 링크 -->
+                                <a href="https://play.google.com/store/apps/details?id=io.metamask&hl=ko" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-play mobile-only" data-play-store-id="io.metamask" aria-label="Google Play에서 MetaMask 지갑 다운로드">
                                     <img src="image/7.png" alt="GET IT ON Google Play">
                                 </a>
-                                <a href="https://apps.apple.com/kr/app/phantom-crypto-wallet/id1598432977" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-apple" data-app-store-id="1598432977" aria-label="App Store에서 Phantom 지갑 다운로드">
+                                <a href="https://apps.apple.com/kr/app/metamask/id1438144202" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-apple mobile-only" data-app-store-id="1438144202" aria-label="App Store에서 MetaMask 지갑 다운로드">
                                     <img src="image/8.png" alt="Download on the App Store">
+                                </a>
+                                <!-- PC에서는 웹사이트 링크 -->
+                                <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" class="store-badge store-badge-web desktop-only" aria-label="MetaMask 웹사이트에서 다운로드">
+                                    <div class="web-download-badge">
+                                        <i class="fas fa-globe"></i>
+                                        <span>웹사이트에서 다운로드</span>
+                                    </div>
                                 </a>
                             </div>
                         </div>
