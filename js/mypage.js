@@ -198,6 +198,7 @@ function runMypageInit() {
             }
         }
         window._mypageOrders = orders || [];
+        await loadPaidSupportByOrderIdMap();
         await displayUserInfo(user, member, orders);
         updateWishlistAndCartCount();
         renderOrderSteps(orders);
@@ -724,6 +725,24 @@ function renderOrderSteps(orders) {
 var SUPPORT_PAGE_SIZE = 25;
 var _mypageSupportCurrentPage = 1;
 
+/** lotteryConfirmedResults 중 paymentStatus === 'paid' 인 지원금만 (orderId → trix) */
+function getActualPaidSupportForOrderId(orderId) {
+    var m = window._mypagePaidSupportByOrderId;
+    if (!orderId || !m) return 0;
+    var v = m[orderId];
+    return v != null ? (Number(v) || 0) : 0;
+}
+
+async function loadPaidSupportByOrderIdMap() {
+    window._mypagePaidSupportByOrderId = {};
+    if (!window.mypageApi || typeof window.mypageApi.getMyPaidSupportByOrderId !== 'function') return;
+    try {
+        window._mypagePaidSupportByOrderId = await window.mypageApi.getMyPaidSupportByOrderId() || {};
+    } catch (e) {
+        console.warn('실지급 지원금 맵 로드 실패:', e);
+    }
+}
+
 function renderSupportList() {
     var tbody = document.getElementById('mypageSupportListBody');
     var summaryEl = document.getElementById('supportSummaryText');
@@ -736,7 +755,7 @@ function renderSupportList() {
     if (totalItems > 0 && _mypageSupportCurrentPage > totalPages) _mypageSupportCurrentPage = totalPages;
     var page = Math.min(Math.max(1, _mypageSupportCurrentPage), totalPages);
 
-    if (summaryEl) summaryEl.textContent = '승인된 주문 기준 쇼핑지원금 내역입니다. (총 ' + totalItems + '건, 합계 ' + formatTrix(list.reduce(function (s, o) { return s + (o.supportAmount || 0); }, 0)) + ' trix)';
+    if (summaryEl) summaryEl.textContent = '추첨 지급 완료된 실제 쇼핑지원금입니다. (승인 주문 ' + totalItems + '건, 지급 합계 ' + formatTrix(list.reduce(function (s, o) { return s + getActualPaidSupportForOrderId(o.id); }, 0)) + ' trix)';
 
     if (!list.length) {
         tbody.innerHTML = '<tr><td colspan="3" class="empty-message" style="padding: 20px; text-align: center;">내역이 없습니다.</td></tr>';
@@ -757,7 +776,7 @@ function renderSupportList() {
     var html = slice.map(function (o) {
         var date = formatDate(o.createdAt);
         var name = (o.productName || '-').replace(/</g, '&lt;');
-        var support = formatTrix(o.supportAmount != null ? o.supportAmount : 0);
+        var support = formatTrix(getActualPaidSupportForOrderId(o.id));
         return '<tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px;">' + date + '</td><td style="padding: 10px;">' + name + '</td><td style="padding: 10px; text-align: right;">' + support + ' trix</td></tr>';
     }).join('');
     tbody.innerHTML = html;
@@ -957,7 +976,7 @@ function renderOrderList(orders) {
         }
         
         var price = (typeof priceNum === 'number' ? priceNum : Number(priceNum) || 0).toLocaleString();
-        var supportNum = o.supportAmount != null ? o.supportAmount : (o.support != null ? o.support : 0);
+        var supportNum = getActualPaidSupportForOrderId(o.id);
         var support = formatTrix(typeof supportNum === 'number' ? supportNum : Number(supportNum) || 0);
         var status = statusLabel(o);
         html += '<li class="order-accordion-item">' +
@@ -972,7 +991,7 @@ function renderOrderList(orders) {
                 (Number(o.trixAmount) || 0).toLocaleString() + ' TRIX' : 
                 price + '원') + 
             '</span></div>' +
-            '<div class="order-detail-row"><span class="order-detail-label">지원금</span><span class="order-detail-value">' + support + ' trix</span></div>' +
+            '<div class="order-detail-row"><span class="order-detail-label">실지급 지원금</span><span class="order-detail-value">' + support + ' trix</span></div>' +
             '<div class="order-detail-row"><span class="order-detail-label">상태</span><span class="order-detail-value order-detail-status">' + (status || '-') + '</span>' +
             (canCancelOrder(o) ? 
                 '<button type="button" class="btn-cancel-order" onclick="cancelOrder(\'' + (o.id || '') + '\')" style="margin-left: 10px; padding: 4px 8px; font-size: 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">주문 취소</button>' +
@@ -1577,7 +1596,9 @@ function showSection(sectionName, clickedLink) {
         const isSelected = dataSection === sectionName;
         sec.style.display = isSelected ? 'block' : 'none';
     });
-    if (sectionName === 'support') renderSupportList();
+    if (sectionName === 'support') {
+        loadPaidSupportByOrderIdMap().then(function () { renderSupportList(); });
+    }
     if (sectionName === 'coupons') renderLotteryList();
     if (sectionName === 'notice') renderNoticeList();
     if (sectionName === 'events') renderEventsList();

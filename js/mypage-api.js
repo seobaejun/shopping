@@ -222,6 +222,43 @@
     }
 
     /**
+     * 내 주문별 실제 지급 완료된 쇼핑지원금 (lotteryConfirmedResults, paymentStatus === 'paid')
+     * 관리자 firebase-admin lotteryConfirmedService.getPaidSupportByOrderId 와 동일 기준
+     * @returns {Promise<Object<string, number>>} { [orderId]: support trix }
+     */
+    function getMyPaidSupportByOrderId() {
+        return getCurrentMemberId().then(function (ids) {
+            if (!ids || !ids.userId) return {};
+            return getMypageDb().then(function (database) {
+                if (!database) return {};
+                var col = database.collection('lotteryConfirmedResults');
+                var q1 = col.where('userId', '==', ids.userId).get();
+                var q2 = ids.docId
+                    ? col.where('memberId', '==', ids.docId).get()
+                    : Promise.resolve({ empty: true, docs: [] });
+                return Promise.all([q1, q2]).then(function (snaps) {
+                    var byOrderId = {};
+                    function merge(snap) {
+                        if (!snap || !snap.docs) return;
+                        snap.docs.forEach(function (doc) {
+                            var d = doc.data();
+                            if ((d.paymentStatus || '') !== 'paid') return;
+                            var oid = d.orderId || '';
+                            if (!oid) return;
+                            byOrderId[oid] = Number(d.support) || 0;
+                        });
+                    }
+                    merge(snaps[0]);
+                    merge(snaps[1]);
+                    return byOrderId;
+                });
+            });
+        }).catch(function () {
+            return {};
+        });
+    }
+
+    /**
      * 내 추첨결과 목록 (관리자 추첨 확정 시 저장되는 lotteryConfirmedResults에서 본인 것만 조회)
      * @returns {Promise<Array>} { round, productName, result: 'winner'|'loser', support }[]
      */
@@ -239,6 +276,7 @@
                             var data = d.data();
                             list.push({ 
                                 id: d.id, 
+                                orderId: data.orderId || null,
                                 round: data.round, 
                                 productName: data.productName, 
                                 result: data.result, 
@@ -466,6 +504,7 @@
         getMyTokenDeposits: getMyTokenDeposits,
         getMyTokenWithdrawals: getMyTokenWithdrawals,
         getMyLotteryResults: getMyLotteryResults,
+        getMyPaidSupportByOrderId: getMyPaidSupportByOrderId,
         getBoardPosts: getBoardPosts,
         updateMember: updateMember,
         withdrawMember: withdrawMember,
