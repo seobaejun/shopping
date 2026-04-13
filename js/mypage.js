@@ -3345,7 +3345,10 @@ function bindNotificationSection() {
     _mypageNotificationMarkAllBound = true;
 
     function runMarkAllRead(e) {
-        if (!e.target || !(e.target.id === 'btnMarkAllRead' || e.target.closest('#btnMarkAllRead'))) return;
+        // iOS Safari: 버튼 안 텍스트 탭 시 target이 #text 노드라 closest 없음 → TypeError 방지
+        var raw = e.target;
+        var t = raw && raw.nodeType === 1 ? raw : raw && raw.parentElement;
+        if (!t || !(t.id === 'btnMarkAllRead' || (typeof t.closest === 'function' && t.closest('#btnMarkAllRead')))) return;
         if (e.cancelable) e.preventDefault();
         e.stopPropagation();
 
