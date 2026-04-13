@@ -45,6 +45,41 @@
     /**
      * 날짜 포맷팅 (YY-MM-DD)
      */
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    /** 관리자 Quill HTML: 스크립트·iframe 등 제거 (본문 표시용) */
+    function sanitizeNoticeHtml(html) {
+        if (!html) return '';
+        var s = String(html);
+        s = s.replace(/<script\b[\s\S]*?<\/script>/gi, '');
+        s = s.replace(/<iframe\b[\s\S]*?<\/iframe>/gi, '');
+        s = s.replace(/<object\b[\s\S]*?<\/object>/gi, '');
+        s = s.replace(/<embed\b[\s\S]*?>/gi, '');
+        s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+        s = s.replace(/href\s*=\s*["']\s*javascript:/gi, 'href="#"');
+        return s;
+    }
+
+    /** 공지 PDF: 새 탭에서 열기 (한 경로만 사용) */
+    function triggerPdfDownload(url, fileName, storagePath) {
+        if (!url) return;
+        var a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
     function formatDate(createdAt) {
         if (!createdAt || createdAt.seconds == null) return '-';
         var d = new Date(createdAt.seconds * 1000);
@@ -225,18 +260,36 @@
             }
 
             var data = doc.data();
-            var title = (data.title || '-').replace(/</g, '&lt;');
-            var author = (data.authorName || '-').replace(/</g, '&lt;');
             var viewCount = data.viewCount != null ? data.viewCount : 0;
             var date = formatDate(data.createdAt);
-            var content = (data.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
 
-            // 상세 내용 렌더링
-            document.getElementById('noticeDetailTitle').textContent = title;
-            document.getElementById('noticeDetailAuthor').querySelector('span').textContent = author;
+            // 상세 내용 렌더링 (제목·작성자는 텍스트만, 본문은 Quill HTML)
+            document.getElementById('noticeDetailTitle').textContent = data.title || '-';
+            document.getElementById('noticeDetailAuthor').querySelector('span').textContent = data.authorName || '-';
             document.getElementById('noticeDetailViews').querySelector('span').textContent = viewCount + '회';
             document.getElementById('noticeDetailDate').querySelector('span').textContent = date;
-            document.getElementById('noticeDetailContent').innerHTML = content;
+            document.getElementById('noticeDetailContent').innerHTML = sanitizeNoticeHtml(data.content || '');
+
+            var pdfEl = document.getElementById('noticeDetailPdf');
+            if (pdfEl) {
+                if (data.pdfUrl) {
+                    pdfEl.style.display = 'block';
+                    var pdfName = escapeHtml(data.pdfFileName || '첨부파일.pdf');
+                    var safeUrl = data.pdfUrl;
+                    var safeFileName = data.pdfFileName || '첨부파일.pdf';
+                    var safePath = data.pdfStoragePath || '';
+                    pdfEl.innerHTML = '<button type="button" class="notice-pdf-download" style="font-size: 16px; font-weight: 600; color: #1565c0; text-decoration: none; background: none; border: none; padding: 0; cursor: pointer; text-align: left;"><i class="fas fa-file-pdf" style="color:#c62828;margin-right:10px;"></i>' + pdfName + ' <span style="font-weight:400;color:#666;">(PDF 보기)</span></button>';
+                    var btn = pdfEl.querySelector('button.notice-pdf-download');
+                    if (btn) {
+                        btn.addEventListener('click', function () {
+                            triggerPdfDownload(safeUrl, safeFileName, safePath);
+                        });
+                    }
+                } else {
+                    pdfEl.style.display = 'none';
+                    pdfEl.innerHTML = '';
+                }
+            }
 
             // 조회수 증가 (중복 방지)
             updateViewCount(noticeId);

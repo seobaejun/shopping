@@ -117,6 +117,29 @@ async function uploadFileToStorage(file) {
     return await ref.getDownloadURL();
 }
 
+/**
+ * 공지사항 PDF 첨부 업로드 (다운로드 URL 저장용)
+ */
+async function uploadNoticePdfToStorage(file) {
+    if (!file || !file.size) throw new Error('업로드할 파일이 없습니다.');
+    var nameLower = (file.name || '').toLowerCase();
+    if (file.type && file.type !== 'application/pdf' && !nameLower.endsWith('.pdf')) {
+        throw new Error('PDF 파일만 업로드할 수 있습니다.');
+    }
+    var maxBytes = 15 * 1024 * 1024;
+    if (file.size > maxBytes) throw new Error('PDF는 15MB 이하만 업로드할 수 있습니다.');
+    if (typeof firebase === 'undefined' || !firebase.storage) {
+        throw new Error('Firebase Storage를 사용할 수 없습니다.');
+    }
+    const storage = firebase.storage();
+    const safeName = (file.name || 'notice.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = 'products/notice-pdf/' + Date.now() + '_' + safeName;
+    const ref = storage.ref(path);
+    await ref.put(file, { contentType: 'application/pdf' });
+    var downloadUrl = await ref.getDownloadURL();
+    return { url: downloadUrl, storagePath: path };
+}
+
 // Firestore 컬렉션 참조
 const collections = {
     members: () => {
@@ -931,7 +954,7 @@ const boardService = {
     async addPost(data) {
         try {
             if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
-            const docRef = await collections.posts().add({
+            var newPostPayload = {
                 boardType: data.boardType || 'notice',
                 title: data.title || '',
                 content: data.content || '',
@@ -943,7 +966,13 @@ const boardService = {
                 faqCategory: data.faqCategory || '',
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            };
+            if (data.pdfUrl) {
+                newPostPayload.pdfUrl = data.pdfUrl;
+                newPostPayload.pdfFileName = data.pdfFileName || '';
+                if (data.pdfStoragePath) newPostPayload.pdfStoragePath = data.pdfStoragePath;
+            }
+            const docRef = await collections.posts().add(newPostPayload);
             return docRef.id;
         } catch (error) {
             console.error('게시글 추가 오류:', error);
@@ -1305,6 +1334,7 @@ window.firebaseAdmin = {
     getInitPromise,
     getDb,
     uploadFileToStorage,
+    uploadNoticePdfToStorage,
     get db() { return db; },
     collections,
     isTestMember,

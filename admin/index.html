@@ -2177,7 +2177,7 @@
             }
             var baseUrl = window.location.origin + scriptDir;
             const script1 = document.createElement('script');
-            script1.src = baseUrl + 'js/firebase-admin.js';
+            script1.src = baseUrl + 'js/firebase-admin.js?v=20260413-pdf';
             script1.onerror = function() { showAdminLoadError('firebase-admin.js 로드 실패. 경로: ' + script1.src); };
             document.body.appendChild(script1);
             
@@ -2699,6 +2699,18 @@
                     </label>
                     <div id="boardPostContentEditor" style="height: 300px;"></div>
                     <input type="hidden" id="boardPostContent">
+                </div>
+                <div class="inquiry-form-group" id="boardPostPdfWrap" style="display: none;">
+                    <label class="inquiry-label">
+                        <span class="label-text">PDF 첨부</span>
+                    </label>
+                    <input type="file" id="boardPostPdfInput" accept="application/pdf,.pdf" style="display: none;">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px;">
+                        <button type="button" class="btn-secondary" id="boardPostPdfPickBtn" style="padding: 8px 14px;">PDF 선택</button>
+                        <span id="boardPostPdfDisplayName" style="color: #444; font-size: 14px;">선택된 파일 없음</span>
+                        <button type="button" class="btn-secondary" id="boardPostPdfRemoveBtn" style="display: none; padding: 8px 14px;">첨부 삭제</button>
+                    </div>
+                    <small style="color: #666; margin-top: 8px; display: block; font-size: 13px;">공지를 읽는 사용자가 PDF를 다운로드할 수 있습니다. (최대 15MB)</small>
                 </div>
                 <div class="inquiry-form-group" id="boardPostStatusWrap">
                     <label class="inquiry-label">

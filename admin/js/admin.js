@@ -3267,6 +3267,71 @@ function compressImageForBoard(file) {
     });
 }
 
+function resetBoardNoticePdfUi() {
+    window._noticePdfClearOnSave = false;
+    var inp = document.getElementById('boardPostPdfInput');
+    var disp = document.getElementById('boardPostPdfDisplayName');
+    var rmBtn = document.getElementById('boardPostPdfRemoveBtn');
+    if (inp) inp.value = '';
+    if (disp) disp.textContent = '선택된 파일 없음';
+    if (rmBtn) rmBtn.style.display = 'none';
+}
+
+function setBoardNoticePdfUiFromPost(post) {
+    var inp = document.getElementById('boardPostPdfInput');
+    var disp = document.getElementById('boardPostPdfDisplayName');
+    var rmBtn = document.getElementById('boardPostPdfRemoveBtn');
+    window._noticePdfClearOnSave = false;
+    if (inp) inp.value = '';
+    if (!post || !post.pdfUrl) {
+        if (disp) disp.textContent = '선택된 파일 없음';
+        if (rmBtn) rmBtn.style.display = 'none';
+        return;
+    }
+    if (disp) disp.textContent = post.pdfFileName || '첨부.pdf';
+    if (rmBtn) rmBtn.style.display = 'inline-block';
+}
+
+async function resolveNoticePdfForSave(boardType) {
+    if (boardType !== 'notice') return undefined;
+    if (window._noticePdfClearOnSave) {
+        return { pdfUrl: null, pdfFileName: null, pdfStoragePath: null };
+    }
+    var pdfInput = document.getElementById('boardPostPdfInput');
+    var file = pdfInput && pdfInput.files && pdfInput.files[0];
+    if (file) {
+        var nameLower = (file.name || '').toLowerCase();
+        if (file.type && file.type !== 'application/pdf' && !nameLower.endsWith('.pdf')) {
+            throw new Error('PDF 파일만 업로드할 수 있습니다.');
+        }
+        var fa = window.firebaseAdmin;
+        if (!fa) {
+            throw new Error('Firebase 모듈이 로드되지 않았습니다. 페이지를 새로고침한 뒤 다시 시도해주세요.');
+        }
+        var uploadFn = typeof fa.uploadNoticePdfToStorage === 'function'
+            ? fa.uploadNoticePdfToStorage.bind(fa)
+            : typeof fa.uploadFileToStorage === 'function'
+                ? fa.uploadFileToStorage.bind(fa)
+                : null;
+        if (!uploadFn) {
+            throw new Error('Storage 업로드 API를 찾을 수 없습니다. 관리자 페이지를 강력 새로고침(Ctrl+Shift+R) 후 다시 시도해주세요.');
+        }
+        var result = await uploadFn(file);
+        if (result && typeof result === 'object' && result.url) {
+            return {
+                pdfUrl: result.url,
+                pdfFileName: file.name,
+                pdfStoragePath: result.storagePath || ''
+            };
+        }
+        if (typeof result === 'string') {
+            return { pdfUrl: result, pdfFileName: file.name, pdfStoragePath: '' };
+        }
+        return { pdfUrl: '', pdfFileName: file.name, pdfStoragePath: '' };
+    }
+    return undefined;
+}
+
 function openBoardPostModal(editId, boardType) {
     boardType = boardType || getCurrentBoardType();
     var modal = document.getElementById('boardPostModal');
@@ -3387,6 +3452,18 @@ function openBoardPostModal(editId, boardType) {
     if (faqCategoryWrap) faqCategoryWrap.style.display = (boardType === 'qna') ? 'block' : 'none';
     if (answerWrap) answerWrap.style.display = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? 'block' : 'none';
     if (productInfoWrap) productInfoWrap.style.display = (boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? 'block' : 'none';
+    var pdfWrap = document.getElementById('boardPostPdfWrap');
+    if (pdfWrap) pdfWrap.style.display = (boardType === 'notice') ? 'block' : 'none';
+    if (boardType === 'notice') {
+        var noticePost = null;
+        if (editId && window._boardPostsList) {
+            noticePost = window._boardPostsList.find(function (p) { return p.id === editId; });
+        }
+        if (noticePost) setBoardNoticePdfUiFromPost(noticePost);
+        else resetBoardNoticePdfUi();
+    } else {
+        resetBoardNoticePdfUi();
+    }
     modal.style.display = 'flex';
 }
 
@@ -3418,6 +3495,7 @@ function closeBoardPostModal() {
     if (statusSelect && statusSelect.parentElement) {
         statusSelect.parentElement.style.display = '';
     }
+    resetBoardNoticePdfUi();
 }
 
 async function saveBoardPost() {
@@ -3457,6 +3535,7 @@ async function saveBoardPost() {
     var faqCategory = (boardType === 'qna' && faqCategorySelect) ? (faqCategorySelect.value || '상품구매') : '';
     try {
         await window.firebaseAdmin.getInitPromise();
+        var pdfPatch = await resolveNoticePdfForSave(boardType);
         if (postId) {
             var isInquiry = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry');
             var updateData = {};
@@ -3482,6 +3561,11 @@ async function saveBoardPost() {
                 updateData.status = (statusSelect && statusSelect.value) || 'published';
                 updateData.isNotice = (noticeCheck && noticeCheck.checked) || false;
                 if (boardType === 'qna') updateData.faqCategory = faqCategory;
+                if (boardType === 'notice' && pdfPatch !== undefined) {
+                    updateData.pdfUrl = pdfPatch.pdfUrl;
+                    updateData.pdfFileName = pdfPatch.pdfFileName;
+                    if (pdfPatch.pdfStoragePath !== undefined) updateData.pdfStoragePath = pdfPatch.pdfStoragePath;
+                }
             }
             
             await window.firebaseAdmin.boardService.updatePost(postId, updateData);
@@ -3527,6 +3611,11 @@ async function saveBoardPost() {
                 addData.answer = answer;
                 addData.status = answer ? 'answered' : 'pending';
             }
+            if (boardType === 'notice' && pdfPatch !== undefined && pdfPatch.pdfUrl) {
+                addData.pdfUrl = pdfPatch.pdfUrl;
+                addData.pdfFileName = pdfPatch.pdfFileName || '';
+                if (pdfPatch.pdfStoragePath) addData.pdfStoragePath = pdfPatch.pdfStoragePath;
+            }
             var newPostId = await window.firebaseAdmin.boardService.addPost(addData);
             
             // 공지사항 등록 시 모든 회원에게 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
@@ -3568,7 +3657,7 @@ async function saveBoardPost() {
         loadBoardPosts(boardType);
     } catch (error) {
         console.error('게시글 저장 오류:', error);
-        alert('저장에 실패했습니다.');
+        alert((error && error.message) ? error.message : '저장에 실패했습니다.');
     }
 }
 
@@ -6587,6 +6676,31 @@ async function initAdminPage() {
         if (boardPostModalClose) boardPostModalClose.onclick = closeBoardPostModal;
         if (boardPostModalCancel) boardPostModalCancel.onclick = closeBoardPostModal;
         if (boardPostModalSave) boardPostModalSave.onclick = function () { saveBoardPost(); };
+        var boardPostPdfPickBtn = document.getElementById('boardPostPdfPickBtn');
+        var boardPostPdfInput = document.getElementById('boardPostPdfInput');
+        var boardPostPdfRemoveBtn = document.getElementById('boardPostPdfRemoveBtn');
+        if (boardPostPdfPickBtn && boardPostPdfInput) {
+            boardPostPdfPickBtn.onclick = function () { boardPostPdfInput.click(); };
+        }
+        if (boardPostPdfInput) {
+            boardPostPdfInput.addEventListener('change', function () {
+                window._noticePdfClearOnSave = false;
+                var f = this.files && this.files[0];
+                var disp = document.getElementById('boardPostPdfDisplayName');
+                var rmBtn = document.getElementById('boardPostPdfRemoveBtn');
+                if (f && disp) disp.textContent = f.name;
+                if (f && rmBtn) rmBtn.style.display = 'inline-block';
+            });
+        }
+        if (boardPostPdfRemoveBtn) {
+            boardPostPdfRemoveBtn.onclick = function () {
+                window._noticePdfClearOnSave = true;
+                if (boardPostPdfInput) boardPostPdfInput.value = '';
+                var disp = document.getElementById('boardPostPdfDisplayName');
+                if (disp) disp.textContent = '선택된 파일 없음';
+                this.style.display = 'none';
+            };
+        }
         if (boardPostModal && boardPostModal.querySelector('.modal-content')) {
             boardPostModal.querySelector('.modal-content').onclick = function (e) { e.stopPropagation(); };
             boardPostModal.onclick = function (e) { if (e.target === boardPostModal) closeBoardPostModal(); };
