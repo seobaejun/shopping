@@ -17,6 +17,16 @@ function formatTrix(value) {
 
 var PRODUCT_DETAIL_FIREBASE_READY = false;
 
+/** 바로구매 TRIX 부족 — catch에서 사용자 안내 문구와 구분 */
+var BUY_NOW_INSUFFICIENT_TRIX_CODE = 'BUY_NOW_INSUFFICIENT_TRIX';
+var BUY_NOW_INSUFFICIENT_TRIX_ALERT = '보유하신 토큰이 부족합니다, 토큰을 충전해주세요.';
+
+/** 상품구매(원화 입금) 계좌 — 토큰 구매하기 입금정보와 별도 */
+var PRODUCT_PURCHASE_DEPOSIT_LINE = '(주)딩펫씨큐리티';
+var PRODUCT_PURCHASE_BANK_NAME = '하나은행';
+var PRODUCT_PURCHASE_ACCOUNT_NUMBER = '670-910020-22804';
+var PRODUCT_PURCHASE_ACCOUNT_DISPLAY = PRODUCT_PURCHASE_BANK_NAME + ' ' + PRODUCT_PURCHASE_ACCOUNT_NUMBER;
+
 function _parseProductDoc(doc) {
     var product = doc.data();
     var options = [];
@@ -707,7 +717,7 @@ function submitBuyNowOrder(delivery) {
             
             // 잔액 재확인
             if (currentTrixBalance < requiredTrix) {
-                throw new Error('보유토큰이 부족합니다. 토큰을 충전해주세요.');
+                throw new Error(BUY_NOW_INSUFFICIENT_TRIX_CODE);
             }
             
             // 주문 생성
@@ -763,6 +773,10 @@ function initBuyActions() {
             }
             if (!PRODUCT_INFO || !PRODUCT_INFO.id) {
                 alert('상품 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            if (!selectedPaymentMethod) {
+                alert('결제방법을 선택하세요.');
                 return;
             }
 
@@ -1019,9 +1033,9 @@ function openBuyNowPaymentModal(delivery) {
         } else {
             bankSection.innerHTML = `
                 <h4 class="payment-section-title">입금 정보</h4>
-                <p class="payment-info-line">국민은행 송건회</p>
+                <p class="payment-info-line">${PRODUCT_PURCHASE_DEPOSIT_LINE}</p>
                 <div class="payment-account-row">
-                    <span id="paymentAccountNumber" class="payment-account-number">455801-04-417746</span>
+                    <span id="paymentAccountNumber" class="payment-account-number">${PRODUCT_PURCHASE_ACCOUNT_DISPLAY}</span>
                     <button type="button" class="btn-copy-account" id="btnCopyPaymentAccount">복사하기</button>
                 </div>
             `;
@@ -1050,8 +1064,6 @@ function closeBuyNowPaymentModal() {
 function initBuyNowPaymentModal() {
     var modal = productDetailElements.buyNowPaymentModal;
     var closeBtn = document.getElementById('buyNowPaymentModalClose');
-    var copyBtn = document.getElementById('btnCopyPaymentAccount');
-    var accountEl = document.getElementById('paymentAccountNumber');
     var confirmBtn = document.getElementById('buyNowPaymentConfirm');
     var orderHistoryBtn = document.getElementById('btnOrderHistory');
     var continueBtn = document.getElementById('btnContinueShopping');
@@ -1064,9 +1076,12 @@ function initBuyNowPaymentModal() {
             if (e.target === modal) closeBuyNowPaymentModal();
         });
     }
-    if (copyBtn && accountEl) {
-        copyBtn.addEventListener('click', function () {
-            var account = (accountEl && accountEl.textContent) ? accountEl.textContent.trim() : '455801-04-417746';
+    if (modal) {
+        modal.addEventListener('click', function (e) {
+            var t = e.target;
+            if (!t || (t.id !== 'btnCopyPaymentAccount' && (!t.closest || !t.closest('#btnCopyPaymentAccount')))) return;
+            var numEl = modal.querySelector('#paymentAccountNumber');
+            var account = (numEl && numEl.textContent) ? numEl.textContent.trim() : PRODUCT_PURCHASE_ACCOUNT_DISPLAY;
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(account).then(function () {
                     alert('계좌번호가 복사되었습니다.');
@@ -1111,7 +1126,11 @@ function initBuyNowPaymentModal() {
                 if (doneFooter) doneFooter.style.display = 'flex';
             } catch (error) {
                 console.error('구매 요청 오류:', error);
-                alert('구매 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                if (error && error.message === BUY_NOW_INSUFFICIENT_TRIX_CODE) {
+                    alert(BUY_NOW_INSUFFICIENT_TRIX_ALERT);
+                } else {
+                    alert('구매 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                }
             }
             confirmBtn.disabled = false;
         });

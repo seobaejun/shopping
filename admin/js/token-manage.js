@@ -160,7 +160,7 @@
                 '<td>' + dateStr + '</td>' +
                 '<td>' + escapeHtml(userName) + ' (' + escapeHtml(String(w.userId || '')) + ')</td>' +
                 '<td class="wallet-cell">' + escapeHtml(w.walletAddress || '') + '</td>' +
-                '<td>' + qty.toLocaleString() + '</td>' +
+                '<td>' + qty.toLocaleString('ko-KR', {maximumFractionDigits: 8}) + '</td>' +
                 '<td><span class="status-badge status-pending">대기</span></td>' +
                 '<td class="token-action-cell">' +
                 '<button type="button" class="btn btn-sm btn-primary btn-complete-withdrawal">확인</button> ' +
@@ -332,7 +332,7 @@
             var userId = escapeHtml(String(w.userId || ''));
             var qty = Number(w.quantity) || 0;
             var status = withdrawalStatusLabel(w.status);
-            return '<tr><td>' + dateStr + '</td><td>' + userName + ' (' + userId + ')</td><td class="wallet-cell">' + escapeHtml(w.walletAddress || '') + '</td><td>' + qty.toLocaleString() + '</td><td>' + escapeHtml(status) + '</td></tr>';
+            return '<tr><td>' + dateStr + '</td><td>' + userName + ' (' + userId + ')</td><td class="wallet-cell">' + escapeHtml(w.walletAddress || '') + '</td><td>' + qty.toLocaleString('ko-KR', {maximumFractionDigits: 8}) + '</td><td>' + escapeHtml(status) + '</td></tr>';
         }).join('');
         renderTokenPagination(total, currentWithdrawalsPage, 'tokenAllWithdrawalsPagination', 'goToTokenWithdrawalsPage');
     }

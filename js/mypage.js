@@ -646,12 +646,12 @@ function bindTokenModals() {
                 
                 console.log('토큰가져오기 요청 저장 완료:', tokenImportData);
                 
-                alert('토큰가져오기 요청이 접수되었습니다. 관리자 확인 후 토큰이 추가됩니다.');
+                alert('토큰가져오기 요청이 완료되었습니다.\n\n관리자 승인 후 마이페이지에서 보유토큰으로 확인할 수 있습니다.');
                 
                 // 입력 폼 초기화 (토큰구매하기와 동일)
                 if (fromAddress) fromAddress.value = '';
-                if (toAddress) toAddress.value = '';
                 if (amount) amount.value = '';
+                // toAddress는 고정값이므로 초기화하지 않음
                 
                 // 토큰구매하기처럼 사용자 정보 새로고침
                 return window.mypageApi.getCurrentMember().then(function (member) {
@@ -664,7 +664,7 @@ function bindTokenModals() {
             } finally {
                 // 버튼 복원
                 btnTokenImportSubmit.disabled = false;
-                btnTokenImportSubmit.innerHTML = '<i class="fas fa-download"></i> 토큰가져오기 요청';
+                btnTokenImportSubmit.innerHTML = '<i class="fas fa-download"></i> 토큰가져오기';
             }
         });
     }
@@ -3639,7 +3639,7 @@ function showTokenImportSection() {
                 var amount = document.getElementById('tokenImportAmount');
                 
                 if (fromAddress) fromAddress.value = '';
-                if (toAddress) toAddress.value = '';
+                if (toAddress) toAddress.value = '0x00827b5bde95C93e87B74e1Bcd66b0Bf7884a10';
                 if (amount) amount.value = '';
             }, 100);
         }
@@ -3653,7 +3653,7 @@ function showTokenImportSection() {
         var amount = document.getElementById('tokenImportAmount');
         
         if (fromAddress) fromAddress.value = '';
-        if (toAddress) toAddress.value = '';
+        if (toAddress) toAddress.value = '0x00827b5bde95C93e87B74e1Bcd66b0Bf7884a10';
         if (amount) amount.value = '';
     }
 }
