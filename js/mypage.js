@@ -335,6 +335,7 @@ function initMypageOnLoad() {
     bindReviewModalMypage();
     bindReviewWriteSection();
     bindTokenModals();
+    bindNotificationSection();
     runMypageInit();
 }
 function closeMobileSlotIfDesktop() {
@@ -3336,43 +3337,41 @@ function renderNotificationList() {
     }
 }
 
-// 알림 섹션 바인딩
-function bindNotificationSection() {
-    // 이벤트 위임 방식으로 변경: document에서 이벤트를 캐치하여 DOM 이동에 영향받지 않음
-    document.addEventListener('click', function(e) {
-        // "모두읽음" 버튼 클릭 감지
-        if (e.target && (e.target.id === 'btnMarkAllRead' || e.target.closest('#btnMarkAllRead'))) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            console.log('모두읽음 버튼 클릭됨 (이벤트 위임)');
-            
-            var user = getCurrentUser();
-            if (!user || !user.userId) {
-                alert('로그인이 필요합니다.');
-                return;
-            }
+// 알림 섹션 바인딩 (모바일 showNotificationPanel만 쓰면 showSection을 안 타서, 여기서 1회만 등록)
+var _mypageNotificationMarkAllBound = false;
 
-            if (window.notificationService && typeof window.notificationService.markAllAsRead === 'function') {
-                console.log('모두읽음 처리 시작...');
-                window.notificationService.markAllAsRead(user.userId).then(function () {
-                    console.log('모두읽음 처리 완료');
-                    renderNotificationList();
-                    if (window.notificationService && typeof window.notificationService.getUnreadCount === 'function') {
-                        window.notificationService.getUnreadCount(user.userId).then(function (count) {
-                            if (window.notificationService && typeof window.notificationService.updateNotificationBadge === 'function') {
-                                window.notificationService.updateNotificationBadge(count);
-                            }
-                        });
-                    }
-                }).catch(function(error) {
-                    console.error('모두읽음 처리 오류:', error);
-                });
-            } else {
-                console.error('notificationService.markAllAsRead 함수를 찾을 수 없음');
-            }
+function bindNotificationSection() {
+    if (_mypageNotificationMarkAllBound) return;
+    _mypageNotificationMarkAllBound = true;
+
+    function runMarkAllRead(e) {
+        if (!e.target || !(e.target.id === 'btnMarkAllRead' || e.target.closest('#btnMarkAllRead'))) return;
+        if (e.cancelable) e.preventDefault();
+        e.stopPropagation();
+
+        var user = getCurrentUser();
+        if (!user || !user.userId) {
+            alert('로그인이 필요합니다.');
+            return;
         }
-    });
+
+        if (window.notificationService && typeof window.notificationService.markAllAsRead === 'function') {
+            window.notificationService.markAllAsRead(user.userId).then(function () {
+                renderNotificationList();
+                if (window.notificationService && typeof window.notificationService.getUnreadCount === 'function') {
+                    window.notificationService.getUnreadCount(user.userId).then(function (count) {
+                        if (window.notificationService && typeof window.notificationService.updateNotificationBadge === 'function') {
+                            window.notificationService.updateNotificationBadge(count);
+                        }
+                    });
+                }
+            }).catch(function (error) {
+                console.error('모두읽음 처리 오류:', error);
+            });
+        }
+    }
+
+    document.addEventListener('click', runMarkAllRead, false);
 }
 
 // 알림 읽음 처리 및 링크 이동
