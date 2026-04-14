@@ -2008,6 +2008,9 @@ document.addEventListener('click', (e) => {
                     if (searchContainer && searchContainer.style.display !== 'none' && typeof applyDeliveryRegisterSearch === 'function') {
                         applyDeliveryRegisterSearch();
                     }
+                    alert('배송 정보가 저장되었습니다.');
+                } else {
+                    alert('저장 서비스를 불러올 수 없습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.');
                 }
             } catch (err) {
                 console.error('배송 정보 저장 오류:', err);

@@ -336,6 +336,7 @@ function initMypageOnLoad() {
     bindReviewWriteSection();
     bindTokenModals();
     bindNotificationSection();
+    bindOrderStepClicks();
     runMypageInit();
 }
 function closeMobileSlotIfDesktop() {
@@ -720,6 +721,98 @@ function renderOrderSteps(orders) {
     if (el3) el3.textContent = ready.length;
     if (el4) el4.textContent = shipping.length;
     if (el5) el5.textContent = complete.length;
+    updateOrderStepActiveUI();
+}
+
+var ORDER_STEP_LABELS = { 1: '주문', 2: '입금', 3: '준비', 4: '배송', 5: '완료' };
+var _mypageOrderStepFilter = null;
+
+/** renderOrderSteps와 동일한 기준으로 단계별 주문만 반환 */
+function filterOrdersForStep(orders, step) {
+    if (!orders || !orders.length) return [];
+    if (step == null || step === '') return orders.slice();
+    var n = Number(step);
+    if (isNaN(n) || n < 1 || n > 5) return orders.slice();
+    var pending = orders.filter(function (o) { return o.status === 'pending' || o.status === '대기'; });
+    var approved = orders.filter(function (o) { return o.status === 'approved'; });
+    var ready = approved.filter(function (o) { return (o.deliveryStatus || '') === 'ready'; });
+    var shipping = orders.filter(function (o) { return o.deliveryStatus === 'shipping'; });
+    var complete = orders.filter(function (o) { return o.deliveryStatus === 'complete'; });
+    if (n === 1) return pending;
+    if (n === 2) return approved;
+    if (n === 3) return ready;
+    if (n === 4) return shipping;
+    if (n === 5) return complete;
+    return orders.slice();
+}
+
+function updateOrderStepActiveUI() {
+    document.querySelectorAll('.order-steps .step-item[data-order-step]').forEach(function (el) {
+        var step = parseInt(el.getAttribute('data-order-step'), 10);
+        var active = _mypageOrderStepFilter != null && step === _mypageOrderStepFilter;
+        el.classList.toggle('is-active', active);
+        el.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+}
+
+var _mypageOrderStepClickBound = false;
+
+function bindOrderStepClicks() {
+    if (_mypageOrderStepClickBound) return;
+    _mypageOrderStepClickBound = true;
+
+    function eventToStepItem(e) {
+        var raw = e.target;
+        var t = raw && raw.nodeType === 1 ? raw : raw && raw.parentElement;
+        return t && typeof t.closest === 'function' ? t.closest('.step-item[data-order-step]') : null;
+    }
+
+    function activateStep(stepNum) {
+        if (_mypageOrderStepFilter === stepNum) {
+            _mypageOrderStepFilter = null;
+        } else {
+            _mypageOrderStepFilter = stepNum;
+        }
+        _mypageOrderCurrentPage = 1;
+        renderOrderList();
+        var listWrap = document.querySelector('.mypage-order-list-wrap');
+        if (listWrap) {
+            try {
+                listWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } catch (err) { /* ignore */ }
+        }
+    }
+
+    var container = document.querySelector('.order-steps');
+    if (container) {
+        container.addEventListener('click', function (e) {
+            var item = eventToStepItem(e);
+            if (!item) return;
+            e.preventDefault();
+            var step = parseInt(item.getAttribute('data-order-step'), 10);
+            if (isNaN(step)) return;
+            activateStep(step);
+        });
+        container.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var item = eventToStepItem(e);
+            if (!item) return;
+            e.preventDefault();
+            var step = parseInt(item.getAttribute('data-order-step'), 10);
+            if (isNaN(step)) return;
+            activateStep(step);
+        });
+    }
+
+    var more = document.getElementById('mypageOrdersMore');
+    if (more) {
+        more.addEventListener('click', function (e) {
+            e.preventDefault();
+            _mypageOrderStepFilter = null;
+            _mypageOrderCurrentPage = 1;
+            renderOrderList();
+        });
+    }
 }
 
 // 쇼핑지원금 내역 테이블 (승인된 주문만, 25건씩 페이징)
@@ -913,21 +1006,44 @@ function renderOrderList(orders) {
     const listEl = document.getElementById('mypageOrderListBody');
     const paginationEl = document.getElementById('mypageOrderPagination');
     if (!listEl) return;
-    if (orders && orders.length >= 0) {
+    if (arguments.length >= 1 && orders !== undefined) {
         window._mypageOrders = orders || [];
         _mypageOrderCurrentPage = 1;
+        _mypageOrderStepFilter = null;
     }
     var allOrders = window._mypageOrders || [];
+
+    var hintEl = document.getElementById('orderStepFilterHint');
+    if (hintEl) {
+        if (_mypageOrderStepFilter != null && ORDER_STEP_LABELS[_mypageOrderStepFilter]) {
+            hintEl.removeAttribute('hidden');
+            hintEl.textContent = ORDER_STEP_LABELS[_mypageOrderStepFilter] + ' 단계 주문만 표시 중입니다. 전체보기를 누르면 전체 목록으로 돌아갑니다.';
+        } else {
+            hintEl.setAttribute('hidden', '');
+            hintEl.textContent = '';
+        }
+    }
+
     if (!allOrders.length) {
         listEl.innerHTML = '<li class="order-accordion-empty empty-message" id="mypageOrderListEmpty">주문 내역이 없습니다.</li>';
         if (paginationEl) paginationEl.style.display = 'none';
+        updateOrderStepActiveUI();
         return;
     }
-    var totalPages = Math.max(1, Math.ceil(allOrders.length / ORDER_PAGE_SIZE));
+
+    var displayOrders = filterOrdersForStep(allOrders, _mypageOrderStepFilter);
+    if (!displayOrders.length) {
+        listEl.innerHTML = '<li class="order-accordion-empty empty-message" id="mypageOrderListEmpty">선택한 단계의 주문이 없습니다.</li>';
+        if (paginationEl) paginationEl.style.display = 'none';
+        updateOrderStepActiveUI();
+        return;
+    }
+
+    var totalPages = Math.max(1, Math.ceil(displayOrders.length / ORDER_PAGE_SIZE));
     var page = Math.min(Math.max(1, _mypageOrderCurrentPage), totalPages);
     _mypageOrderCurrentPage = page;
     var start = (page - 1) * ORDER_PAGE_SIZE;
-    var pageOrders = allOrders.slice(start, start + ORDER_PAGE_SIZE);
+    var pageOrders = displayOrders.slice(start, start + ORDER_PAGE_SIZE);
 
     function formatDate(createdAt) {
         if (!createdAt) return '-';
@@ -980,6 +1096,8 @@ function renderOrderList(orders) {
         var supportNum = getActualPaidSupportForOrderId(o.id);
         var support = formatTrix(typeof supportNum === 'number' ? supportNum : Number(supportNum) || 0);
         var status = statusLabel(o);
+        var deliveryCompanyDisp = (String(o.deliveryCompany != null ? o.deliveryCompany : '').trim() || '-').replace(/</g, '&lt;');
+        var trackingDisp = (String(o.trackingNumber != null ? o.trackingNumber : '').trim() || '-').replace(/</g, '&lt;');
         html += '<li class="order-accordion-item">' +
             '<button type="button" class="order-accordion-header" aria-expanded="false">' +
             '<span class="order-accordion-title">' + name + '</span>' +
@@ -995,10 +1113,11 @@ function renderOrderList(orders) {
             '<div class="order-detail-row"><span class="order-detail-label">실지급 지원금</span><span class="order-detail-value">' + support + ' trix</span></div>' +
             '<div class="order-detail-row"><span class="order-detail-label">상태</span><span class="order-detail-value order-detail-status">' + (status || '-') + '</span>' +
             (canCancelOrder(o) ? 
-                '<button type="button" class="btn-cancel-order" onclick="cancelOrder(\'' + (o.id || '') + '\')" style="margin-left: 10px; padding: 4px 8px; font-size: 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">주문 취소</button>' +
-                '<button type="button" onclick="debugUserInfo()" style="margin-left: 5px; padding: 4px 8px; font-size: 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">디버그</button>'
+                '<button type="button" class="btn-cancel-order" onclick="cancelOrder(\'' + (o.id || '') + '\')" style="margin-left: 10px; padding: 4px 8px; font-size: 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">주문 취소</button>'
                 : '') +
             '</div>' +
+            '<div class="order-detail-row"><span class="order-detail-label">택배사</span><span class="order-detail-value">' + deliveryCompanyDisp + '</span></div>' +
+            '<div class="order-detail-row"><span class="order-detail-label">운송장번호</span><span class="order-detail-value order-tracking-number">' + trackingDisp + '</span></div>' +
             '</div>' +
             '</li>';
     });
@@ -1059,6 +1178,7 @@ function renderOrderList(orders) {
         }
         paginationEl.appendChild(nextBtn);
     }
+    updateOrderStepActiveUI();
 }
 
 // 마케팅 수신동의 폼 채우기
@@ -3693,47 +3813,10 @@ function canCancelOrder(order) {
     return status === 'pending' || status === 'payment_pending' || status === 'waiting' || status === 'cancel_requested';
 }
 
-// 디버깅: 현재 사용자 정보 확인
-async function debugUserInfo() {
-    console.log('=== 현재 사용자 정보 디버깅 ===');
-    
-    // Firebase Auth 사용자
-    const currentUser = firebase.auth().currentUser;
-    console.log('Firebase Auth 사용자:', currentUser);
-    
-    // localStorage 사용자
-    try {
-        const loginUser = localStorage.getItem('loginUser');
-        console.log('localStorage loginUser (raw):', loginUser);
-        if (loginUser) {
-            const parsedUser = JSON.parse(loginUser);
-            console.log('localStorage loginUser (parsed):', parsedUser);
-        }
-    } catch (e) {
-        console.error('localStorage 파싱 오류:', e);
-    }
-    
-    // members 컬렉션의 모든 문서 ID 확인
-    try {
-        const membersSnapshot = await firebase.firestore().collection('members').limit(10).get();
-        console.log('members 컬렉션 문서 ID들:');
-        membersSnapshot.docs.forEach(doc => {
-            console.log('- 문서 ID:', doc.id, '데이터:', doc.data());
-        });
-    } catch (e) {
-        console.error('members 컬렉션 조회 오류:', e);
-    }
-    
-    console.log('=== 디버깅 완료 ===');
-}
-
 // 주문 취소 함수
 async function cancelOrder(orderId) {
     console.log('=== 주문 취소 시작 ===');
     console.log('주문 ID:', orderId);
-    
-    // 먼저 사용자 정보 디버깅
-    await debugUserInfo();
     
     if (!orderId) {
         alert('주문 ID가 없습니다.');
@@ -4014,6 +4097,9 @@ async function cancelOrder(orderId) {
                 }
             }
             renderOrderList();
+            if (typeof renderOrderSteps === 'function') {
+                renderOrderSteps(window._mypageOrders || []);
+            }
         }
         
         // TRIX 환불인 경우 잔액 새로고침
@@ -4083,7 +4169,6 @@ function handleMaxWithdraw() {
 // 전역 함수로 노출
 window.showSection = showSection;
 window.cancelOrder = cancelOrder;
-window.debugUserInfo = debugUserInfo;
 window.showNotificationPanel = showNotificationPanel;
 window.showWishlistSection = showWishlistSection;
 window.showCartSection = showCartSection;

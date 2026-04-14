@@ -749,6 +749,28 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(74, 95, 193, 0.12);
+    border-radius: 8px;
+    padding: 4px;
+    margin: -4px;
+    transition: opacity 0.2s, transform 0.15s;
+}
+
+.step-item:focus-visible {
+    outline: 2px solid var(--primary-color, #4A5FC1);
+    outline-offset: 2px;
+}
+
+.step-item:active {
+    transform: scale(0.98);
+}
+
+.step-item.is-active .step-number {
+    border-color: var(--primary-color, #4A5FC1);
+    color: var(--primary-color, #4A5FC1);
+    background: rgba(74, 95, 193, 0.08);
 }
 
 .step-number {
@@ -769,6 +791,21 @@
     font-size: 13px;
     color: #666;
     font-weight: 600;
+}
+
+.order-step-filter-hint {
+    display: none;
+    font-size: 13px;
+    color: #555;
+    margin: 0 0 4px;
+    padding: 8px 12px;
+    background: #f5f7ff;
+    border-radius: 6px;
+    border: 1px solid #e0e6ff;
+}
+
+.order-step-filter-hint:not([hidden]) {
+    display: block;
 }
 
 .step-arrow {
@@ -1807,6 +1844,12 @@
 
 .order-detail-status {
     color: #4A5FC1;
+}
+
+.order-detail-value.order-tracking-number {
+    white-space: normal;
+    word-break: break-all;
+    font-variant-numeric: tabular-nums;
 }
 
 /* 관심상품/장바구니 아코디언 - 제목 말줄임, 펼침 시 한 줄씩 표시 */
