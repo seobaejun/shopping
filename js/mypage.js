@@ -465,7 +465,7 @@ function bindTokenModals() {
     var tokenAccountEl = document.getElementById('tokenAccountNumber');
     if (btnCopyTokenAccount && tokenAccountEl) {
         btnCopyTokenAccount.addEventListener('click', function () {
-            var account = (tokenAccountEl.textContent || '').trim() || '455801-04-417746';
+            var account = (tokenAccountEl.textContent || '').trim() || '670-910020-22804';
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(account).then(function () {
                     alert('계좌번호가 복사되었습니다.');
