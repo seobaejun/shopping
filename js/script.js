@@ -348,6 +348,25 @@ let mainProductCurrentPage = 1;
 const MAIN_PAGINATION_VISIBLE = 9;
 const MAIN_PAGINATION_SKIP = 10;
 
+/** URL ?page= 와 메인 목록 페이지 동기화 (뒤로가기 시 동일 페이지 유지) */
+function applyMainPageFromUrl() {
+    var list = (productsData.all && productsData.all.length) ? productsData.all : [];
+    var totalPages = Math.max(1, Math.ceil(list.length / MAIN_ITEMS_PER_PAGE));
+    var p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
+    if (isNaN(p) || p < 1) p = 1;
+    if (p > totalPages) p = totalPages;
+    mainProductCurrentPage = p;
+}
+
+function replaceMainPageUrlWithPage(page) {
+    try {
+        var url = new URL(window.location.href);
+        if (page <= 1) url.searchParams.delete('page');
+        else url.searchParams.set('page', String(page));
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    } catch (e) { /* ignore */ }
+}
+
 function getMainPaginationVisible() {
     var w = typeof window !== 'undefined' ? window.innerWidth : 1024;
     if (w <= 360) return 4;
@@ -412,6 +431,7 @@ function renderMainPagination(totalItems) {
         else if (btn.classList.contains('main-pagination-skip-next')) { mainProductCurrentPage = Math.min(totalPages, mainProductCurrentPage + MAIN_PAGINATION_SKIP); }
         else if (btn.dataset.page) { mainProductCurrentPage = parseInt(btn.dataset.page, 10); }
         else return;
+        replaceMainPageUrlWithPage(mainProductCurrentPage);
         renderProducts();
         var el = document.getElementById('main-products');
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -828,6 +848,7 @@ async function loadProductsFromFirestore() {
             console.log('📌 상품 ID 샘플(첫 5개):', window.__mainProductDocIds.slice(0, 5));
         }
 
+        applyMainPageFromUrl();
         // 상품 렌더링 다시 실행
         renderProducts();
 
@@ -1207,6 +1228,14 @@ if (document.readyState === 'loading') {
 } else {
     initTopMenuNavigation();
 }
+
+// bfcache로 메인 복원 시 URL ?page= 과 그리드 동기화
+window.addEventListener('pageshow', function (ev) {
+    if (!ev.persisted) return;
+    if (!document.getElementById('mainProductGrid')) return;
+    applyMainPageFromUrl();
+    renderProducts();
+});
 
 // 전역으로 노출
 window.handleLogout = handleLogout;

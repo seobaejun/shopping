@@ -85,6 +85,26 @@ function getUrlParameter(name, defaultValue = null) {
     return urlParams.get(name) || defaultValue;
 }
 
+/** ?page= 쿼리와 목록 페이지 동기화 (상세에서 뒤로가기 시 동일 페이지 유지) */
+function replaceListPageUrl(page) {
+    try {
+        var url = new URL(window.location.href);
+        if (page <= 1) url.searchParams.delete('page');
+        else url.searchParams.set('page', String(page));
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    } catch (e) { /* ignore */ }
+}
+
+function applyListPageFromUrlAfterProductsLoaded() {
+    itemsPerPage = getItemsPerPageForView();
+    var totalPages = Math.max(1, Math.ceil(currentProducts.length / itemsPerPage));
+    var p = parseInt(new URLSearchParams(window.location.search || '').get('page') || '1', 10);
+    if (isNaN(p) || p < 1) p = 1;
+    if (p > totalPages) p = totalPages;
+    currentPage = p;
+    replaceListPageUrl(currentPage);
+}
+
 // 페이지 초기화
 async function initPage() {
     console.log('[products-list] initPage 시작');
@@ -442,6 +462,7 @@ async function loadProducts() {
             console.warn('[products-list] Firebase 없음, currentProducts=[]');
             currentProducts = [];
             sortProducts();
+            applyListPageFromUrlAfterProductsLoaded();
             renderProducts();
             updatePagination();
             listElements.totalCount.textContent = currentProducts.length;
@@ -501,6 +522,7 @@ async function loadProducts() {
             }
         console.log('[products-list] currentProducts 개수=', currentProducts.length);
         sortProducts();
+        applyListPageFromUrlAfterProductsLoaded();
         
         // 상품 렌더링
         renderProducts();
@@ -520,6 +542,7 @@ async function loadProducts() {
         currentProducts = [];
         
         sortProducts();
+        applyListPageFromUrlAfterProductsLoaded();
         renderProducts();
         updatePagination();
         listElements.totalCount.textContent = currentProducts.length;
@@ -775,6 +798,7 @@ function initEventListeners() {
     listElements.sortSelect.addEventListener('change', (e) => {
         currentSort = e.target.value;
         currentPage = 1;
+        replaceListPageUrl(1);
         loadProducts();
     });
     
@@ -786,6 +810,7 @@ function initEventListeners() {
             btn.classList.add('active');
             listElements.productGrid.className = `product-grid ${viewType}-view`;
             currentPage = 1;
+            replaceListPageUrl(1);
             renderProducts();
             updatePagination();
         });
@@ -803,6 +828,7 @@ function initEventListeners() {
         else if (btn.classList.contains('skip-next')) currentPage = Math.min(totalPages, currentPage + PAGINATION_SKIP);
         else if (btn.classList.contains('page-num') && btn.dataset.page) currentPage = parseInt(btn.dataset.page, 10);
         else return;
+        replaceListPageUrl(currentPage);
         renderProducts();
         updatePagination();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1028,12 +1054,8 @@ window.addEventListener('pageshow', function (event) {
     if (currentType !== null && currentType.trim() === '') currentType = null;
     if (currentCategory) currentType = null;
     else if (!currentType) currentType = 'hit';
-    currentPage = 1;
     (async function () {
         await loadProducts();
-        sortProducts();
-        renderProducts();
-        updatePagination();
         if (listElements.totalCount) listElements.totalCount.textContent = currentProducts.length;
         if (currentCategory && typeof updateBreadcrumbProductCount === 'function') updateBreadcrumbProductCount(currentProducts.length);
     })();
