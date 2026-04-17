@@ -512,6 +512,30 @@ body {
     box-shadow: 0 0 0 2px rgba(74, 95, 193, 0.1) !important;
 }
 
+/* 배송 진행 등록: 배송상태를 지급상태 배지처럼 색상 구분 */
+.delivery-status-select {
+    font-weight: 600 !important;
+    border-width: 1px !important;
+}
+
+.delivery-status-select.delivery-status-ready {
+    background: #fff3cd !important;
+    color: #856404 !important;
+    border-color: #ffeeba !important;
+}
+
+.delivery-status-select.delivery-status-shipping {
+    background: #d1ecf1 !important;
+    color: #0c5460 !important;
+    border-color: #bee5eb !important;
+}
+
+.delivery-status-select.delivery-status-complete {
+    background: #d4edda !important;
+    color: #155724 !important;
+    border-color: #c3e6cb !important;
+}
+
 /* 버튼 크기 */
 .btn-sm {
     padding: 6px 12px;

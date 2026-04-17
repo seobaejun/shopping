@@ -1589,7 +1589,10 @@ function _deliveryRegisterBuildRows(list, memberMap, rowStart) {
         var ds = order.deliveryStatus || 'ready';
         var company = _orderEscapeHtml(order.deliveryCompany || '');
         var tracking = _orderEscapeHtml(order.trackingNumber || '');
-        var statusSelectHtml = '<select class="form-control delivery-status-select" data-order-id="' + _orderEscapeHtml(orderId) + '" style="min-width:100px;">' +
+        var statusClass = ds === 'complete'
+            ? 'delivery-status-complete'
+            : (ds === 'shipping' ? 'delivery-status-shipping' : 'delivery-status-ready');
+        var statusSelectHtml = '<select class="form-control delivery-status-select ' + statusClass + '" data-order-id="' + _orderEscapeHtml(orderId) + '" style="min-width:100px;">' +
             '<option value="ready"' + (ds === 'ready' ? ' selected' : '') + '>배송준비</option>' +
             '<option value="shipping"' + (ds === 'shipping' ? ' selected' : '') + '>배송중</option>' +
             '<option value="complete"' + (ds === 'complete' ? ' selected' : '') + '>배송완료</option></select>';
@@ -1857,6 +1860,25 @@ document.addEventListener('submit', async function (e) {
         return false;
     }
 }, true);
+
+function applyDeliveryStatusSelectColor(selectEl) {
+    if (!selectEl) return;
+    selectEl.classList.remove('delivery-status-ready', 'delivery-status-shipping', 'delivery-status-complete');
+    var value = selectEl.value || 'ready';
+    if (value === 'complete') {
+        selectEl.classList.add('delivery-status-complete');
+    } else if (value === 'shipping') {
+        selectEl.classList.add('delivery-status-shipping');
+    } else {
+        selectEl.classList.add('delivery-status-ready');
+    }
+}
+
+document.addEventListener('change', function (e) {
+    var selectEl = e.target && e.target.closest ? e.target.closest('.delivery-status-select') : null;
+    if (!selectEl) return;
+    applyDeliveryStatusSelectColor(selectEl);
+});
 
 // 테이블 편집/삭제 버튼 (구매요청 검색/취소는 위임으로 항상 동작)
 document.addEventListener('click', (e) => {
