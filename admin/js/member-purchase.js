@@ -204,7 +204,8 @@ window.searchMemberPurchase = async function() {
             }
         }
         console.log('✅ 구매 내역:', purchases.length, '건, 지급완료 지원금:', paidSupport, 'byOrderId 키 수:', Object.keys(paidSupportByOrderId).length);
-        displayPurchaseResults(member, purchases, paidSupport, paidSupportByOrderId);
+        var tokenDeposits = await getMemberTokenPurchases(member, startDate, endDate, firebaseAdmin);
+        displayPurchaseResults(member, purchases, paidSupport, paidSupportByOrderId, tokenDeposits);
         
     } catch (error) {
         console.error('❌ 구매 정보 검색 오류:', error);
@@ -299,8 +300,91 @@ async function getMemberPurchases(memberId, startDate, endDate, firebaseAdminArg
     }
 }
 
+function getTokenDepositCreatedAtMs(createdAt) {
+    if (!createdAt) return null;
+    try {
+        if (typeof createdAt.toDate === 'function') {
+            var d = createdAt.toDate();
+            if (d && !isNaN(d.getTime())) return d.getTime();
+        }
+        if (createdAt.seconds != null) {
+            var s = createdAt.seconds;
+            if (typeof s === 'object' && typeof s.valueOf === 'function') s = s.valueOf();
+            var sec = typeof s === 'number' ? s : parseInt(s, 10);
+            if (!isNaN(sec)) return sec * 1000;
+        }
+    } catch (e) { /* ignore */ }
+    return null;
+}
+
+/** 회원의 토큰 구매(입금) 내역 — tokenDeposits, type import 제외, 날짜 필터 동일 */
+async function getMemberTokenPurchases(member, startDate, endDate, firebaseAdminArg) {
+    try {
+        var db = (firebaseAdminArg && firebaseAdminArg.db) ? firebaseAdminArg.db : (window.db || (window.firebaseAdmin && window.firebaseAdmin.db));
+        if (!db || !member) {
+            return [];
+        }
+        var startMs = startDate ? new Date(startDate + 'T00:00:00').getTime() : null;
+        var endMs = endDate ? new Date(endDate + 'T23:59:59.999').getTime() : null;
+        var merged = {};
+
+        function mergeSnap(snap) {
+            snap.docs.forEach(function (doc) {
+                var data = doc.data();
+                if (data.type === 'import') return;
+                var ts = getTokenDepositCreatedAtMs(data.createdAt);
+                if (startMs != null && (ts == null || ts < startMs)) return;
+                if (endMs != null && (ts == null || ts > endMs)) return;
+                merged[doc.id] = Object.assign({ id: doc.id }, data);
+            });
+        }
+
+        var uidStr = member.userId != null ? String(member.userId).trim() : '';
+        var memberDocId = member.id != null ? String(member.id).trim() : '';
+
+        try {
+            if (uidStr) {
+                var q1 = await db.collection('tokenDeposits').where('userId', '==', uidStr).get();
+                mergeSnap(q1);
+                var n = parseInt(uidStr, 10);
+                if (!isNaN(n) && String(n) === uidStr && /^\d+$/.test(uidStr)) {
+                    var q1n = await db.collection('tokenDeposits').where('userId', '==', n).get();
+                    mergeSnap(q1n);
+                }
+            }
+        } catch (e1) {
+            console.warn('tokenDeposits userId 조회 실패:', e1);
+        }
+        try {
+            if (memberDocId) {
+                var q2 = await db.collection('tokenDeposits').where('memberId', '==', memberDocId).get();
+                mergeSnap(q2);
+            }
+        } catch (e2) {
+            console.warn('tokenDeposits memberId 조회 실패:', e2);
+        }
+
+        var list = Object.keys(merged).map(function (k) { return merged[k]; });
+        list.sort(function (a, b) {
+            var ta = getTokenDepositCreatedAtMs(a.createdAt) || 0;
+            var tb = getTokenDepositCreatedAtMs(b.createdAt) || 0;
+            return tb - ta;
+        });
+        console.log('✅ 토큰 구매(입금) 내역 ' + list.length + '건');
+        return list;
+    } catch (err) {
+        console.error('❌ 토큰 구매 내역 조회 오류:', err);
+        return [];
+    }
+}
+
+function tokenDepositStatusLabel(status) {
+    var map = { pending: '대기', approved: '승인', cancelled: '취소' };
+    return map[status] || status || '-';
+}
+
 // 검색 결과 표시. totalPaidSupport=지급완료 지원금 합계, paidSupportByOrderId=행별 지급완료 지원금 맵
-function displayPurchaseResults(member, purchases, totalPaidSupport, paidSupportByOrderId) {
+function displayPurchaseResults(member, purchases, totalPaidSupport, paidSupportByOrderId, tokenDeposits) {
     paidSupportByOrderId = paidSupportByOrderId || {};
     const resultsContainer = document.getElementById('purchaseResultsContainer');
     if (resultsContainer) {
@@ -327,12 +411,19 @@ function displayPurchaseResults(member, purchases, totalPaidSupport, paidSupport
     const totalSupport = (totalPaidSupport != null && totalPaidSupport !== undefined)
         ? Number(totalPaidSupport)
         : purchases.reduce((sum, p) => sum + (p.supportAmount || 0), 0);
+    const totalTokenPurchaseAmount = (tokenDeposits || []).reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+    const totalTokenPurchaseQuantity = (tokenDeposits || []).reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
     
     document.getElementById('totalPurchaseCount').textContent = totalCount.toLocaleString();
     document.getElementById('totalPurchaseAmount').textContent = totalAmount.toLocaleString();
     document.getElementById('totalSupportAmount').textContent = formatTrix(totalSupport);
+    var totalTokenPurchaseAmountEl = document.getElementById('totalTokenPurchaseAmount');
+    if (totalTokenPurchaseAmountEl) totalTokenPurchaseAmountEl.textContent = totalTokenPurchaseAmount.toLocaleString();
+    var totalTokenPurchaseQuantityEl = document.getElementById('totalTokenPurchaseQuantity');
+    if (totalTokenPurchaseQuantityEl) totalTokenPurchaseQuantityEl.textContent = totalTokenPurchaseQuantity.toLocaleString();
     
     renderPurchaseDetailTable(purchases, paidSupportByOrderId);
+    renderTokenPurchaseDetailTable(tokenDeposits || []);
 }
 
 // 구매 상세 내역 테이블 렌더링. 지원금 컬럼은 지급완료된 금액만 표시(paidSupportByOrderId[orderId], 없으면 0)
@@ -394,6 +485,43 @@ function renderPurchaseDetailTable(purchases, paidSupportByOrderId) {
     tbody.innerHTML = tableHTML;
 }
 
+function renderTokenPurchaseDetailTable(deposits) {
+    var tbody = document.getElementById('tokenPurchaseDetailBody');
+    if (!tbody) {
+        return;
+    }
+    if (!deposits || deposits.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-message">토큰 구매 내역이 없습니다.</td></tr>';
+        return;
+    }
+    var rows = deposits.map(function (d, index) {
+        var dateStr = '-';
+        var src = d.createdAt;
+        if (src) {
+            if (src.toDate) {
+                dateStr = src.toDate().toLocaleString('ko-KR');
+            } else if (src.seconds) {
+                dateStr = new Date(src.seconds * 1000).toLocaleString('ko-KR');
+            }
+        }
+        var qty = Number(d.quantity) || 0;
+        var amount = Number(d.amount) || 0;
+        var st = tokenDepositStatusLabel(d.status);
+        var statusRaw = (d.status || '').toString().toLowerCase();
+        var statusClass = statusRaw === 'approved' ? 'badge-success' :
+            statusRaw === 'pending' ? 'badge-warning' :
+            statusRaw === 'cancelled' ? 'badge-secondary' : 'badge-danger';
+        return '<tr>' +
+            '<td>' + (index + 1) + '</td>' +
+            '<td>' + dateStr + '</td>' +
+            '<td>' + qty.toLocaleString() + '</td>' +
+            '<td>' + amount.toLocaleString() + '원</td>' +
+            '<td><span class="badge ' + statusClass + '">' + st + '</span></td>' +
+            '</tr>';
+    }).join('');
+    tbody.innerHTML = rows;
+}
+
 // 검색 초기화
 window.resetMemberPurchase = function() {
     document.getElementById('purchaseSearchKeyword').value = '';
@@ -405,6 +533,12 @@ window.resetMemberPurchase = function() {
     if (resultsContainer) {
         resultsContainer.style.display = 'none';
     }
+    var tokenTbody = document.getElementById('tokenPurchaseDetailBody');
+    if (tokenTbody) tokenTbody.innerHTML = '';
+    var totalTokenPurchaseAmountEl = document.getElementById('totalTokenPurchaseAmount');
+    if (totalTokenPurchaseAmountEl) totalTokenPurchaseAmountEl.textContent = '0';
+    var totalTokenPurchaseQuantityEl = document.getElementById('totalTokenPurchaseQuantity');
+    if (totalTokenPurchaseQuantityEl) totalTokenPurchaseQuantityEl.textContent = '0';
 };
 
 // 페이지 진입 시 초기화 (loadPageData에서 호출)
@@ -414,6 +548,7 @@ window.initMemberPurchasePage = function() {
     const endDateInput = document.getElementById('purchaseEndDate');
     const resultsContainer = document.getElementById('purchaseResultsContainer');
     const detailBody = document.getElementById('purchaseDetailBody');
+    const tokenDetailBody = document.getElementById('tokenPurchaseDetailBody');
 
     if (keywordInput) keywordInput.value = '';
     if (startDateInput) {
@@ -424,6 +559,11 @@ window.initMemberPurchasePage = function() {
     if (endDateInput) endDateInput.value = new Date().toISOString().split('T')[0];
     if (resultsContainer) resultsContainer.style.display = 'none';
     if (detailBody) detailBody.innerHTML = '';
+    if (tokenDetailBody) tokenDetailBody.innerHTML = '';
+    var totalTokenPurchaseAmountEl = document.getElementById('totalTokenPurchaseAmount');
+    if (totalTokenPurchaseAmountEl) totalTokenPurchaseAmountEl.textContent = '0';
+    var totalTokenPurchaseQuantityEl = document.getElementById('totalTokenPurchaseQuantity');
+    if (totalTokenPurchaseQuantityEl) totalTokenPurchaseQuantityEl.textContent = '0';
 };
 
 // 페이지 로드 시 날짜 초기화

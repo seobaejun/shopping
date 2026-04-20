@@ -576,4 +576,9 @@ body {
     color: #667eea !important;
 }
 
+@media (max-width: 1200px) {
+    #mdLookupStatsPanel {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
 

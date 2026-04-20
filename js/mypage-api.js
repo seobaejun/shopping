@@ -151,7 +151,7 @@
 
     /**
      * 내 토큰 입금 내역 조회 (tokenDeposits 컬렉션에서 본인 것만)
-     * @returns {Promise<Array>} { amount, status, createdAt }[]
+     * @returns {Promise<Array>} { id, quantity, amount, status, type, createdAt, date }[]
      */
     function getMyTokenDeposits() {
         return getCurrentMemberId().then(function (ids) {
@@ -167,8 +167,10 @@
                             var data = d.data();
                             list.push({ 
                                 id: d.id, 
+                                quantity: data.quantity != null ? Number(data.quantity) : 0,
                                 amount: data.amount || 0,
                                 status: data.status || 'pending',
+                                type: data.type || '',
                                 createdAt: data.createdAt,
                                 date: data.date
                             });

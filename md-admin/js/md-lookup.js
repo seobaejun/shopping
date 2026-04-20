@@ -5,11 +5,16 @@
     'use strict';
 
     var PAGE_SIZE = 10;
+    var TOKEN_PURCHASE_PAGE_SIZE = 20;
 
     window.mdLookupMembers = [];
     window.mdLookupCurrentPage = 1;
     window.mdLookupHasSearched = false;
     window.mdLookupLastCode = '';
+    window.mdLookupTokenDeposits = [];
+    window.mdLookupTokenDepositsLoading = false;
+    window.mdLookupTokenStatLine = '';
+    window.mdLookupTokenDepositPage = 1;
 
     function escapeHtml(str) {
         if (str == null || str === '') return '';
@@ -155,15 +160,21 @@
         opts = opts || {};
         var elC = document.getElementById('mdLookupStatCount');
         var elP = document.getElementById('mdLookupStatPurchase');
+        var elT = document.getElementById('mdLookupStatTokenPurchase');
         var elS = document.getElementById('mdLookupStatSupport');
-        if (!elC || !elP || !elS) return;
         if (opts.loading) {
-            elC.textContent = elP.textContent = elS.textContent = '조회 중…';
+            if (elC) elC.textContent = '조회 중…';
+            if (elP) elP.textContent = '조회 중…';
+            if (elS) elS.textContent = '조회 중…';
+            if (elT) elT.textContent = '조회 중…';
             return;
         }
         members = members || [];
         if (!window.mdLookupHasSearched && members.length === 0) {
-            elC.textContent = elP.textContent = elS.textContent = '—';
+            if (elC) elC.textContent = '—';
+            if (elP) elP.textContent = '—';
+            if (elS) elS.textContent = '—';
+            if (elT) elT.textContent = '—';
             return;
         }
         var n = members.length;
@@ -173,9 +184,180 @@
             totalPurchase += Number(m.purchaseAmount || 0);
             totalSupport += Number(m.supportAmount || 0);
         });
-        elC.textContent = n.toLocaleString() + '명';
-        elP.textContent = totalPurchase.toLocaleString() + '원';
-        elS.textContent = formatTrixVal(totalSupport) + ' trix';
+        if (elC) elC.textContent = n.toLocaleString() + '명';
+        if (elP) elP.textContent = totalPurchase.toLocaleString() + '원';
+        if (elS) elS.textContent = formatTrixVal(totalSupport) + ' trix';
+        if (elT) {
+            if (!window.mdLookupHasSearched) elT.textContent = '—';
+            else if (window.mdLookupTokenDepositsLoading) elT.textContent = '조회 중…';
+            else if (window.mdLookupTokenStatLine) elT.textContent = window.mdLookupTokenStatLine;
+            else elT.textContent = members.length === 0 ? '—' : '0원 · 0 trix';
+        }
+    }
+
+    function chunkArrayForInQuery(arr, size) {
+        var out = [];
+        for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+        return out;
+    }
+
+    /** Firestore에 문자열/숫자로 나뉘어 저장된 userId 모두 in 쿼리에 넣기 위한 값 목록 */
+    function expandUserIdsForTokenDepositQuery(members) {
+        var seen = {};
+        var vals = [];
+        function add(v) {
+            if (v == null || v === '') return;
+            var key = typeof v === 'number' ? 'n:' + v : 's:' + String(v);
+            if (seen[key]) return;
+            seen[key] = true;
+            vals.push(v);
+        }
+        (members || []).forEach(function (m) {
+            if (m.userId == null || m.userId === '') return;
+            var s = String(m.userId).trim();
+            if (!s) return;
+            add(s);
+            var n = parseInt(s, 10);
+            if (!isNaN(n) && String(n) === s && /^\d+$/.test(s)) add(n);
+        });
+        return vals;
+    }
+
+    async function fetchTokenPurchaseDepositsForMembers(members) {
+        if (!window.db || !members || members.length === 0) return [];
+        var memberSet = {};
+        members.forEach(function (m) {
+            if (m.id != null && String(m.id).trim()) memberSet[String(m.id).trim()] = true;
+        });
+        var userIdsExpanded = expandUserIdsForTokenDepositQuery(members);
+        var memberIds = Object.keys(memberSet);
+        var merged = {};
+
+        async function queryIn(field, ids) {
+            if (!ids || !ids.length) return;
+            var parts = chunkArrayForInQuery(ids, 10);
+            for (var pi = 0; pi < parts.length; pi++) {
+                try {
+                    var snap = await window.db.collection('tokenDeposits').where(field, 'in', parts[pi]).get();
+                    snap.docs.forEach(function (doc) {
+                        var data = doc.data();
+                        if (data.type === 'import') return;
+                        merged[doc.id] = Object.assign({ id: doc.id }, data);
+                    });
+                } catch (qErr) {
+                    console.warn('MD조회 tokenDeposits 조회 실패 (' + field + '):', qErr);
+                }
+            }
+        }
+        try {
+            if (userIdsExpanded.length) await queryIn('userId', userIdsExpanded);
+            if (memberIds.length) await queryIn('memberId', memberIds);
+        } catch (err) {
+            console.warn('MD조회 토큰 입금 합산 조회 오류:', err);
+        }
+
+        var list = Object.keys(merged).map(function (k) { return merged[k]; });
+        list.sort(function (a, b) {
+            return (toSecondsFromFirestoreValue(b.createdAt) || 0) - (toSecondsFromFirestoreValue(a.createdAt) || 0);
+        });
+        return list;
+    }
+
+    function mdLookupDepositStatusLabel(status) {
+        var map = { pending: '대기', approved: '승인', cancelled: '취소' };
+        return map[status] || status || '-';
+    }
+
+    function buildTokenPurchasePaginationHtml(page, totalPages) {
+        var html = '<button type="button" class="page-btn" data-md-token-page="' + (page - 1) + '" ' + (page === 1 ? 'disabled' : '') + '><i class="fas fa-chevron-left"></i></button>';
+        var i;
+        for (i = 1; i <= totalPages; i++) {
+            html += '<button type="button" class="page-num' + (i === page ? ' active' : '') + '" data-md-token-page="' + i + '">' + i + '</button>';
+        }
+        html += '<button type="button" class="page-btn" data-md-token-page="' + (page + 1) + '" ' + (page === totalPages ? 'disabled' : '') + '><i class="fas fa-chevron-right"></i></button>';
+        return html;
+    }
+
+    function renderMdLookupTokenPurchaseTable() {
+        var tbody = document.getElementById('mdLookupTokenPurchaseBody');
+        var pagEl = document.getElementById('mdLookupTokenPurchasePagination');
+        if (!tbody) return;
+
+        if (!window.mdLookupHasSearched) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-message">MD 코드를 검색하면 내역이 표시됩니다.</td></tr>';
+            if (pagEl) pagEl.innerHTML = '';
+            return;
+        }
+
+        if (!window.mdLookupMembers || window.mdLookupMembers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-message">조회된 회원이 없습니다.</td></tr>';
+            if (pagEl) pagEl.innerHTML = '';
+            return;
+        }
+
+        if (window.mdLookupTokenDepositsLoading) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-message">토큰 구매 내역을 불러오는 중…</td></tr>';
+            if (pagEl) pagEl.innerHTML = '';
+            return;
+        }
+
+        var rows = window.mdLookupTokenDeposits || [];
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-message">토큰 구매 내역이 없습니다.</td></tr>';
+            if (pagEl) pagEl.innerHTML = '';
+            return;
+        }
+
+        var totalPages = Math.max(1, Math.ceil(rows.length / TOKEN_PURCHASE_PAGE_SIZE));
+        var page = Math.min(Math.max(1, window.mdLookupTokenDepositPage || 1), totalPages);
+        window.mdLookupTokenDepositPage = page;
+        var start = (page - 1) * TOKEN_PURCHASE_PAGE_SIZE;
+        var slice = rows.slice(start, start + TOKEN_PURCHASE_PAGE_SIZE);
+
+        tbody.innerHTML = slice.map(function (d) {
+            var dateStr = formatFirestoreDateLike(d.createdAt) || '-';
+            var userName = escapeHtml(d.userName || '');
+            var userId = escapeHtml(String(d.userId || ''));
+            var memberCell = userName ? (userName + ' (' + userId + ')') : userId;
+            var qty = Number(d.quantity) || 0;
+            var amount = Number(d.amount) || 0;
+            var st = escapeHtml(mdLookupDepositStatusLabel(d.status));
+            return '<tr><td>' + dateStr + '</td><td>' + memberCell + '</td><td>' + qty.toLocaleString() + '</td><td>' + amount.toLocaleString() + '원</td><td>' + st + '</td></tr>';
+        }).join('');
+
+        if (pagEl) pagEl.innerHTML = buildTokenPurchasePaginationHtml(page, totalPages);
+    }
+
+    function loadMdLookupTokenPurchasesForCurrentMembers() {
+        window.mdLookupTokenDepositPage = 1;
+        window.mdLookupTokenDepositsLoading = true;
+        window.mdLookupTokenStatLine = '';
+        window.mdLookupTokenDeposits = [];
+        renderMdLookupTokenPurchaseTable();
+        updateMdLookupStatsPanel(window.mdLookupMembers || []);
+
+        return fetchTokenPurchaseDepositsForMembers(window.mdLookupMembers)
+            .then(function (list) {
+                window.mdLookupTokenDeposits = list || [];
+                var won = 0;
+                var trix = 0;
+                (list || []).forEach(function (d) {
+                    if ((d.status || '') !== 'approved') return;
+                    won += Number(d.amount) || 0;
+                    trix += Number(d.quantity) || 0;
+                });
+                window.mdLookupTokenStatLine = won.toLocaleString() + '원 · ' + trix.toLocaleString() + ' trix';
+            })
+            .catch(function (err) {
+                console.error('MD조회 토큰 구매 내역 로드 오류:', err);
+                window.mdLookupTokenDeposits = [];
+                window.mdLookupTokenStatLine = '조회 실패';
+            })
+            .then(function () {
+                window.mdLookupTokenDepositsLoading = false;
+                renderMdLookupTokenPurchaseTable();
+                updateMdLookupStatsPanel(window.mdLookupMembers || []);
+            });
     }
 
     function buildPaginationHtml(page, totalPages) {
@@ -254,7 +436,12 @@
         window.mdLookupCurrentPage = 1;
         window.mdLookupHasSearched = false;
         window.mdLookupLastCode = '';
+        window.mdLookupTokenDeposits = [];
+        window.mdLookupTokenDepositsLoading = false;
+        window.mdLookupTokenStatLine = '';
+        window.mdLookupTokenDepositPage = 1;
         renderMdLookupTable();
+        renderMdLookupTokenPurchaseTable();
         window.initMdLookupPage();
     };
 
@@ -266,6 +453,16 @@
         if (isNaN(p) || p < 1 || p > totalPages) return;
         window.mdLookupCurrentPage = p;
         renderMdLookupTable();
+    };
+
+    window.changeMdLookupTokenPurchasePage = function (page) {
+        if (!isMdLookupAdminOnlyOk()) return;
+        var rows = window.mdLookupTokenDeposits || [];
+        var totalPages = Math.max(1, Math.ceil(rows.length / TOKEN_PURCHASE_PAGE_SIZE));
+        var p = parseInt(page, 10);
+        if (isNaN(p) || p < 1 || p > totalPages) return;
+        window.mdLookupTokenDepositPage = p;
+        renderMdLookupTokenPurchaseTable();
     };
 
     function isMdLookupAdminOnlyOk() {
@@ -296,6 +493,10 @@
         if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="empty-message">조회 중...</td></tr>';
         var pagEl = document.getElementById('mdLookupPagination');
         if (pagEl) pagEl.innerHTML = '';
+        var tokBody = document.getElementById('mdLookupTokenPurchaseBody');
+        if (tokBody) tokBody.innerHTML = '<tr><td colspan="5" class="empty-message">조회 중...</td></tr>';
+        var tokPag = document.getElementById('mdLookupTokenPurchasePagination');
+        if (tokPag) tokPag.innerHTML = '';
         updateMdLookupStatsPanel(null, { loading: true });
 
         try {
@@ -327,27 +528,48 @@
             window.mdLookupCurrentPage = 1;
             window.mdLookupHasSearched = true;
             window.mdLookupLastCode = code;
+            window.mdLookupTokenDepositsLoading = true;
+            window.mdLookupTokenStatLine = '';
+            window.mdLookupTokenDeposits = [];
+            window.mdLookupTokenDepositPage = 1;
 
             var sub = document.getElementById('mdLookupSubtitle');
             if (sub) sub.textContent = 'MD 코드 ' + code + '에 소속된 회원입니다. (4자리 MD는 하위 5자리 코드 회원 포함)';
 
             renderMdLookupTable();
+            loadMdLookupTokenPurchasesForCurrentMembers();
         } catch (err) {
             console.error('MD조회 오류:', err);
             alert(err && err.message ? err.message : String(err));
             window.mdLookupMembers = [];
             window.mdLookupHasSearched = true;
+            window.mdLookupTokenDeposits = [];
+            window.mdLookupTokenDepositsLoading = false;
+            window.mdLookupTokenStatLine = '';
+            window.mdLookupTokenDepositPage = 1;
             renderMdLookupTable();
+            renderMdLookupTokenPurchaseTable();
         }
     };
 
     document.body.addEventListener('click', function (e) {
-        var btn = e.target && e.target.closest && e.target.closest('[data-md-lookup-page]');
-        if (!btn) return;
-        var p = btn.getAttribute('data-md-lookup-page');
-        if (p == null) return;
-        e.preventDefault();
-        window.changeMdLookupPage(p);
+        var btnTok = e.target && e.target.closest && e.target.closest('[data-md-token-page]');
+        if (btnTok) {
+            var p2 = btnTok.getAttribute('data-md-token-page');
+            if (p2 != null && !btnTok.disabled) {
+                e.preventDefault();
+                window.changeMdLookupTokenPurchasePage(p2);
+            }
+            return;
+        }
+        var btnLookup = e.target && e.target.closest && e.target.closest('[data-md-lookup-page]');
+        if (btnLookup) {
+            var p1 = btnLookup.getAttribute('data-md-lookup-page');
+            if (p1 != null && !btnLookup.disabled) {
+                e.preventDefault();
+                window.changeMdLookupPage(p1);
+            }
+        }
     });
 
     console.log('md-lookup.js 로드됨');

@@ -11,10 +11,12 @@
     const MAX_PAGINATION_BUTTONS = 9;
     var allOrdersData = [];
     var allDepositsData = [];
+    var allTokenPurchaseHistoryData = [];
     var allWithdrawalsData = [];
     var tokenMemberMap = {};
     var currentOrdersPage = 1;
     var currentDepositsPage = 1;
+    var currentTokenPurchaseHistoryPage = 1;
     var currentWithdrawalsPage = 1;
 
 
@@ -252,6 +254,33 @@
         container.innerHTML = html;
     }
 
+    function isTokenPurchaseDeposit(d) {
+        return d && d.type !== 'import';
+    }
+
+    function renderTokenPurchaseHistoryTable() {
+        var tbody = document.getElementById('tokenPurchaseHistoryTableBody');
+        if (!tbody) return;
+        var total = allTokenPurchaseHistoryData.length;
+        if (total === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-message">토큰 구매 내역이 없습니다.</td></tr>';
+            renderTokenPagination(0, 1, 'tokenPurchaseHistoryPagination', 'goToTokenPurchaseHistoryPage');
+            return;
+        }
+        var start = (currentTokenPurchaseHistoryPage - 1) * TOKEN_HISTORY_PER_PAGE;
+        var slice = allTokenPurchaseHistoryData.slice(start, start + TOKEN_HISTORY_PER_PAGE);
+        tbody.innerHTML = slice.map(function (d) {
+            var dateStr = formatDate(d.createdAt);
+            var userName = escapeHtml(d.userName || d.userId || '-');
+            var userId = escapeHtml(String(d.userId || ''));
+            var qty = Number(d.quantity) || 0;
+            var amount = Number(d.amount) || 0;
+            var status = depositStatusLabel(d.status);
+            return '<tr><td>' + dateStr + '</td><td>' + userName + ' (' + userId + ')</td><td>' + qty.toLocaleString() + '</td><td>' + amount.toLocaleString() + '원</td><td>' + escapeHtml(status) + '</td></tr>';
+        }).join('');
+        renderTokenPagination(total, currentTokenPurchaseHistoryPage, 'tokenPurchaseHistoryPagination', 'goToTokenPurchaseHistoryPage');
+    }
+
     function renderOrdersPage() {
         var tbody = document.getElementById('tokenAllOrdersTableBody');
         if (!tbody) return;
@@ -344,6 +373,13 @@
         renderOrdersPage();
     };
 
+    window.goToTokenPurchaseHistoryPage = function (p) {
+        var totalPages = Math.max(1, Math.ceil(allTokenPurchaseHistoryData.length / TOKEN_HISTORY_PER_PAGE));
+        if (p < 1 || p > totalPages) return;
+        currentTokenPurchaseHistoryPage = p;
+        renderTokenPurchaseHistoryTable();
+    };
+
     window.goToTokenDepositsPage = function (p) {
         var totalPages = Math.max(1, Math.ceil(allDepositsData.length / TOKEN_HISTORY_PER_PAGE));
         if (p < 1 || p > totalPages) return;
@@ -386,35 +422,51 @@
 
     async function loadAllTokenHistoryTable() {
         var depositsBody = document.getElementById('tokenAllDepositsTableBody');
+        var purchaseHistoryBody = document.getElementById('tokenPurchaseHistoryTableBody');
         var withdrawalsBody = document.getElementById('tokenAllWithdrawalsTableBody');
         if (!depositsBody || !withdrawalsBody) return;
         var admin = window.firebaseAdmin;
         if (!admin || !admin.tokenService) {
             depositsBody.innerHTML = '<tr><td colspan="5" class="empty-message">서비스를 사용할 수 없습니다.</td></tr>';
             withdrawalsBody.innerHTML = '<tr><td colspan="5" class="empty-message">서비스를 사용할 수 없습니다.</td></tr>';
+            if (purchaseHistoryBody) {
+                purchaseHistoryBody.innerHTML = '<tr><td colspan="5" class="empty-message">서비스를 사용할 수 없습니다.</td></tr>';
+            }
+            renderTokenPagination(0, 1, 'tokenPurchaseHistoryPagination', 'goToTokenPurchaseHistoryPage');
             return;
         }
         depositsBody.innerHTML = '<tr><td colspan="5" class="empty-message">불러오는 중...</td></tr>';
+        if (purchaseHistoryBody) {
+            purchaseHistoryBody.innerHTML = '<tr><td colspan="5" class="empty-message">불러오는 중...</td></tr>';
+        }
         withdrawalsBody.innerHTML = '<tr><td colspan="5" class="empty-message">불러오는 중...</td></tr>';
         try {
             var deposits = await admin.tokenService.getAllDeposits(500);
             var withdrawals = await admin.tokenService.getAllWithdrawals(500);
             allDepositsData = deposits || [];
             allWithdrawalsData = withdrawals || [];
-            
-            
+            allTokenPurchaseHistoryData = allDepositsData.filter(isTokenPurchaseDeposit);
+
             currentDepositsPage = 1;
+            currentTokenPurchaseHistoryPage = 1;
             currentWithdrawalsPage = 1;
+            renderTokenPurchaseHistoryTable();
             renderDepositsPage();
             renderWithdrawalsPage();
         } catch (err) {
             console.error('전체 토큰 내역 로드 오류:', err);
             depositsBody.innerHTML = '<tr><td colspan="6" class="empty-message">로드 실패: ' + (err.message || '알 수 없음') + '</td></tr>';
+            if (purchaseHistoryBody) {
+                purchaseHistoryBody.innerHTML = '<tr><td colspan="5" class="empty-message">로드 실패: ' + (err.message || '알 수 없음') + '</td></tr>';
+            }
             withdrawalsBody.innerHTML = '<tr><td colspan="5" class="empty-message">로드 실패: ' + (err.message || '알 수 없음') + '</td></tr>';
             allDepositsData = [];
+            allTokenPurchaseHistoryData = [];
             allWithdrawalsData = [];
             currentDepositsPage = 1;
+            currentTokenPurchaseHistoryPage = 1;
             currentWithdrawalsPage = 1;
+            renderTokenPagination(0, 1, 'tokenPurchaseHistoryPagination', 'goToTokenPurchaseHistoryPage');
             renderTokenPagination(0, 1, 'tokenAllDepositsPagination', 'goToTokenDepositsPage');
             renderTokenPagination(0, 1, 'tokenAllWithdrawalsPagination', 'goToTokenWithdrawalsPage');
         }

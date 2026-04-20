@@ -431,6 +431,172 @@ async function displayUserInfo(user, member, orders) {
     updateWishlistAndCartCount();
 }
 
+function getTokenDepositSortTime(d) {
+    if (d.createdAt && typeof d.createdAt.toDate === 'function') return d.createdAt.toDate().getTime();
+    if (d.date) return new Date(d.date).getTime();
+    return 0;
+}
+
+function formatTokenPurchaseHistoryDate(d) {
+    var dt;
+    if (d.createdAt && typeof d.createdAt.toDate === 'function') dt = d.createdAt.toDate();
+    else if (d.date) dt = new Date(d.date);
+    else dt = new Date(0);
+    return dt.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+var TOKEN_PURCHASE_HISTORY_PAGE_SIZE = 30;
+var _tokenPurchaseHistoryCurrentPage = 1;
+
+function hideTokenPurchaseHistoryPagination() {
+    var paginationEl = document.getElementById('tokenPurchaseHistoryPagination');
+    if (paginationEl) {
+        paginationEl.style.display = 'none';
+        paginationEl.innerHTML = '';
+    }
+}
+
+function renderTokenPurchaseHistoryPage() {
+    var listEl = document.getElementById('tokenPurchaseHistoryList');
+    var paginationEl = document.getElementById('tokenPurchaseHistoryPagination');
+    var rows = window._tokenPurchaseHistoryCache;
+    if (!listEl || !rows || !rows.length) return;
+
+    var totalPages = Math.max(1, Math.ceil(rows.length / TOKEN_PURCHASE_HISTORY_PAGE_SIZE));
+    var page = Math.min(Math.max(1, _tokenPurchaseHistoryCurrentPage), totalPages);
+    _tokenPurchaseHistoryCurrentPage = page;
+    var start = (page - 1) * TOKEN_PURCHASE_HISTORY_PAGE_SIZE;
+    var slice = rows.slice(start, start + TOKEN_PURCHASE_HISTORY_PAGE_SIZE);
+
+    listEl.innerHTML = '';
+    slice.forEach(function (d) {
+        var qty = Number(d.quantity) || 0;
+        var li = document.createElement('li');
+        li.className = 'token-purchase-history-item';
+        var spanDate = document.createElement('span');
+        spanDate.className = 'token-purchase-history-date';
+        spanDate.textContent = formatTokenPurchaseHistoryDate(d);
+        var spanQty = document.createElement('span');
+        spanQty.className = 'token-purchase-history-qty';
+        spanQty.textContent = qty.toLocaleString() + ' trix';
+        li.appendChild(spanDate);
+        li.appendChild(spanQty);
+        listEl.appendChild(li);
+    });
+
+    if (!paginationEl) return;
+    paginationEl.style.display = 'flex';
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'btn';
+    prevBtn.textContent = '이전';
+    prevBtn.disabled = page <= 1;
+    prevBtn.addEventListener('click', function () {
+        if (_tokenPurchaseHistoryCurrentPage <= 1) return;
+        _tokenPurchaseHistoryCurrentPage -= 1;
+        renderTokenPurchaseHistoryPage();
+    });
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'btn';
+    nextBtn.textContent = '다음';
+    nextBtn.disabled = page >= totalPages;
+    nextBtn.addEventListener('click', function () {
+        if (_tokenPurchaseHistoryCurrentPage >= totalPages) return;
+        _tokenPurchaseHistoryCurrentPage += 1;
+        renderTokenPurchaseHistoryPage();
+    });
+    paginationEl.innerHTML = '';
+    paginationEl.appendChild(prevBtn);
+    for (var i = 1; i <= totalPages; i++) {
+        var numBtn = document.createElement('button');
+        numBtn.type = 'button';
+        numBtn.className = 'btn mypage-page-num' + (i === page ? ' active' : '');
+        numBtn.textContent = String(i);
+        (function (p) {
+            numBtn.addEventListener('click', function () {
+                _tokenPurchaseHistoryCurrentPage = p;
+                renderTokenPurchaseHistoryPage();
+            });
+        })(i);
+        paginationEl.appendChild(numBtn);
+    }
+    paginationEl.appendChild(nextBtn);
+}
+
+/** 토큰 구매하기: 관리자 승인(approved)된 토큰구매 건의 수량 합계 + 건별 목록 (토큰가져오기 import 제외) */
+function refreshTokenPurchaseCumulative() {
+    var el = document.getElementById('tokenPurchaseCumulativeQty');
+    var listEl = document.getElementById('tokenPurchaseHistoryList');
+    if (!el) return;
+    hideTokenPurchaseHistoryPagination();
+    delete window._tokenPurchaseHistoryCache;
+    el.textContent = '불러오는 중…';
+    if (listEl) {
+        listEl.innerHTML = '';
+        var loadingLi = document.createElement('li');
+        loadingLi.className = 'token-purchase-history-item token-purchase-history-loading';
+        loadingLi.textContent = '불러오는 중…';
+        listEl.appendChild(loadingLi);
+    }
+    if (!window.mypageApi || typeof window.mypageApi.getMyTokenDeposits !== 'function') {
+        el.textContent = '-';
+        if (listEl) {
+            listEl.innerHTML = '';
+            var noApiLi = document.createElement('li');
+            noApiLi.className = 'token-purchase-history-item token-purchase-history-empty';
+            noApiLi.textContent = '내역을 불러올 수 없습니다.';
+            listEl.appendChild(noApiLi);
+        }
+        return;
+    }
+    window.mypageApi.getMyTokenDeposits().then(function (deposits) {
+        var approvedPurchases = [];
+        var sum = 0;
+        (deposits || []).forEach(function (d) {
+            if ((d.status || '') !== 'approved') return;
+            if (d.type === 'import') return;
+            var qty = Number(d.quantity) || 0;
+            sum += qty;
+            approvedPurchases.push(d);
+        });
+        approvedPurchases.sort(function (a, b) {
+            return getTokenDepositSortTime(b) - getTokenDepositSortTime(a);
+        });
+        el.textContent = sum.toLocaleString() + ' trix';
+        if (!listEl) return;
+        window._tokenPurchaseHistoryCache = approvedPurchases;
+        _tokenPurchaseHistoryCurrentPage = 1;
+        listEl.innerHTML = '';
+        if (approvedPurchases.length === 0) {
+            var emptyLi = document.createElement('li');
+            emptyLi.className = 'token-purchase-history-item token-purchase-history-empty';
+            emptyLi.textContent = '승인된 구매 내역이 없습니다.';
+            listEl.appendChild(emptyLi);
+            hideTokenPurchaseHistoryPagination();
+            return;
+        }
+        renderTokenPurchaseHistoryPage();
+    }).catch(function () {
+        el.textContent = '-';
+        delete window._tokenPurchaseHistoryCache;
+        hideTokenPurchaseHistoryPagination();
+        if (listEl) {
+            listEl.innerHTML = '';
+            var errLi = document.createElement('li');
+            errLi.className = 'token-purchase-history-item token-purchase-history-empty';
+            errLi.textContent = '내역을 불러오지 못했습니다.';
+            listEl.appendChild(errLi);
+        }
+    });
+}
+
 // 보유 토큰(쇼핑지원금) 숫자만 반환 (trix)
 function getCurrentSupportBalance() {
     var el = document.getElementById('currentSupport');
@@ -514,6 +680,7 @@ function bindTokenModals() {
                 alert('입금 신청이 접수되었습니다. 관리자 확인 후 보유 토큰에 반영됩니다.');
                 if (purchaseQty) purchaseQty.value = '';
                 if (purchaseAmount) purchaseAmount.value = '';
+                refreshTokenPurchaseCumulative();
                 return window.mypageApi.getCurrentMember().then(function (member) {
                     displayUserInfo(window.mypageApi.getLoginUser(), member, window._mypageOrders || []);
                 });
@@ -1773,6 +1940,9 @@ function showSection(sectionName, clickedLink) {
                 if (raw) fillProfileForm(JSON.parse(raw));
             } catch (e) { /* ignore */ }
         }
+    }
+    if (sectionName === 'token-purchase') {
+        refreshTokenPurchaseCumulative();
     }
 }
 

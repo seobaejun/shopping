@@ -197,7 +197,7 @@
                         <button type="button" class="btn btn-default" id="mdLookupResetBtn">초기화</button>
                     </div>
                 </div>
-                <div id="mdLookupStatsPanel" class="md-lookup-stats-panel" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; margin-bottom: 20px;">
+                <div id="mdLookupStatsPanel" class="md-lookup-stats-panel" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 24px; margin-bottom: 20px;">
                     <div style="background: #f5f6f8; border: 1px solid #e1e5e9; padding: 16px; border-radius: 8px;">
                         <div style="font-size: 13px; color: #666; margin-bottom: 6px;">총 인원(합)</div>
                         <div id="mdLookupStatCount" style="font-size: 22px; font-weight: 700; color: #333;">—</div>
@@ -205,6 +205,12 @@
                     <div style="background: #f5f6f8; border: 1px solid #e1e5e9; padding: 16px; border-radius: 8px;">
                         <div style="font-size: 13px; color: #666; margin-bottom: 6px;">구매총액 합</div>
                         <div id="mdLookupStatPurchase" style="font-size: 22px; font-weight: 700; color: #28a745;">—</div>
+                        <div style="font-size: 11px; color: #888; margin-top: 6px;">쇼핑 주문 금액 합</div>
+                    </div>
+                    <div style="background: #f5f6f8; border: 1px solid #e1e5e9; padding: 16px; border-radius: 8px;">
+                        <div style="font-size: 13px; color: #666; margin-bottom: 6px;">토큰구매 합</div>
+                        <div id="mdLookupStatTokenPurchase" style="font-size: 18px; font-weight: 700; color: #1e7e34; line-height: 1.35;">—</div>
+                        <div style="font-size: 11px; color: #888; margin-top: 6px;">승인 완료 · 입금액·trix</div>
                     </div>
                     <div style="background: #f5f6f8; border: 1px solid #e1e5e9; padding: 16px; border-radius: 8px;">
                         <div style="font-size: 13px; color: #666; margin-bottom: 6px;">지원토큰 합</div>
@@ -234,6 +240,28 @@
                     </table>
                 </div>
                 <div id="mdLookupPagination" class="pagination"></div>
+
+                <div class="page-header" style="margin-top: 28px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #4A5FC1;">
+                    <h3 style="font-size: 18px; margin: 0; color: #333;">소속 회원 토큰 구매 내역</h3>
+                    <p style="margin: 8px 0 0 0; font-size: 13px; color: #666;">계좌 입금 방식만 표시합니다(토큰가져오기 제외). 대기·승인·취소 전체 건입니다.</p>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>일시</th>
+                                <th>회원(아이디)</th>
+                                <th>수량 (trix)</th>
+                                <th>입금액</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mdLookupTokenPurchaseBody">
+                            <tr><td colspan="5" class="empty-message">MD 코드를 검색하면 내역이 표시됩니다.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="mdLookupTokenPurchasePagination" class="pagination"></div>
             </div>
 
             <!-- 개인별 구매 누적정보 페이지 (관리자와 동일) -->
@@ -282,7 +310,7 @@
                     </div>
                     <div class="stats-panel" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                         <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #4A5FC1; padding-bottom: 10px;">누계 정보</h3>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center;">
                             <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
                                 <div style="color: #666; font-size: 13px; margin-bottom: 8px;">구매 건수</div>
                                 <div style="font-size: 24px; font-weight: bold; color: #4A5FC1;"><span id="totalPurchaseCount">0</span>건</div>
@@ -295,7 +323,29 @@
                                 <div style="color: #666; font-size: 13px; margin-bottom: 8px;">누적 지원금</div>
                                 <div style="font-size: 24px; font-weight: bold; color: #dc3545;"><span id="totalSupportAmount">0</span> trix</div>
                             </div>
+                            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <div style="color: #666; font-size: 13px; margin-bottom: 8px;">총 토큰 구매</div>
+                                <div style="font-size: 20px; font-weight: bold; color: #1e7e34;">
+                                    <span id="totalTokenPurchaseAmount">0</span>원 / <span id="totalTokenPurchaseQuantity">0</span> trix
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                    <div class="table-container" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 20px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #4A5FC1; padding-bottom: 10px;">토큰 구매 내역</h3>
+                        <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">계좌 입금 방식만 표시합니다. (토큰가져오기 제외)</p>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>번호</th>
+                                    <th>신청일시</th>
+                                    <th>수량 (trix)</th>
+                                    <th>입금액</th>
+                                    <th>상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tokenPurchaseDetailBody"></tbody>
+                        </table>
                     </div>
                     <div class="table-container" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                         <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #4A5FC1; padding-bottom: 10px;">구매 상세 내역</h3>
@@ -411,8 +461,15 @@
                                             alert('MD조회는 관리자 페이지에서 MD 바로가기로 들어온 경우에만 이용할 수 있습니다.');
                                             return;
                                         }
-                                        document.querySelectorAll('.content-page').forEach(function(p){ p.classList.remove('active'); p.style.display=p.id==='dashboard'?'none':''; });
-                                        var el=document.getElementById(page); if(el){ el.classList.add('active'); if(page==='dashboard') el.style.display='block'; }
+                                        document.querySelectorAll('.content-page').forEach(function(p){
+                                            p.classList.remove('active');
+                                            p.style.display = 'none';
+                                        });
+                                        var el=document.getElementById(page);
+                                        if(el){
+                                            el.classList.add('active');
+                                            el.style.display='block';
+                                        }
                                         document.querySelectorAll('.admin-sidebar .nav-list li').forEach(function(li){ li.classList.remove('active'); });
                                         if(this.parentElement) this.parentElement.classList.add('active');
                                         if(page==='dashboard'&&window.loadMdDashboard) window.loadMdDashboard();
