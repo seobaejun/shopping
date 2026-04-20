@@ -451,42 +451,86 @@ function formatTokenPurchaseHistoryDate(d) {
     });
 }
 
-var TOKEN_PURCHASE_HISTORY_PAGE_SIZE = 30;
-var _tokenPurchaseHistoryCurrentPage = 1;
+var TOKEN_TRANSACTION_HISTORY_PAGE_SIZE = 30;
+var _tokenTransactionHistoryCurrentPage = 1;
 
-function hideTokenPurchaseHistoryPagination() {
-    var paginationEl = document.getElementById('tokenPurchaseHistoryPagination');
+function hideTokenTransactionHistoryPagination() {
+    var paginationEl = document.getElementById('tokenTransactionHistoryPagination');
     if (paginationEl) {
         paginationEl.style.display = 'none';
         paginationEl.innerHTML = '';
     }
 }
 
-function renderTokenPurchaseHistoryPage() {
-    var listEl = document.getElementById('tokenPurchaseHistoryList');
-    var paginationEl = document.getElementById('tokenPurchaseHistoryPagination');
-    var rows = window._tokenPurchaseHistoryCache;
+function getTokenHistoryStatusLabel(status) {
+    var s = String(status || '').toLowerCase();
+    if (s === 'approved') return '승인';
+    if (s === 'pending') return '대기';
+    if (s === 'cancelled') return '취소';
+    if (s === 'completed') return '완료';
+    return status || '-';
+}
+
+function getTokenHistoryTypeLabel(type) {
+    if (type === 'import') return '토큰가져오기';
+    if (type === 'withdraw') return '토큰출금하기';
+    return '토큰구매하기';
+}
+
+function getTokenHistorySortTime(item) {
+    if (item.createdAt && typeof item.createdAt.toDate === 'function') return item.createdAt.toDate().getTime();
+    if (item.date) return new Date(item.date).getTime();
+    return 0;
+}
+
+function renderTokenTransactionHistoryPage() {
+    var listEl = document.getElementById('tokenTransactionHistoryList');
+    var paginationEl = document.getElementById('tokenTransactionHistoryPagination');
+    var rows = window._tokenTransactionHistoryCache;
     if (!listEl || !rows || !rows.length) return;
 
-    var totalPages = Math.max(1, Math.ceil(rows.length / TOKEN_PURCHASE_HISTORY_PAGE_SIZE));
-    var page = Math.min(Math.max(1, _tokenPurchaseHistoryCurrentPage), totalPages);
-    _tokenPurchaseHistoryCurrentPage = page;
-    var start = (page - 1) * TOKEN_PURCHASE_HISTORY_PAGE_SIZE;
-    var slice = rows.slice(start, start + TOKEN_PURCHASE_HISTORY_PAGE_SIZE);
+    var totalPages = Math.max(1, Math.ceil(rows.length / TOKEN_TRANSACTION_HISTORY_PAGE_SIZE));
+    var page = Math.min(Math.max(1, _tokenTransactionHistoryCurrentPage), totalPages);
+    _tokenTransactionHistoryCurrentPage = page;
+    var start = (page - 1) * TOKEN_TRANSACTION_HISTORY_PAGE_SIZE;
+    var slice = rows.slice(start, start + TOKEN_TRANSACTION_HISTORY_PAGE_SIZE);
 
     listEl.innerHTML = '';
-    slice.forEach(function (d) {
-        var qty = Number(d.quantity) || 0;
+    slice.forEach(function (item) {
+        var qty = Number(item.quantity) || 0;
+        var amount = Number(item.amount) || 0;
         var li = document.createElement('li');
-        li.className = 'token-purchase-history-item';
+        li.className = 'token-transaction-history-item';
+        var leftWrap = document.createElement('div');
+        leftWrap.className = 'token-transaction-history-left';
         var spanDate = document.createElement('span');
-        spanDate.className = 'token-purchase-history-date';
-        spanDate.textContent = formatTokenPurchaseHistoryDate(d);
+        spanDate.className = 'token-transaction-history-date';
+        spanDate.textContent = formatTokenPurchaseHistoryDate(item);
+        var spanMeta = document.createElement('span');
+        spanMeta.className = 'token-transaction-history-meta';
+        var spanType = document.createElement('span');
+        spanType.className = 'token-transaction-history-type token-transaction-history-type-' + (item.type || 'purchase');
+        spanType.textContent = getTokenHistoryTypeLabel(item.type);
+        var spanDivider = document.createTextNode(' · ');
+        var spanStatus = document.createElement('span');
+        spanStatus.textContent = getTokenHistoryStatusLabel(item.status);
+        spanMeta.appendChild(spanType);
+        spanMeta.appendChild(spanDivider);
+        spanMeta.appendChild(spanStatus);
+        leftWrap.appendChild(spanDate);
+        leftWrap.appendChild(spanMeta);
+        var rightWrap = document.createElement('div');
+        rightWrap.className = 'token-transaction-history-right';
         var spanQty = document.createElement('span');
-        spanQty.className = 'token-purchase-history-qty';
-        spanQty.textContent = qty.toLocaleString() + ' trix';
-        li.appendChild(spanDate);
-        li.appendChild(spanQty);
+        spanQty.className = 'token-transaction-history-qty';
+        spanQty.textContent = (item.type === 'withdraw' ? '-' : '+') + qty.toLocaleString() + ' trix';
+        var spanAmount = document.createElement('span');
+        spanAmount.className = 'token-transaction-history-amount';
+        spanAmount.textContent = amount > 0 ? amount.toLocaleString() + '원' : '-';
+        rightWrap.appendChild(spanQty);
+        rightWrap.appendChild(spanAmount);
+        li.appendChild(leftWrap);
+        li.appendChild(rightWrap);
         listEl.appendChild(li);
     });
 
@@ -498,9 +542,9 @@ function renderTokenPurchaseHistoryPage() {
     prevBtn.textContent = '이전';
     prevBtn.disabled = page <= 1;
     prevBtn.addEventListener('click', function () {
-        if (_tokenPurchaseHistoryCurrentPage <= 1) return;
-        _tokenPurchaseHistoryCurrentPage -= 1;
-        renderTokenPurchaseHistoryPage();
+        if (_tokenTransactionHistoryCurrentPage <= 1) return;
+        _tokenTransactionHistoryCurrentPage -= 1;
+        renderTokenTransactionHistoryPage();
     });
     var nextBtn = document.createElement('button');
     nextBtn.type = 'button';
@@ -508,9 +552,9 @@ function renderTokenPurchaseHistoryPage() {
     nextBtn.textContent = '다음';
     nextBtn.disabled = page >= totalPages;
     nextBtn.addEventListener('click', function () {
-        if (_tokenPurchaseHistoryCurrentPage >= totalPages) return;
-        _tokenPurchaseHistoryCurrentPage += 1;
-        renderTokenPurchaseHistoryPage();
+        if (_tokenTransactionHistoryCurrentPage >= totalPages) return;
+        _tokenTransactionHistoryCurrentPage += 1;
+        renderTokenTransactionHistoryPage();
     });
     paginationEl.innerHTML = '';
     paginationEl.appendChild(prevBtn);
@@ -521,8 +565,8 @@ function renderTokenPurchaseHistoryPage() {
         numBtn.textContent = String(i);
         (function (p) {
             numBtn.addEventListener('click', function () {
-                _tokenPurchaseHistoryCurrentPage = p;
-                renderTokenPurchaseHistoryPage();
+                _tokenTransactionHistoryCurrentPage = p;
+                renderTokenTransactionHistoryPage();
             });
         })(i);
         paginationEl.appendChild(numBtn);
@@ -530,71 +574,85 @@ function renderTokenPurchaseHistoryPage() {
     paginationEl.appendChild(nextBtn);
 }
 
-/** 토큰 구매하기: 관리자 승인(approved)된 토큰구매 건의 수량 합계 + 건별 목록 (토큰가져오기 import 제외) */
-function refreshTokenPurchaseCumulative() {
-    var el = document.getElementById('tokenPurchaseCumulativeQty');
-    var listEl = document.getElementById('tokenPurchaseHistoryList');
-    if (!el) return;
-    hideTokenPurchaseHistoryPagination();
-    delete window._tokenPurchaseHistoryCache;
-    el.textContent = '불러오는 중…';
-    if (listEl) {
+function refreshTokenTransactionHistory() {
+    var listEl = document.getElementById('tokenTransactionHistoryList');
+    if (!listEl) return;
+    hideTokenTransactionHistoryPagination();
+    delete window._tokenTransactionHistoryCache;
+    listEl.innerHTML = '';
+    var loadingLi = document.createElement('li');
+    loadingLi.className = 'token-transaction-history-item token-transaction-history-loading';
+    loadingLi.textContent = '불러오는 중…';
+    listEl.appendChild(loadingLi);
+
+    if (!window.mypageApi || typeof window.mypageApi.getMyTokenDeposits !== 'function' || typeof window.mypageApi.getMyTokenWithdrawals !== 'function') {
         listEl.innerHTML = '';
-        var loadingLi = document.createElement('li');
-        loadingLi.className = 'token-purchase-history-item token-purchase-history-loading';
-        loadingLi.textContent = '불러오는 중…';
-        listEl.appendChild(loadingLi);
-    }
-    if (!window.mypageApi || typeof window.mypageApi.getMyTokenDeposits !== 'function') {
-        el.textContent = '-';
-        if (listEl) {
-            listEl.innerHTML = '';
-            var noApiLi = document.createElement('li');
-            noApiLi.className = 'token-purchase-history-item token-purchase-history-empty';
-            noApiLi.textContent = '내역을 불러올 수 없습니다.';
-            listEl.appendChild(noApiLi);
-        }
+        var noApiLi = document.createElement('li');
+        noApiLi.className = 'token-transaction-history-item token-transaction-history-empty';
+        noApiLi.textContent = '내역을 불러올 수 없습니다.';
+        listEl.appendChild(noApiLi);
         return;
     }
-    window.mypageApi.getMyTokenDeposits().then(function (deposits) {
-        var approvedPurchases = [];
-        var sum = 0;
-        (deposits || []).forEach(function (d) {
+
+    Promise.all([
+        window.mypageApi.getMyTokenDeposits(),
+        window.mypageApi.getMyTokenWithdrawals()
+    ]).then(function (results) {
+        var deposits = results[0] || [];
+        var withdrawals = results[1] || [];
+        var merged = [];
+        deposits.forEach(function (d) {
             if ((d.status || '') !== 'approved') return;
-            if (d.type === 'import') return;
-            var qty = Number(d.quantity) || 0;
-            sum += qty;
-            approvedPurchases.push(d);
+            merged.push({
+                id: d.id || '',
+                type: d.type === 'import' ? 'import' : 'purchase',
+                status: d.status || 'pending',
+                quantity: Number(d.quantity) || 0,
+                amount: Number(d.amount) || 0,
+                createdAt: d.createdAt,
+                date: d.date
+            });
         });
-        approvedPurchases.sort(function (a, b) {
-            return getTokenDepositSortTime(b) - getTokenDepositSortTime(a);
+        withdrawals.forEach(function (w) {
+            if ((w.status || '') !== 'completed') return;
+            merged.push({
+                id: w.id || '',
+                type: 'withdraw',
+                status: w.status || 'pending',
+                quantity: Number(w.amount) || 0,
+                amount: 0,
+                createdAt: w.createdAt,
+                date: w.date
+            });
         });
-        el.textContent = sum.toLocaleString() + ' trix';
-        if (!listEl) return;
-        window._tokenPurchaseHistoryCache = approvedPurchases;
-        _tokenPurchaseHistoryCurrentPage = 1;
+        merged.sort(function (a, b) {
+            return getTokenHistorySortTime(b) - getTokenHistorySortTime(a);
+        });
+        window._tokenTransactionHistoryCache = merged;
+        _tokenTransactionHistoryCurrentPage = 1;
         listEl.innerHTML = '';
-        if (approvedPurchases.length === 0) {
+        if (merged.length === 0) {
             var emptyLi = document.createElement('li');
-            emptyLi.className = 'token-purchase-history-item token-purchase-history-empty';
-            emptyLi.textContent = '승인된 구매 내역이 없습니다.';
+            emptyLi.className = 'token-transaction-history-item token-transaction-history-empty';
+            emptyLi.textContent = '토큰 거래 내역이 없습니다.';
             listEl.appendChild(emptyLi);
-            hideTokenPurchaseHistoryPagination();
+            hideTokenTransactionHistoryPagination();
             return;
         }
-        renderTokenPurchaseHistoryPage();
+        renderTokenTransactionHistoryPage();
     }).catch(function () {
-        el.textContent = '-';
-        delete window._tokenPurchaseHistoryCache;
-        hideTokenPurchaseHistoryPagination();
-        if (listEl) {
-            listEl.innerHTML = '';
-            var errLi = document.createElement('li');
-            errLi.className = 'token-purchase-history-item token-purchase-history-empty';
-            errLi.textContent = '내역을 불러오지 못했습니다.';
-            listEl.appendChild(errLi);
-        }
+        listEl.innerHTML = '';
+        delete window._tokenTransactionHistoryCache;
+        hideTokenTransactionHistoryPagination();
+        var errLi = document.createElement('li');
+        errLi.className = 'token-transaction-history-item token-transaction-history-empty';
+        errLi.textContent = '내역을 불러오지 못했습니다.';
+        listEl.appendChild(errLi);
     });
+}
+
+function refreshTokenPurchaseCumulative() {
+    refreshTokenTransactionHistory();
 }
 
 // 보유 토큰(쇼핑지원금) 숫자만 반환 (trix)
@@ -609,6 +667,7 @@ function getCurrentSupportBalance() {
 function bindTokenModals() {
     var btnPurchase = document.getElementById('btnTokenPurchase');
     var btnWithdraw = document.getElementById('btnTokenWithdraw');
+    var btnHistory = document.getElementById('btnTokenHistory');
     var purchaseQty = document.getElementById('tokenPurchaseQty');
     var purchaseAmount = document.getElementById('tokenPurchaseAmount');
     var btnPurchaseComplete = document.getElementById('btnTokenPurchaseComplete');
@@ -625,6 +684,11 @@ function bindTokenModals() {
             if (purchaseQty) purchaseQty.value = '';
             if (purchaseAmount) purchaseAmount.value = '';
             showSection('token-purchase');
+        });
+    }
+    if (btnHistory) {
+        btnHistory.addEventListener('click', function () {
+            showSection('token-history');
         });
     }
     var btnCopyTokenAccount = document.getElementById('btnCopyTokenAccount');
@@ -680,7 +744,7 @@ function bindTokenModals() {
                 alert('입금 신청이 접수되었습니다. 관리자 확인 후 보유 토큰에 반영됩니다.');
                 if (purchaseQty) purchaseQty.value = '';
                 if (purchaseAmount) purchaseAmount.value = '';
-                refreshTokenPurchaseCumulative();
+                refreshTokenTransactionHistory();
                 return window.mypageApi.getCurrentMember().then(function (member) {
                     displayUserInfo(window.mypageApi.getLoginUser(), member, window._mypageOrders || []);
                 });
@@ -731,6 +795,7 @@ function bindTokenModals() {
                 alert('출금 요청이 접수되었습니다. 관리자 확인 후 처리됩니다.');
                 if (withdrawAddress) withdrawAddress.value = '';
                 if (withdrawQty) withdrawQty.value = '';
+                refreshTokenTransactionHistory();
                 return window.mypageApi.getCurrentMember().then(function (member) {
                     displayUserInfo(window.mypageApi.getLoginUser(), member, window._mypageOrders || []);
                 });
@@ -824,6 +889,7 @@ function bindTokenModals() {
                 // toAddress는 고정값이므로 초기화하지 않음
                 
                 // 토큰구매하기처럼 사용자 정보 새로고침
+                refreshTokenTransactionHistory();
                 return window.mypageApi.getCurrentMember().then(function (member) {
                     displayUserInfo(window.mypageApi.getLoginUser(), member, window._mypageOrders || []);
                 });
@@ -1848,6 +1914,8 @@ function showSection(sectionName, clickedLink) {
         var insertAfterEl = null;
         if (sectionName === 'token-purchase') {
             insertAfterEl = document.getElementById('btnTokenPurchase');
+        } else if (sectionName === 'token-history') {
+            insertAfterEl = document.querySelector('.mypage-sidebar .support-info-section');
         } else if (sectionName === 'token-withdraw') {
             insertAfterEl = document.querySelector('.mypage-sidebar .support-info-section');
         } else if (linkLi) {
@@ -1941,8 +2009,8 @@ function showSection(sectionName, clickedLink) {
             } catch (e) { /* ignore */ }
         }
     }
-    if (sectionName === 'token-purchase') {
-        refreshTokenPurchaseCumulative();
+    if (sectionName === 'token-history') {
+        refreshTokenTransactionHistory();
     }
 }
 

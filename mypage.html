@@ -97,6 +97,9 @@
                         <button type="button" class="btn-token-action" id="btnTokenImport" style="background: #28a745; border-color: #28a745; margin-top: 8px;">
                             <i class="fas fa-download"></i> 토큰가져오기
                         </button>
+                        <button type="button" class="btn-token-action" id="btnTokenHistory" style="margin-top: 8px;">
+                            <i class="fas fa-list-alt"></i> 토큰거래내역
+                        </button>
                         <div class="support-row">
                             <span>보유 토큰</span>
                             <strong id="currentSupport">0 trix</strong>
@@ -239,15 +242,6 @@
                             </div>
                             <button type="button" class="btn btn-primary btn-token-submit" id="btnTokenPurchaseComplete"><i class="fas fa-check-circle"></i> 입금완료</button>
                         </div>
-                        <div class="token-purchase-cumulative" id="tokenPurchaseCumulativeWrap" aria-live="polite">
-                            <p class="token-cumulative-label">누적 구매 수량 <span class="token-cumulative-hint">(관리자 승인 완료 기준)</span></p>
-                            <p class="token-cumulative-value" id="tokenPurchaseCumulativeQty">-</p>
-                        </div>
-                        <div class="token-purchase-history" id="tokenPurchaseHistoryWrap" aria-live="polite">
-                            <p class="token-purchase-history-title">구매 내역 <span class="token-purchase-history-hint">(승인 완료 건, 최신순)</span></p>
-                            <ul class="token-purchase-history-list" id="tokenPurchaseHistoryList"></ul>
-                            <div id="tokenPurchaseHistoryPagination" class="mypage-list-pagination token-purchase-history-pagination" style="display: none; margin-top: 12px;" aria-label="구매 내역 페이지"></div>
-                        </div>
                     </div>
                     
                     <!-- 토큰가져오기 (토큰 구매하기 밑) -->
@@ -341,6 +335,18 @@
                                     </div>
                                 </a>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- 토큰 거래내역 -->
+                    <div class="content-section mypage-section token-section" data-section="token-history" id="mypageSectionTokenHistory" style="display: none;">
+                        <div class="section-title">
+                            <h3><i class="fas fa-list-alt"></i> 토큰 거래내역</h3>
+                        </div>
+                        <div class="token-transaction-history" aria-live="polite">
+                            <p class="token-transaction-history-title">토큰 구매/가져오기/출금 내역 <span class="token-transaction-history-hint">(승인/완료 건, 최신순)</span></p>
+                            <ul class="token-transaction-history-list" id="tokenTransactionHistoryList"></ul>
+                            <div id="tokenTransactionHistoryPagination" class="mypage-list-pagination token-transaction-history-pagination" style="display: none; margin-top: 12px;" aria-label="토큰 거래내역 페이지"></div>
                         </div>
                     </div>
 
