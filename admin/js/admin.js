@@ -4296,6 +4296,13 @@ function formatTrix(value) {
     return str;
 }
 
+// 지원금 표기 전용: 화면 비교 혼선을 막기 위해 항상 소수점 8자리 고정
+function formatTrixFixed8(value) {
+    var num = Number(value) || 0;
+    var truncated = Math.floor(num * 1e8) / 1e8;
+    return truncated.toFixed(8);
+}
+
 // 추첨 대기 데이터 — 승인(approved)된 주문 전체를 선착순 1개 대기열로 사용. 상품 구분 없음.
 var LOTTERY_GLOBAL_KEY = '_all';
 window.LOTTERY_GLOBAL_KEY = LOTTERY_GLOBAL_KEY;
@@ -4992,7 +4999,7 @@ function renderConfirmResults() {
                     ? '<span class="badge badge-success">당첨</span>' 
                     : '<span class="badge badge-info">미선정</span>'}
             </td>
-            <td>${formatTrix(result.support || 0)} trix</td>
+            <td>${formatTrixFixed8(result.support || 0)} trix</td>
             <td>
                 <button class="btn btn-sm ${paymentStatus === 'paid' ? 'btn-success' : 'btn-secondary'}" 
                     data-id="${escapeHtml(String(result.id))}" 
@@ -5084,6 +5091,53 @@ function exportConfirmResults() {
     alert('엑셀 다운로드 기능\n(서버 연동 후 구현)');
 }
 
+async function resolveSupportTargetUserId(result) {
+    var userId = (result && result.userId) ? String(result.userId).trim() : '';
+    if (userId) return userId;
+    if (!result || !result.orderId || !window.firebaseAdmin || !window.firebaseAdmin.collections) return '';
+    try {
+        var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
+        if (orderDoc.exists) {
+            userId = String(orderDoc.data().userId || '').trim();
+        }
+    } catch (e) {
+        console.error('지원금 대상 userId 조회 오류:', e);
+    }
+    return userId;
+}
+
+async function applySupportPayment(result) {
+    if (!result || !result.id) throw new Error('지급 대상 정보가 올바르지 않습니다.');
+    var supportAmount = Number(result.support) || 0;
+    if (supportAmount <= 0) throw new Error('지원금 금액이 0 이하입니다.');
+
+    var userId = await resolveSupportTargetUserId(result);
+    if (!userId) throw new Error('지급 대상 userId를 찾을 수 없습니다.');
+
+    if (!window.firebaseAdmin || !window.firebaseAdmin.lotteryConfirmedService || !window.firebaseAdmin.tokenService) {
+        throw new Error('지급 서비스가 초기화되지 않았습니다.');
+    }
+    if (typeof window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus !== 'function') {
+        throw new Error('지급상태 업데이트 서비스를 사용할 수 없습니다.');
+    }
+    if (typeof window.firebaseAdmin.tokenService.addSupportToMemberBalance !== 'function') {
+        throw new Error('토큰 반영 서비스를 사용할 수 없습니다.');
+    }
+
+    await window.firebaseAdmin.tokenService.addSupportToMemberBalance(userId, supportAmount);
+    await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(result.id, 'paid');
+    await createNotificationForUser(
+        userId,
+        'support_paid',
+        '쇼핑지원금이 지급되었습니다',
+        formatTrix(supportAmount) + ' trix의 쇼핑지원금이 지급되었습니다.',
+        'mypage.html?section=support'
+    );
+
+    result.userId = userId;
+    result.paymentStatus = 'paid';
+}
+
 // 개별 지급 상태 토글
 async function togglePaymentStatus(resultId) {
     var result = LOTTERY_CONFIRMED_RESULTS.find(function (r) { return r.id === resultId; });
@@ -5102,37 +5156,13 @@ async function togglePaymentStatus(resultId) {
         }
     } else {
         if (confirm(result.name + '님에게 ' + formatTrix(result.support) + ' trix를 지급하시겠습니까?')) {
-            result.paymentStatus = 'paid';
-            if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
-                try { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(result.id, 'paid'); } catch (e) { console.error(e); }
+            try {
+                await applySupportPayment(result);
+            } catch (error) {
+                console.error('지원금 지급 실패:', error);
+                alert('지급 실패: ' + ((error && error.message) ? error.message : '알 수 없는 오류'));
+                return;
             }
-            // 알림 생성 (에러가 발생해도 원래 기능은 계속 진행)
-            if (result.orderId) {
-                (async function() {
-                    try {
-                        var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
-                        if (orderDoc.exists) {
-                            var orderData = orderDoc.data();
-                            var userId = orderData.userId;
-                            if (userId) {
-                                await createNotificationForUser(
-                                    userId,
-                                    'support_paid',
-                                    '쇼핑지원금이 지급되었습니다',
-                                    formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.',
-                                    'mypage.html?section=support'
-                                );
-                                if (window.firebaseAdmin.tokenService && typeof window.firebaseAdmin.tokenService.addSupportToMemberBalance === 'function') {
-                                    await window.firebaseAdmin.tokenService.addSupportToMemberBalance(userId, result.support);
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        console.error('쇼핑지원금 알림/토큰 반영 오류 (무시됨):', error);
-                    }
-                })();
-            }
-            
             alert(result.name + '님에게 ' + formatTrix(result.support) + ' trix가 지급되었습니다.');
             renderConfirmResults();
             updateConfirmSummary();
@@ -5216,51 +5246,26 @@ async function completeDailyPayment() {
     const paymentCount = dailyPaymentResults.length;
     
     if (confirm('총 ' + paymentCount + '명, ' + formatTrix(totalAmount) + ' trix를 일괄 지급하시겠습니까?')) {
-        dailyPaymentResults.forEach(function (result) {
-            result.paymentStatus = 'paid';
-        });
-        if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
+        var successCount = 0;
+        var failedCount = 0;
+        for (var i = 0; i < dailyPaymentResults.length; i++) {
             try {
-                for (var i = 0; i < dailyPaymentResults.length; i++) {
-                    await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(dailyPaymentResults[i].id, 'paid');
-                }
-            } catch (e) { console.error(e); }
-        }
-        
-        (async function() {
-            try {
-                var tokenService = window.firebaseAdmin && window.firebaseAdmin.tokenService;
-                var addSupport = tokenService && typeof tokenService.addSupportToMemberBalance === 'function';
-                for (var i = 0; i < dailyPaymentResults.length; i++) {
-                    var result = dailyPaymentResults[i];
-                    if (result.orderId) {
-                        try {
-                            var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
-                            if (orderDoc.exists) {
-                                var userId = orderDoc.data().userId;
-                                if (userId) {
-                                    await createNotificationForUser(
-                                        userId,
-                                        'support_paid',
-                                        '쇼핑지원금이 지급되었습니다',
-                                        formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.',
-                                        'mypage.html?section=support'
-                                    ).catch(function() {});
-                                    if (addSupport) await tokenService.addSupportToMemberBalance(userId, result.support);
-                                }
-                            }
-                        } catch (e) {}
-                    }
-                }
-            } catch (error) {
-                console.error('쇼핑지원금 알림/토큰 반영 오류 (무시됨):', error);
+                await applySupportPayment(dailyPaymentResults[i]);
+                successCount++;
+            } catch (e) {
+                failedCount++;
+                console.error('일괄 지급 실패:', dailyPaymentResults[i] && dailyPaymentResults[i].id, e);
             }
-        })();
-        
+        }
+
         // 화면 유지: 같은 목록을 지급완료 상태로 다시 표시
         renderDailyPaymentResults(dailyPaymentResults);
         hidePaymentCompleteButton();
-        alert('✅ 지급이 완료되었습니다!\n\n지급 인원: ' + paymentCount + '명\n지급 금액: ' + formatTrix(totalAmount) + ' trix\n\n각 회원의 계좌로 현금이 입금되었습니다.');
+        if (failedCount > 0) {
+            alert('일괄 지급 완료 (일부 실패)\n성공: ' + successCount + '건\n실패: ' + failedCount + '건\n\n실패 건은 로그를 확인해 주세요.');
+        } else {
+            alert('✅ 지급이 완료되었습니다!\n\n지급 인원: ' + paymentCount + '명\n지급 금액: ' + formatTrix(totalAmount) + ' trix\n\n각 회원의 계좌로 현금이 입금되었습니다.');
+        }
     }
 }
 
@@ -5276,33 +5281,21 @@ async function completePagePayment() {
         }
         var amount = toPay.reduce(function (s, r) { return s + r.support; }, 0);
         if (!confirm('이 페이지 ' + toPay.length + '명, ' + formatTrix(amount) + ' trix를 지급하시겠습니까?')) return;
-        toPay.forEach(function (result) { result.paymentStatus = 'paid'; });
-        if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
-            try { for (var i = 0; i < toPay.length; i++) { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(toPay[i].id, 'paid'); } } catch (e) {}
-        }
-        (async function () {
+        var successCount = 0;
+        var failedCount = 0;
+        for (var i = 0; i < toPay.length; i++) {
             try {
-                var tokenService = window.firebaseAdmin && window.firebaseAdmin.tokenService;
-                var addSupport = tokenService && typeof tokenService.addSupportToMemberBalance === 'function';
-                for (var i = 0; i < toPay.length; i++) {
-                    var result = toPay[i];
-                    if (result.orderId) {
-                        try {
-                            var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
-                            if (orderDoc.exists) {
-                                var uid = orderDoc.data().userId;
-                                if (uid) {
-                                    // 지급 완료 문자 발송 제거 (추첨 완료 시로 변경)
-                                    // await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
-                                    if (addSupport) await tokenService.addSupportToMemberBalance(uid, result.support);
-                                }
-                            }
-                        } catch (e) {}
-                    }
-                }
-            } catch (e) {}
-        })();
+                await applySupportPayment(toPay[i]);
+                successCount++;
+            } catch (e) {
+                failedCount++;
+                console.error('페이지 일괄 지급 실패:', toPay[i] && toPay[i].id, e);
+            }
+        }
         renderDailyPaymentResults(dailyPaymentResults);
+        if (failedCount > 0) {
+            alert('페이지 지급 완료 (일부 실패)\n성공: ' + successCount + '건\n실패: ' + failedCount + '건');
+        }
         return;
     }
     if (lastConfirmFiltered.length === 0) {
@@ -5318,33 +5311,21 @@ async function completePagePayment() {
     }
     var amount = toPay.reduce(function (s, r) { return s + r.support; }, 0);
     if (!confirm('이 페이지 ' + toPay.length + '명, ' + formatTrix(amount) + ' trix를 지급하시겠습니까?')) return;
-    toPay.forEach(function (result) { result.paymentStatus = 'paid'; });
-    if (window.firebaseAdmin && window.firebaseAdmin.lotteryConfirmedService) {
-        try { for (var i = 0; i < toPay.length; i++) { await window.firebaseAdmin.lotteryConfirmedService.updatePaymentStatus(toPay[i].id, 'paid'); } } catch (e) {}
-    }
-    (async function () {
+    var successCount = 0;
+    var failedCount = 0;
+    for (var i = 0; i < toPay.length; i++) {
         try {
-            var tokenService = window.firebaseAdmin && window.firebaseAdmin.tokenService;
-            var addSupport = tokenService && typeof tokenService.addSupportToMemberBalance === 'function';
-            for (var i = 0; i < toPay.length; i++) {
-                var result = toPay[i];
-                if (result.orderId) {
-                    try {
-                        var orderDoc = await window.firebaseAdmin.collections.orders().doc(result.orderId).get();
-                        if (orderDoc.exists) {
-                            var uid = orderDoc.data().userId;
-                            if (uid) {
-                                // 지급 완료 문자 발송 제거 (추첨 완료 시로 변경)
-                                // await createNotificationForUser(uid, 'support_paid', '쇼핑지원금이 지급되었습니다', formatTrix(result.support) + ' trix의 쇼핑지원금이 지급되었습니다.', 'mypage.html?section=support').catch(function () {});
-                                if (addSupport) await tokenService.addSupportToMemberBalance(uid, result.support);
-                            }
-                        }
-                    } catch (e) {}
-                }
-            }
-        } catch (e) {}
-    })();
+            await applySupportPayment(toPay[i]);
+            successCount++;
+        } catch (e) {
+            failedCount++;
+            console.error('페이지 지급 실패:', toPay[i] && toPay[i].id, e);
+        }
+    }
     renderConfirmResults();
+    if (failedCount > 0) {
+        alert('페이지 지급 완료 (일부 실패)\n성공: ' + successCount + '건\n실패: ' + failedCount + '건');
+    }
 }
 
 
@@ -5395,7 +5376,7 @@ function renderDailyPaymentResults(pendingResults) {
             <td>${escapeHtml(phone)}</td>
             <td>${amount.toLocaleString()}원</td>
             <td>${result.result === 'winner' ? '<span class="badge badge-success">당첨</span>' : '<span class="badge badge-info">미선정</span>'}</td>
-            <td style="font-weight: bold; color: #e74c3c;">${formatTrix(support)} trix</td>
+            <td style="font-weight: bold; color: #e74c3c;">${formatTrixFixed8(support)} trix</td>
             <td>${isPaid ? '<span class="badge badge-success">지급완료</span>' : '<span class="badge badge-warning">지급대기</span>'}</td>
             <td>${escapeHtml(date)}</td>
         </tr>

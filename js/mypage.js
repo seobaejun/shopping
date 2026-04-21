@@ -64,8 +64,8 @@ async function loadUserTrixBalance() {
                 allFields: Object.keys(userData)
             });
             
-            // trixBalance 필드가 없으면 tokenBalance, supportAmount를 사용하거나 0으로 초기화
-            const trixBalance = userData.trixBalance || userData.tokenBalance || userData.supportAmount || 0;
+            // 보유토큰 표시는 tokenBalance를 단일 원천으로 사용
+            const trixBalance = Number(userData.tokenBalance) || 0;
             
             console.log('💰 최종 트릭스 잔액:', trixBalance);
             
@@ -3618,6 +3618,22 @@ function getCurrentUser() {
     }
 }
 
+var NOTIFICATION_PAGE_SIZE = 20;
+var notification_page = 1;
+
+function ensureNotificationPaginationContainer() {
+    var existing = document.getElementById('notificationPagination');
+    if (existing) return existing;
+    var listContainer = document.getElementById('notificationList');
+    if (!listContainer || !listContainer.parentNode) return null;
+    var pagination = document.createElement('div');
+    pagination.id = 'notificationPagination';
+    pagination.className = 'mypage-list-pagination';
+    pagination.style.marginTop = '12px';
+    listContainer.parentNode.insertBefore(pagination, listContainer.nextSibling);
+    return pagination;
+}
+
 // 알림 목록 렌더링
 function renderNotificationList() {
     var listContainer = document.getElementById('notificationList');
@@ -3632,10 +3648,12 @@ function renderNotificationList() {
     }
 
     if (window.notificationService && typeof window.notificationService.getNotifications === 'function') {
-        window.notificationService.getNotifications(user.userId, 50).then(function (notifications) {
+        window.notificationService.getNotifications(user.userId).then(function (notifications) {
             if (!notifications || notifications.length === 0) {
                 listContainer.innerHTML = '';
                 if (emptyState) emptyState.style.display = 'block';
+                var emptyPagination = document.getElementById('notificationPagination');
+                if (emptyPagination) emptyPagination.innerHTML = '';
                 return;
             }
 
@@ -3659,7 +3677,13 @@ function renderNotificationList() {
                 return year + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
             }
 
-            var html = notifications.map(function (notif) {
+            var total_pages = Math.max(1, Math.ceil(notifications.length / NOTIFICATION_PAGE_SIZE));
+            if (notification_page > total_pages) notification_page = total_pages;
+            if (notification_page < 1) notification_page = 1;
+            var start_index = (notification_page - 1) * NOTIFICATION_PAGE_SIZE;
+            var page_notifications = notifications.slice(start_index, start_index + NOTIFICATION_PAGE_SIZE);
+
+            var html = page_notifications.map(function (notif) {
                 var readClass = notif.read ? 'read' : 'unread';
                 var iconClass = 'fas fa-bell';
                 if (notif.type === 'order_approved' || notif.type === 'order_shipped' || notif.type === 'order_delivered') {
@@ -3684,15 +3708,75 @@ function renderNotificationList() {
             }).join('');
 
             listContainer.innerHTML = html;
+            renderNotificationPagination(total_pages);
         }).catch(function (error) {
             console.error('알림 목록 로드 오류:', error);
             listContainer.innerHTML = '';
             if (emptyState) emptyState.style.display = 'block';
+            var errorPagination = document.getElementById('notificationPagination');
+            if (errorPagination) errorPagination.innerHTML = '';
         });
     } else {
         listContainer.innerHTML = '';
         if (emptyState) emptyState.style.display = 'block';
     }
+}
+
+function renderNotificationPagination(totalPages) {
+    var pagination = ensureNotificationPaginationContainer();
+    if (!pagination) return;
+    if (!totalPages || totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+    pagination.innerHTML = '';
+    pagination.style.display = 'flex';
+
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'btn';
+    prevBtn.textContent = '이전';
+    prevBtn.disabled = notification_page <= 1;
+    prevBtn.addEventListener('click', function () {
+        if (notification_page <= 1) return;
+        changeNotificationPage(notification_page - 1);
+    });
+    pagination.appendChild(prevBtn);
+
+    var PAGE_WINDOW_SIZE = 7;
+    var windowHalf = Math.floor(PAGE_WINDOW_SIZE / 2);
+    var startPage = Math.max(1, notification_page - windowHalf);
+    var endPage = Math.min(totalPages, startPage + PAGE_WINDOW_SIZE - 1);
+    startPage = Math.max(1, endPage - PAGE_WINDOW_SIZE + 1);
+
+    for (var pageIndex = startPage; pageIndex <= endPage; pageIndex++) {
+        var pageBtn = document.createElement('button');
+        pageBtn.type = 'button';
+        pageBtn.className = 'btn mypage-page-num' + (pageIndex === notification_page ? ' active' : '');
+        pageBtn.textContent = String(pageIndex);
+        (function (targetPage) {
+            pageBtn.addEventListener('click', function () {
+                changeNotificationPage(targetPage);
+            });
+        })(pageIndex);
+        pagination.appendChild(pageBtn);
+    }
+
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'btn';
+    nextBtn.textContent = '다음';
+    nextBtn.disabled = notification_page >= totalPages;
+    nextBtn.addEventListener('click', function () {
+        if (notification_page >= totalPages) return;
+        changeNotificationPage(notification_page + 1);
+    });
+    pagination.appendChild(nextBtn);
+}
+
+function changeNotificationPage(page) {
+    notification_page = Math.max(1, Number(page) || 1);
+    renderNotificationList();
 }
 
 // 알림 섹션 바인딩 (모바일 showNotificationPanel만 쓰면 showSection을 안 타서, 여기서 1회만 등록)
@@ -3718,6 +3802,7 @@ function bindNotificationSection() {
 
         if (window.notificationService && typeof window.notificationService.markAllAsRead === 'function') {
             window.notificationService.markAllAsRead(user.userId).then(function () {
+                notification_page = 1;
                 renderNotificationList();
                 if (window.notificationService && typeof window.notificationService.getUnreadCount === 'function') {
                     window.notificationService.getUnreadCount(user.userId).then(function (count) {
@@ -3804,7 +3889,7 @@ function showNotificationPanel() {
                     // 직접 알림 로딩
                     var user = window.currentUser || getCurrentUser();
                     if (user && window.notificationService) {
-                        window.notificationService.getNotifications(user.userId, 50).then(function (notifications) {
+                        window.notificationService.getNotifications(user.userId).then(function (notifications) {
                             var listContainer = document.getElementById('notificationList');
                             var emptyState = document.getElementById('notificationEmpty');
                             
@@ -4356,7 +4441,7 @@ async function cancelOrder(orderId) {
                         
                         if (userDoc.exists) {
                             const userData = userDoc.data();
-                            const newBalance = userData.tokenBalance || userData.supportAmount || userData.trixBalance || 0;
+                            const newBalance = Number(userData.tokenBalance) || 0;
                             
                             // 보유 토큰 표시 업데이트
                             const tokenBalanceEl = document.querySelector('.user-info .user-balance');

@@ -84,6 +84,31 @@
         }
     }
 
+    async function resolveNotificationUserKeys(userId) {
+        var userKeys = [];
+        function addKey(value) {
+            var key = (value || '').toString().trim();
+            if (!key) return;
+            if (userKeys.indexOf(key) === -1) userKeys.push(key);
+        }
+
+        addKey(userId);
+        try {
+            if (firebase && firebase.auth && firebase.auth().currentUser && firebase.auth().currentUser.uid) {
+                addKey(firebase.auth().currentUser.uid);
+            }
+        } catch (e) {}
+
+        try {
+            if (db && userId) {
+                var memberSnapshot = await db.collection('members').where('userId', '==', userId).limit(1).get();
+                if (!memberSnapshot.empty) addKey(memberSnapshot.docs[0].id);
+            }
+        } catch (e) {}
+
+        return userKeys;
+    }
+
     /**
      * 알림 생성 (관리자 페이지에서 호출)
      */
@@ -125,12 +150,19 @@
         if (!db || !userId) return 0;
 
         try {
-            var snapshot = await db.collection('notifications')
-                .where('userId', '==', userId)
-                .where('read', '==', false)
-                .get();
-            
-            return snapshot.size;
+            var userKeys = await resolveNotificationUserKeys(userId);
+            if (!userKeys.length) return 0;
+            var uniqueUnread = {};
+            for (var i = 0; i < userKeys.length; i++) {
+                var snapshot = await db.collection('notifications')
+                    .where('userId', '==', userKeys[i])
+                    .where('read', '==', false)
+                    .get();
+                snapshot.forEach(function(doc) {
+                    uniqueUnread[doc.id] = true;
+                });
+            }
+            return Object.keys(uniqueUnread).length;
         } catch (error) {
             console.error('❌ 읽지 않은 알림 개수 조회 오류:', error);
             return 0;
@@ -147,31 +179,35 @@
         if (!db || !userId) return [];
 
         try {
-            var query = db.collection('notifications')
-                .where('userId', '==', userId);
-            if (limit) {
-                query = query.limit(limit);
-            }
-            var snapshot = await query.get();
-            var notifications = [];
-            snapshot.forEach(function(doc) {
-                var data = doc.data();
-                notifications.push({
-                    id: doc.id,
-                    createdAt: data.createdAt,
-                    read: data.read,
-                    type: data.type,
-                    title: data.title,
-                    message: data.message,
-                    link: data.link,
-                    userId: data.userId
+            var userKeys = await resolveNotificationUserKeys(userId);
+            if (!userKeys.length) return [];
+
+            var mergedMap = {};
+            for (var i = 0; i < userKeys.length; i++) {
+                var query = db.collection('notifications').where('userId', '==', userKeys[i]);
+                if (limit) query = query.limit(limit);
+                var snapshot = await query.get();
+                snapshot.forEach(function(doc) {
+                    var data = doc.data();
+                    mergedMap[doc.id] = {
+                        id: doc.id,
+                        createdAt: data.createdAt,
+                        read: data.read,
+                        type: data.type,
+                        title: data.title,
+                        message: data.message,
+                        link: data.link,
+                        userId: data.userId
+                    };
                 });
-            });
+            }
+            var notifications = Object.keys(mergedMap).map(function(id) { return mergedMap[id]; });
             notifications.sort(function(a, b) {
                 var at = (a.createdAt && a.createdAt.seconds != null) ? a.createdAt.seconds : 0;
                 var bt = (b.createdAt && b.createdAt.seconds != null) ? b.createdAt.seconds : 0;
                 return bt - at;
             });
+            if (limit && notifications.length > limit) notifications = notifications.slice(0, limit);
             return notifications;
         } catch (error) {
             console.error('❌ 알림 목록 조회 오류:', error);
@@ -208,18 +244,20 @@
         if (!db || !userId) return;
 
         try {
-            var snapshot = await db.collection('notifications')
-                .where('userId', '==', userId)
-                .where('read', '==', false)
-                .get();
-            
             var batch = db.batch();
-            snapshot.forEach(function(doc) {
-                batch.update(doc.ref, {
-                    read: true,
-                    readAt: firebase.firestore.FieldValue.serverTimestamp()
+            var userKeys = await resolveNotificationUserKeys(userId);
+            for (var i = 0; i < userKeys.length; i++) {
+                var snapshot = await db.collection('notifications')
+                    .where('userId', '==', userKeys[i])
+                    .where('read', '==', false)
+                    .get();
+                snapshot.forEach(function(doc) {
+                    batch.update(doc.ref, {
+                        read: true,
+                        readAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                 });
-            });
+            }
             
             await batch.commit();
             console.log('✅ 모든 알림 읽음 처리 완료');
@@ -305,7 +343,7 @@
     /**
      * 실시간 알림 리스너 시작
      */
-    function startNotificationListener(userId) {
+    async function startNotificationListener(userId) {
         if (!db || !userId) return;
 
         // 기존 리스너 제거
@@ -313,38 +351,47 @@
             notificationListener();
         }
 
-        // 읽지 않은 알림 개수 업데이트
         getUnreadCount(userId).then(function(count) {
             updateNotificationBadge(count);
         });
 
-        // 실시간 리스너 (userId만 조건 → 복합 인덱스 불필요, read/createdAt은 콜백에서 처리)
-        notificationListener = db.collection('notifications')
-            .where('userId', '==', userId)
-            .onSnapshot(function(snapshot) {
-                snapshot.docChanges().forEach(function(change) {
-                    if (change.type !== 'added') return;
-                    var notification = change.doc.data();
-                    if (notification.read === true) return;
+        var userKeys = await resolveNotificationUserKeys(userId);
+        if (!userKeys.length) return;
+        var unsubscribeList = [];
+        for (var i = 0; i < userKeys.length; i++) {
+            (function(userKey) {
+                var unsubscribe = db.collection('notifications')
+                    .where('userId', '==', userKey)
+                    .onSnapshot(function(snapshot) {
+                        snapshot.docChanges().forEach(function(change) {
+                            if (change.type !== 'added') return;
+                            var notification = change.doc.data();
+                            if (notification.read === true) return;
 
-                    // 읽지 않은 알림 개수 업데이트
-                    getUnreadCount(userId).then(function(count) {
-                        updateNotificationBadge(count);
-                    });
-
-                    // 브라우저 알림 표시
-                    requestNotificationPermission().then(function(hasPermission) {
-                        if (hasPermission) {
-                            showBrowserNotification(notification.title || '알림', {
-                                body: notification.message || '',
-                                link: notification.link || ''
+                            getUnreadCount(userId).then(function(count) {
+                                updateNotificationBadge(count);
                             });
-                        }
+
+                            requestNotificationPermission().then(function(hasPermission) {
+                                if (hasPermission) {
+                                    showBrowserNotification(notification.title || '알림', {
+                                        body: notification.message || '',
+                                        link: notification.link || ''
+                                    });
+                                }
+                            });
+                        });
+                    }, function(error) {
+                        console.error('❌ 알림 리스너 오류:', error);
                     });
-                });
-            }, function(error) {
-                console.error('❌ 알림 리스너 오류:', error);
+                unsubscribeList.push(unsubscribe);
+            })(userKeys[i]);
+        }
+        notificationListener = function() {
+            unsubscribeList.forEach(function(unsubscribe) {
+                if (typeof unsubscribe === 'function') unsubscribe();
             });
+        };
     }
 
     /**
