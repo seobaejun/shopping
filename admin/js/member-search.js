@@ -94,6 +94,11 @@ function formatTrix(value) {
     return truncated.toFixed(8);
 }
 
+/** 수정 모달(구 보유 트릭스)과 동일 우선순위: tokenBalance → trixBalance → supportAmount */
+function getMemberTrixWalletDisplayAmount(member) {
+    return Number(member.tokenBalance || member.trixBalance || member.supportAmount || 0);
+}
+
 /** MD 관리자 전용: firebaseAdmin 없이 window.db로 구매총액·지원토큰 집계 후 회원에 병합 */
 async function enrichMembersWithOrderStatsMdFallback(members) {
     if (!members || members.length === 0) return members;
@@ -616,7 +621,7 @@ async function loadAllMembers() {
                             <td>${address}</td>
                             <td>${referralCode}</td>
                             <td>${Number(member.purchaseAmount || 0).toLocaleString()}</td>
-                            <td>${Number(member.supportAmount || 0).toLocaleString()} trix</td>
+                            <td>${formatTrix(getMemberTrixWalletDisplayAmount(member))} trix</td>
                             <td>${statusCell}</td>
                             <td>
                                 <button class="btn-icon btn-edit" data-member-id="${safeId}" onclick="editMemberInfo(this.dataset.memberId)" title="수정">
@@ -1043,7 +1048,7 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
             } else {
                 mdAddCell = '<td>—</td>';
             }
-            return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(emailDisplay) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td>' + memberKindCell + mdAddCell + '</tr>';
+            return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(memberId) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(emailDisplay) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(getMemberTrixWalletDisplayAmount(member)) + ' trix</td>' + memberKindCell + mdAddCell + '</tr>';
         }
         const phone = member.phone || '';
         const address = [member.postcode, member.address, member.detailAddress].filter(Boolean).join(' ') || '';
@@ -1062,7 +1067,7 @@ function renderMembersIntoBody(membersToRender, tbody, options) {
             }
         }
         
-        return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(emailDisplay) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(phone) + '</td><td>' + escapeHtml(finalJoinDate) + '</td><td>' + escapeHtml(address) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(Number(member.supportAmount || 0)) + ' trix</td><td>' + statusCell + '</td><td><button class="btn-icon btn-edit" data-member-id="' + safeId + '" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button><button class="btn-icon btn-delete" data-member-id="' + safeId + '" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr><td>' + (startIndex + index + 1) + '</td><td>' + escapeHtml(emailDisplay) + '</td><td>' + escapeHtml(name) + '</td><td>' + escapeHtml(phone) + '</td><td>' + escapeHtml(finalJoinDate) + '</td><td>' + escapeHtml(address) + '</td><td>' + escapeHtml(referralCode) + '</td><td>' + Number(member.purchaseAmount || 0).toLocaleString() + '</td><td>' + formatTrix(getMemberTrixWalletDisplayAmount(member)) + ' trix</td><td>' + statusCell + '</td><td><button class="btn-icon btn-edit" data-member-id="' + safeId + '" onclick="editMemberInfo(this.dataset.memberId)" title="수정"><i class="fas fa-edit"></i></button><button class="btn-icon btn-delete" data-member-id="' + safeId + '" onclick="deleteMemberInfo(this.dataset.memberId)" title="삭제"><i class="fas fa-trash"></i></button></td></tr>';
     }).join('');
 
     tbody.innerHTML = tableHTML;
@@ -1321,10 +1326,6 @@ function renderTableRows(tbody, members, startIndex) {
         });
     };
 
-    const formatTrix = (amount) => {
-        return Number(amount || 0).toLocaleString();
-    };
-
     const tableHTML = members.map((member, index) => {
         const memberId = member.userId || member.id || '';
         const nameRaw = (member.name || member.userName || '').toString().trim();
@@ -1383,7 +1384,7 @@ function renderTableRows(tbody, members, startIndex) {
             <td>${escapeHtml(address)}</td>
             <td>${escapeHtml(referralCode)}</td>
             <td>${Number(member.purchaseAmount || 0).toLocaleString()}</td>
-            <td>${formatTrix(Number(member.supportAmount || 0))} trix</td>
+            <td>${formatTrix(getMemberTrixWalletDisplayAmount(member))} trix</td>
             <td>${statusCell}</td>
             <td>
                 <button class="btn-icon btn-edit" data-member-id="${safeId}" onclick="editMemberInfo(this.dataset.memberId)" title="수정">
@@ -1472,11 +1473,39 @@ window.editMemberInfo = async function(memberId) {
         
         // 회원 정보 가져오기
         const members = await firebaseAdmin.memberService.getMembers();
-        const member = members.find(m => (m.id || m.userId) === memberId);
+        let member = members.find(m => (m.id || m.userId) === memberId);
         
         if (!member) {
             alert('회원 정보를 찾을 수 없습니다.');
             return;
+        }
+        member = Object.assign({}, member);
+        if (firebaseAdmin && typeof firebaseAdmin.enrichMembersWithOrderStats === 'function') {
+            try {
+                var enrichedRow = await firebaseAdmin.enrichMembersWithOrderStats([member]);
+                if (enrichedRow && enrichedRow[0]) member = enrichedRow[0];
+            } catch (enrichErr) {
+                console.warn('editMemberInfo: 집계 병합 실패:', enrichErr);
+            }
+        }
+        member = Object.assign({}, member, {
+            purchaseAmount: Number(member.purchaseAmount || 0),
+            supportAmount: Number(member.supportAmount || 0)
+        });
+        if (window.isMdAdmin && window.enrichMembersWithOrderStatsMdFallback && window.db &&
+            member.purchaseAmount === 0 && member.supportAmount === 0) {
+            try {
+                var mdRow = await window.enrichMembersWithOrderStatsMdFallback([member]);
+                if (mdRow && mdRow[0]) {
+                    member = mdRow[0];
+                    member = Object.assign({}, member, {
+                        purchaseAmount: Number(member.purchaseAmount || 0),
+                        supportAmount: Number(member.supportAmount || 0)
+                    });
+                }
+            } catch (mdErr) {
+                console.warn('editMemberInfo: MD 폴백 집계 실패:', mdErr);
+            }
         }
         
         var walletDisplay = (member.walletAddress || '').toString().trim();
@@ -1512,6 +1541,8 @@ window.editMemberInfo = async function(memberId) {
         document.getElementById('editMemberWalletAddress').value = walletDisplay;
         document.getElementById('editMemberReferralCode').value = member.referralCode || member.recommender || '';
         document.getElementById('editMemberStatus').value = member.status || '정상';
+        var supportReadonly = document.getElementById('editMemberTrixBalance');
+        if (supportReadonly) supportReadonly.value = formatTrix(Number(member.supportAmount || 0)) + ' trix';
         
         // 모달 표시
         const modal = document.getElementById('editMemberModal');

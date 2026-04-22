@@ -2808,10 +2808,35 @@ async function editMember(memberId) {
         console.log('찾은 회원:', member);
         
         if (member) {
-            // 보유 트릭스 계산 (tokenBalance 우선, 없으면 trixBalance, supportAmount 순)
-            const trixBalance = member.tokenBalance || member.trixBalance || member.supportAmount || 0;
-            const trixFormatted = formatTrix(trixBalance) + ' TRIX';
-            console.log('트릭스 잔액:', trixBalance, '→', trixFormatted);
+            let memberForModal = Object.assign({}, member);
+            if (window.firebaseAdmin && typeof window.firebaseAdmin.enrichMembersWithOrderStats === 'function') {
+                try {
+                    const enriched = await window.firebaseAdmin.enrichMembersWithOrderStats([memberForModal]);
+                    if (enriched && enriched[0]) memberForModal = enriched[0];
+                } catch (enrichErr) {
+                    console.warn('editMember: 구매·지원금 집계 병합 실패:', enrichErr);
+                }
+            }
+            memberForModal = Object.assign({}, memberForModal, {
+                purchaseAmount: Number(memberForModal.purchaseAmount || 0),
+                supportAmount: Number(memberForModal.supportAmount || 0)
+            });
+            if (window.isMdAdmin && window.enrichMembersWithOrderStatsMdFallback && window.db &&
+                memberForModal.purchaseAmount === 0 && memberForModal.supportAmount === 0) {
+                try {
+                    const mdEnriched = await window.enrichMembersWithOrderStatsMdFallback([memberForModal]);
+                    if (mdEnriched && mdEnriched[0]) memberForModal = mdEnriched[0];
+                    memberForModal = Object.assign({}, memberForModal, {
+                        purchaseAmount: Number(memberForModal.purchaseAmount || 0),
+                        supportAmount: Number(memberForModal.supportAmount || 0)
+                    });
+                } catch (mdErr) {
+                    console.warn('editMember: MD 폴백 집계 실패:', mdErr);
+                }
+            }
+            const supportForDisplay = Number(memberForModal.supportAmount || 0);
+            const supportFormatted = formatTrix(supportForDisplay) + ' trix';
+            console.log('지원금(목록과 동일 집계):', supportForDisplay, '→', supportFormatted);
             
             // 모달 필드에 회원 정보 설정 (안전하게)
             try {
@@ -2830,23 +2855,23 @@ async function editMember(memberId) {
                 };
                 
                 // 각 필드를 개별적으로 안전하게 설정 (실제 HTML ID에 맞춤)
-                try { setFieldValue('editMemberName', member.name); } catch(e) { console.error('Name 설정 실패:', e); }
-                try { setFieldValue('editMemberUserId', member.userId); } catch(e) { console.error('UserId 설정 실패:', e); }
-                try { setFieldValue('editMemberPhone', member.phone); } catch(e) { console.error('Phone 설정 실패:', e); }
-                try { setFieldValue('editMemberPostcode', member.postcode); } catch(e) { console.error('Postcode 설정 실패:', e); }
-                try { setFieldValue('editMemberAddress', member.address); } catch(e) { console.error('Address 설정 실패:', e); }
-                try { setFieldValue('editMemberDetailAddress', member.detailAddress); } catch(e) { console.error('DetailAddress 설정 실패:', e); }
-                try { setFieldValue('editMemberReferralCode', member.recommender || member.referralCode); } catch(e) { console.error('ReferralCode 설정 실패:', e); }
-                try { setFieldValue('editMemberBank', member.bank); } catch(e) { console.error('Bank 설정 실패:', e); }
-                try { setFieldValue('editMemberAccountNumber', member.accountNumber); } catch(e) { console.error('AccountNumber 설정 실패:', e); }
-                try { setFieldValue('editMemberWalletAddress', member.walletAddress); } catch(e) { console.error('WalletAddress 설정 실패:', e); }
-                try { setFieldValue('editMemberTrixBalance', trixFormatted); } catch(e) { console.error('TrixBalance 설정 실패:', e); }
+                try { setFieldValue('editMemberName', memberForModal.name); } catch(e) { console.error('Name 설정 실패:', e); }
+                try { setFieldValue('editMemberUserId', memberForModal.userId); } catch(e) { console.error('UserId 설정 실패:', e); }
+                try { setFieldValue('editMemberPhone', memberForModal.phone); } catch(e) { console.error('Phone 설정 실패:', e); }
+                try { setFieldValue('editMemberPostcode', memberForModal.postcode); } catch(e) { console.error('Postcode 설정 실패:', e); }
+                try { setFieldValue('editMemberAddress', memberForModal.address); } catch(e) { console.error('Address 설정 실패:', e); }
+                try { setFieldValue('editMemberDetailAddress', memberForModal.detailAddress); } catch(e) { console.error('DetailAddress 설정 실패:', e); }
+                try { setFieldValue('editMemberReferralCode', memberForModal.recommender || memberForModal.referralCode); } catch(e) { console.error('ReferralCode 설정 실패:', e); }
+                try { setFieldValue('editMemberBank', memberForModal.bank); } catch(e) { console.error('Bank 설정 실패:', e); }
+                try { setFieldValue('editMemberAccountNumber', memberForModal.accountNumber); } catch(e) { console.error('AccountNumber 설정 실패:', e); }
+                try { setFieldValue('editMemberWalletAddress', memberForModal.walletAddress); } catch(e) { console.error('WalletAddress 설정 실패:', e); }
+                try { setFieldValue('editMemberTrixBalance', supportFormatted); } catch(e) { console.error('지원금 필드 설정 실패:', e); }
                 
                 // 상태 설정
                 const statusSelect = document.getElementById('editMemberStatus');
                 if (statusSelect) {
-                    statusSelect.value = member.status || '정상';
-                    console.log('상태 설정 완료:', member.status);
+                    statusSelect.value = memberForModal.status || '정상';
+                    console.log('상태 설정 완료:', memberForModal.status);
                 } else {
                     console.warn('editMemberStatus 요소를 찾을 수 없음');
                 }
