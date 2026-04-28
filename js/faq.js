@@ -9,7 +9,6 @@
     var _faqListCache = [];
     var db = null;
     var faqPdfOverlayEl = null;
-    var faqPdfObjectUrl = null;
 
     function sanitizeFaqHtml(html) {
         if (!html) return '';
@@ -28,14 +27,10 @@
         faqPdfOverlayEl.style.display = 'none';
         var frame = faqPdfOverlayEl.querySelector('iframe');
         if (frame) frame.src = 'about:blank';
-        if (faqPdfObjectUrl) {
-            URL.revokeObjectURL(faqPdfObjectUrl);
-            faqPdfObjectUrl = null;
-        }
         document.body.style.overflow = '';
     }
 
-    async function openFaqPdfOverlay(url, fileName) {
+    function openFaqPdfOverlay(url, fileName) {
         if (!url) return;
         if (!faqPdfOverlayEl) {
             faqPdfOverlayEl = document.createElement('div');
@@ -48,7 +43,6 @@
                 '<a id="faqPdfOverlayOpenNew" target="_blank" rel="noopener noreferrer" style="padding:6px 10px;background:#374151;color:#fff;border-radius:6px;text-decoration:none;font-size:12px;">새 창</a>' +
                 '<button type="button" id="faqPdfOverlayClose" style="padding:6px 10px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">닫기</button>' +
                 '</div></div>' +
-                '<div id="faqPdfOverlayLoading" style="padding:10px 12px;background:#f3f4f6;color:#374151;font-size:13px;">PDF를 불러오는 중...</div>' +
                 '<iframe id="faqPdfOverlayFrame" title="FAQ PDF viewer" style="flex:1;border:0;"></iframe>' +
                 '</div>';
             document.body.appendChild(faqPdfOverlayEl);
@@ -60,25 +54,9 @@
 
         faqPdfOverlayEl.querySelector('#faqPdfOverlayTitle').textContent = fileName || '첨부파일.pdf';
         faqPdfOverlayEl.querySelector('#faqPdfOverlayOpenNew').href = url;
-        var loadingEl = faqPdfOverlayEl.querySelector('#faqPdfOverlayLoading');
-        var frame = faqPdfOverlayEl.querySelector('#faqPdfOverlayFrame');
-        if (frame) frame.src = 'about:blank';
-        if (loadingEl) loadingEl.style.display = 'block';
+        faqPdfOverlayEl.querySelector('#faqPdfOverlayFrame').src = url;
         faqPdfOverlayEl.style.display = 'block';
         document.body.style.overflow = 'hidden';
-        try {
-            var response = await fetch(url, { credentials: 'omit' });
-            if (!response.ok) throw new Error('PDF 요청 실패: ' + response.status);
-            var blob = await response.blob();
-            if (faqPdfObjectUrl) URL.revokeObjectURL(faqPdfObjectUrl);
-            faqPdfObjectUrl = URL.createObjectURL(blob);
-            if (frame) frame.src = faqPdfObjectUrl;
-        } catch (error) {
-            console.warn('FAQ PDF 인페이지 로드 실패, 원본 URL로 대체:', error);
-            if (frame) frame.src = url;
-        } finally {
-            if (loadingEl) loadingEl.style.display = 'none';
-        }
     }
 
     /**
