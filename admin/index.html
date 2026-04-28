@@ -116,7 +116,7 @@
                 <div class="nav-section">
                     <h3 class="nav-title"><i class="fas fa-trophy"></i> 추첨관리</h3>
                     <ul class="nav-list">
-                        <li><a href="#" data-page="purchase-request"><i class="fas fa-clock"></i> 구매 요청 및 승인대기</a></li>
+                        <li><a href="#" data-page="purchase-request"><i class="fas fa-clock"></i> 구매 요청 및 승인대기 <span class="nav-new-badge" data-badge-page="purchase-request" style="display:none;">N</span></a></li>
                         <li><a href="#" data-page="draw-lottery"><i class="fas fa-dice"></i> 조별 추첨하기</a></li>
                         <li><a href="#" data-page="draw-confirm"><i class="fas fa-check-circle"></i> 조별 추첨 확정 현황</a></li>
                     </ul>
@@ -144,7 +144,7 @@
                     <h3 class="nav-title"><i class="fas fa-chart-bar"></i> 통계/분석</h3>
                     <ul class="nav-list">
                         <li><a href="#" data-page="visitor-stats"><i class="fas fa-users"></i> 접속자집계</a></li>
-                        <li><a href="#" data-page="board-manage"><i class="fas fa-clipboard"></i> 게시판관리</a></li>
+                        <li><a href="#" data-page="board-manage"><i class="fas fa-clipboard"></i> 게시판관리 <span class="nav-new-badge" data-badge-page="board-manage" style="display:none;">N</span></a></li>
                         <li><a href="#" data-page="product-sales"><i class="fas fa-chart-line"></i> 상품판매순위</a></li>
                     </ul>
                 </div>
@@ -2732,6 +2732,7 @@
                         <select class="inquiry-select" id="boardPostFaqCategory">
                             <option value="상품구매">상품구매</option>
                             <option value="쇼핑지원금">쇼핑지원금</option>
+                            <option value="TRIX Token">TRIX Token</option>
                             <option value="배송 관련">배송 관련</option>
                             <option value="회원가입">회원가입</option>
                         </select>
@@ -2755,7 +2756,7 @@
                         <span id="boardPostPdfDisplayName" style="color: #444; font-size: 14px;">선택된 파일 없음</span>
                         <button type="button" class="btn-secondary" id="boardPostPdfRemoveBtn" style="display: none; padding: 8px 14px;">첨부 삭제</button>
                     </div>
-                    <small style="color: #666; margin-top: 8px; display: block; font-size: 13px;">공지를 읽는 사용자가 PDF를 다운로드할 수 있습니다. (최대 15MB)</small>
+                    <small style="color: #666; margin-top: 8px; display: block; font-size: 13px;">공지사항/자주 묻는 질문에서 PDF를 다운로드할 수 있습니다. (최대 15MB)</small>
                 </div>
                 <div class="inquiry-form-group" id="boardPostStatusWrap">
                     <label class="inquiry-label">

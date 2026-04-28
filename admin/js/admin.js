@@ -1070,6 +1070,7 @@ async function loadPurchaseRequests() {
             window._purchaseRequestDateInitialized = true;
         }
         bindPurchaseRequestSearchButtons();
+        refreshSidebarNewBadges();
     } catch (error) {
         console.error('구매 요청 목록 로드 오류:', error);
         tbody.innerHTML = '<tr><td colspan="9" class="empty-message">목록을 불러오는 중 오류가 발생했습니다.</td></tr>';
@@ -3054,6 +3055,52 @@ function navigateToPage(pageId) {
 // 게시판 관리
 // ============================================
 const BOARD_TYPE_LABELS = { notice: '공지사항', event: '이벤트', qna: 'Q&A', review: '상품후기', inquiry: '1:1문의', 'product-inquiry': '상품문의', 'product-detail-inquiry': '상품상세 상품문의' };
+const SIDEBAR_NEW_BADGE_REFRESH_MS = 60000;
+let boardDateFilterEnabled = false;
+
+function setSidebarNavNewBadge(pageId, count) {
+    var badge = document.querySelector('.nav-new-badge[data-badge-page="' + pageId + '"]');
+    if (!badge) return;
+    var normalizedCount = Number(count || 0);
+    if (normalizedCount > 0) {
+        badge.textContent = 'N';
+        badge.title = '새 항목 ' + normalizedCount + '건';
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+        badge.title = '';
+    }
+}
+
+async function refreshSidebarNewBadges() {
+    try {
+        if (!window.firebaseAdmin || !window.firebaseAdmin.getInitPromise) return;
+        await window.firebaseAdmin.getInitPromise();
+        if (!window.firebaseAdmin.orderService || !window.firebaseAdmin.boardService) return;
+
+        var allOrders = await window.firebaseAdmin.orderService.getOrders({}) || [];
+        var newPurchaseRequestCount = allOrders.filter(function (o) {
+            return o.status === 'pending' || o.status === '대기' || o.status === 'cancel_requested';
+        }).length;
+
+        var inquiryPosts = await window.firebaseAdmin.boardService.getPosts('inquiry', {
+            keyword: '',
+            author: '',
+            startDate: '',
+            endDate: ''
+        }) || [];
+        var newInquiryCount = inquiryPosts.filter(function (p) {
+            var status = (p.status || '').toString();
+            var answer = (p.answer || '').toString().trim();
+            return status !== 'answered' || !answer;
+        }).length;
+
+        setSidebarNavNewBadge('purchase-request', newPurchaseRequestCount);
+        setSidebarNavNewBadge('board-manage', newInquiryCount);
+    } catch (error) {
+        console.warn('사이드바 신규 배지 갱신 실패:', error);
+    }
+}
 
 function getCurrentBoardType() {
     var active = document.querySelector('#board-manage .board-tab.active');
@@ -3064,8 +3111,8 @@ function getBoardFilters() {
     return {
         keyword: (document.getElementById('boardSearchKeyword') && document.getElementById('boardSearchKeyword').value) || '',
         author: (document.getElementById('boardSearchAuthor') && document.getElementById('boardSearchAuthor').value) || '',
-        startDate: (document.getElementById('boardSearchStartDate') && document.getElementById('boardSearchStartDate').value) || '',
-        endDate: (document.getElementById('boardSearchEndDate') && document.getElementById('boardSearchEndDate').value) || ''
+        startDate: boardDateFilterEnabled ? ((document.getElementById('boardSearchStartDate') && document.getElementById('boardSearchStartDate').value) || '') : '',
+        endDate: boardDateFilterEnabled ? ((document.getElementById('boardSearchEndDate') && document.getElementById('boardSearchEndDate').value) || '') : ''
     };
 }
 
@@ -3085,6 +3132,33 @@ async function loadBoardPosts(boardType) {
             var detailList = await window.firebaseAdmin.boardService.getPosts('product-inquiry', filters);
             list = detailList.filter(function(item) {
                 return item.productId && item.productId.trim() !== '';
+            });
+        } else if (boardType === 'qna') {
+            var qnaFilters = Object.assign({}, filters);
+            var hasKeywordOrAuthor = !!((qnaFilters.keyword || '').trim() || (qnaFilters.author || '').trim());
+            // Q&A 탭 기본 진입은 과거 누적 FAQ까지 보여주기 위해 날짜 제한을 해제한다.
+            if (!hasKeywordOrAuthor) {
+                qnaFilters.startDate = '';
+                qnaFilters.endDate = '';
+            }
+            // FAQ 레거시 데이터(boardType='faq')도 Q&A 탭에서 함께 관리
+            var qnaList = await window.firebaseAdmin.boardService.getPosts('qna', qnaFilters);
+            var legacyFaqList = await window.firebaseAdmin.boardService.getPosts('faq', qnaFilters);
+            var mergedMap = {};
+            (qnaList || []).forEach(function (item) {
+                if (item && item.id) mergedMap[item.id] = item;
+            });
+            (legacyFaqList || []).forEach(function (item) {
+                if (!item || !item.id) return;
+                if (!mergedMap[item.id]) {
+                    mergedMap[item.id] = Object.assign({}, item, { boardType: 'qna' });
+                }
+            });
+            list = Object.keys(mergedMap).map(function (key) { return mergedMap[key]; });
+            list.sort(function (a, b) {
+                var at = a.createdAt && (a.createdAt.seconds != null ? a.createdAt.seconds : 0);
+                var bt = b.createdAt && (b.createdAt.seconds != null ? b.createdAt.seconds : 0);
+                return bt - at;
             });
         } else {
             list = await window.firebaseAdmin.boardService.getPosts(boardType, filters);
@@ -3173,6 +3247,7 @@ function renderBoardTable(list, boardType) {
 }
 
 function switchBoardTab(boardType) {
+    boardDateFilterEnabled = false;
     document.querySelectorAll('#board-manage .board-tab').forEach(function (tab) {
         tab.classList.toggle('active', tab.getAttribute('data-board-type') === boardType);
     });
@@ -3343,7 +3418,7 @@ function setBoardNoticePdfUiFromPost(post) {
 }
 
 async function resolveNoticePdfForSave(boardType) {
-    if (boardType !== 'notice') return undefined;
+    if (boardType !== 'notice' && boardType !== 'qna') return undefined;
     if (window._noticePdfClearOnSave) {
         return { pdfUrl: null, pdfFileName: null, pdfStoragePath: null };
     }
@@ -3503,8 +3578,8 @@ function openBoardPostModal(editId, boardType) {
     if (answerWrap) answerWrap.style.display = (boardType === 'inquiry' || boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? 'block' : 'none';
     if (productInfoWrap) productInfoWrap.style.display = (boardType === 'product-inquiry' || boardType === 'product-detail-inquiry') ? 'block' : 'none';
     var pdfWrap = document.getElementById('boardPostPdfWrap');
-    if (pdfWrap) pdfWrap.style.display = (boardType === 'notice') ? 'block' : 'none';
-    if (boardType === 'notice') {
+    if (pdfWrap) pdfWrap.style.display = (boardType === 'notice' || boardType === 'qna') ? 'block' : 'none';
+    if (boardType === 'notice' || boardType === 'qna') {
         var noticePost = null;
         if (editId && window._boardPostsList) {
             noticePost = window._boardPostsList.find(function (p) { return p.id === editId; });
@@ -3611,7 +3686,7 @@ async function saveBoardPost() {
                 updateData.status = (statusSelect && statusSelect.value) || 'published';
                 updateData.isNotice = (noticeCheck && noticeCheck.checked) || false;
                 if (boardType === 'qna') updateData.faqCategory = faqCategory;
-                if (boardType === 'notice' && pdfPatch !== undefined) {
+                if ((boardType === 'notice' || boardType === 'qna') && pdfPatch !== undefined) {
                     updateData.pdfUrl = pdfPatch.pdfUrl;
                     updateData.pdfFileName = pdfPatch.pdfFileName;
                     if (pdfPatch.pdfStoragePath !== undefined) updateData.pdfStoragePath = pdfPatch.pdfStoragePath;
@@ -3661,7 +3736,7 @@ async function saveBoardPost() {
                 addData.answer = answer;
                 addData.status = answer ? 'answered' : 'pending';
             }
-            if (boardType === 'notice' && pdfPatch !== undefined && pdfPatch.pdfUrl) {
+            if ((boardType === 'notice' || boardType === 'qna') && pdfPatch !== undefined && pdfPatch.pdfUrl) {
                 addData.pdfUrl = pdfPatch.pdfUrl;
                 addData.pdfFileName = pdfPatch.pdfFileName || '';
                 if (pdfPatch.pdfStoragePath) addData.pdfStoragePath = pdfPatch.pdfStoragePath;
@@ -3705,6 +3780,7 @@ async function saveBoardPost() {
         }
         closeBoardPostModal();
         loadBoardPosts(boardType);
+        refreshSidebarNewBadges();
     } catch (error) {
         console.error('게시글 저장 오류:', error);
         alert((error && error.message) ? error.message : '저장에 실패했습니다.');
@@ -3718,6 +3794,7 @@ async function deleteBoardPost(postId) {
         await window.firebaseAdmin.boardService.deletePost(postId);
         alert('삭제되었습니다.');
         loadBoardPosts(getCurrentBoardType());
+        refreshSidebarNewBadges();
     } catch (error) {
         console.error('게시글 삭제 오류:', error);
         alert('삭제에 실패했습니다.');
@@ -6460,6 +6537,13 @@ async function initAdminPage() {
     }
     
     console.log('✅ 모든 네비게이션 이벤트 등록 완료');
+    await refreshSidebarNewBadges();
+    if (window._sidebarNewBadgeTimer) {
+        clearInterval(window._sidebarNewBadgeTimer);
+    }
+    window._sidebarNewBadgeTimer = setInterval(function () {
+        refreshSidebarNewBadges();
+    }, SIDEBAR_NEW_BADGE_REFRESH_MS);
     
     // localStorage에서 마지막 페이지 복원
     let savedPage = null;
@@ -6683,7 +6767,10 @@ async function initAdminPage() {
             });
         });
         var boardSearchBtn = document.getElementById('boardSearchBtn');
-        if (boardSearchBtn) boardSearchBtn.onclick = function () { loadBoardPosts(getCurrentBoardType()); };
+        if (boardSearchBtn) boardSearchBtn.onclick = function () {
+            boardDateFilterEnabled = true;
+            loadBoardPosts(getCurrentBoardType());
+        };
         var boardResetBtn = document.getElementById('boardResetBtn');
         if (boardResetBtn) {
             boardResetBtn.onclick = function () {
@@ -6695,6 +6782,7 @@ async function initAdminPage() {
                 if (author) author.value = '';
                 if (start) start.value = '';
                 if (end) end.value = '';
+                boardDateFilterEnabled = false;
                 loadBoardPosts(getCurrentBoardType());
             };
         }

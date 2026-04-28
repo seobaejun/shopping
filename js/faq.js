@@ -82,6 +82,15 @@
         list.forEach(function(p) {
             var title = (p.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             var content = (p.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            var pdfHtml = '';
+            if (p.pdfUrl) {
+                var pdfName = (p.pdfFileName || '첨부파일.pdf').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                pdfHtml = '<div class="faq-a-attachment" style="margin-top: 10px;">' +
+                    '<a href="' + p.pdfUrl + '" target="_blank" rel="noopener noreferrer" class="faq-pdf-download" style="color: #1565c0; font-weight: 600; text-decoration: none;">' +
+                    '<i class="fas fa-file-pdf" style="color:#c62828;margin-right:8px;"></i>' + pdfName + ' <span style="font-weight:400;color:#666;">(PDF 다운로드)</span>' +
+                    '</a>' +
+                    '</div>';
+            }
             htmlParts.push(
                 '<li class="faq-accordion-item" data-faq-id="' + (p.id || '') + '" style="display: block; width: 100%; max-width: 100%; overflow: hidden; box-sizing: border-box;">' +
                 '<div class="faq-accordion-q" style="display: flex; width: 100%; max-width: 100%; overflow: hidden; box-sizing: border-box;">' +
@@ -91,7 +100,7 @@
                 '</div>' +
                 '<div class="faq-accordion-a" style="display: none;">' +
                 '<span class="faq-a-icon">A</span>' +
-                '<div class="faq-a-text">' + content + '</div>' +
+                '<div class="faq-a-text">' + content + pdfHtml + '</div>' +
                 '</div>' +
                 '</li>'
             );
@@ -110,14 +119,25 @@
             return;
         }
 
-        db.collection('posts')
-            .where('boardType', '==', 'qna')
-            .get()
-            .then(function(snap) {
-                var list = [];
-                snap.docs.forEach(function(d) {
-                    list.push({ id: d.id, ...d.data() });
+        Promise.all([
+            db.collection('posts').where('boardType', '==', 'qna').get(),
+            db.collection('posts').where('boardType', '==', 'faq').get()
+        ])
+            .then(function(results) {
+                var qnaSnap = results[0];
+                var legacyFaqSnap = results[1];
+                var mergedMap = {};
+
+                qnaSnap.docs.forEach(function(d) {
+                    mergedMap[d.id] = { id: d.id, ...d.data() };
                 });
+                legacyFaqSnap.docs.forEach(function(d) {
+                    if (!mergedMap[d.id]) {
+                        mergedMap[d.id] = Object.assign({}, d.data(), { id: d.id, boardType: 'qna' });
+                    }
+                });
+
+                var list = Object.keys(mergedMap).map(function(key) { return mergedMap[key]; });
                 list.sort(function(a, b) {
                     var at = (a.createdAt && a.createdAt.seconds != null) ? a.createdAt.seconds : 0;
                     var bt = (b.createdAt && b.createdAt.seconds != null) ? b.createdAt.seconds : 0;
