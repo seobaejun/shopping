@@ -9,6 +9,18 @@
     var _faqListCache = [];
     var db = null;
 
+    function sanitizeFaqHtml(html) {
+        if (!html) return '';
+        var s = String(html);
+        s = s.replace(/<script\b[\s\S]*?<\/script>/gi, '');
+        s = s.replace(/<iframe\b[\s\S]*?<\/iframe>/gi, '');
+        s = s.replace(/<object\b[\s\S]*?<\/object>/gi, '');
+        s = s.replace(/<embed\b[\s\S]*?>/gi, '');
+        s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+        s = s.replace(/href\s*=\s*["']\s*javascript:/gi, 'href="#"');
+        return s;
+    }
+
     /**
      * Firebase 초기화 (로그인 없이도 작동)
      */
@@ -47,7 +59,31 @@
      */
     function getCurrentFaqCategory() {
         var tab = document.querySelector('.faq-tab.active');
-        return (tab && tab.getAttribute('data-faq-category')) ? tab.getAttribute('data-faq-category') : '상품구매';
+        return (tab && tab.getAttribute('data-faq-category')) ? tab.getAttribute('data-faq-category') : 'TRIX Token';
+    }
+
+    /**
+     * URL 쿼리(category) 기준 초기 탭 설정
+     */
+    function applyInitialFaqCategoryFromUrl() {
+        try {
+            var params = new URLSearchParams(window.location.search || '');
+            var source = (params.get('source') || '').trim().toLowerCase();
+            var category = (params.get('category') || '').trim();
+            if (!category && source === 'trix-token') category = 'TRIX Token';
+            if (!category) return;
+            function normalizeCategory(value) {
+                return String(value || '').toLowerCase().replace(/\s+/g, '').replace(/[-_]/g, '');
+            }
+            var targetTab = Array.prototype.slice.call(document.querySelectorAll('.faq-tab')).find(function (tab) {
+                return normalizeCategory(tab.getAttribute('data-faq-category')) === normalizeCategory(category);
+            });
+            if (!targetTab) return;
+            document.querySelectorAll('.faq-tab').forEach(function(tab) { tab.classList.remove('active'); });
+            targetTab.classList.add('active');
+        } catch (e) {
+            console.warn('FAQ 초기 카테고리 적용 실패:', e);
+        }
     }
 
     /**
@@ -81,7 +117,7 @@
         var htmlParts = [];
         list.forEach(function(p) {
             var title = (p.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            var content = (p.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            var content = sanitizeFaqHtml(p.content || '');
             var pdfHtml = '';
             if (p.pdfUrl) {
                 var pdfName = (p.pdfFileName || '첨부파일.pdf').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -213,6 +249,7 @@
      */
     function init() {
         console.log('🔵 FAQ 페이지 초기화 시작');
+        applyInitialFaqCategoryFromUrl();
         
         // Firebase 초기화
         initFirebase().then(function() {
