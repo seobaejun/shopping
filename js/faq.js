@@ -8,7 +8,6 @@
 
     var _faqListCache = [];
     var db = null;
-    var faqPdfOverlayEl = null;
 
     function sanitizeFaqHtml(html) {
         if (!html) return '';
@@ -20,43 +19,6 @@
         s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
         s = s.replace(/href\s*=\s*["']\s*javascript:/gi, 'href="#"');
         return s;
-    }
-
-    function closeFaqPdfOverlay() {
-        if (!faqPdfOverlayEl) return;
-        faqPdfOverlayEl.style.display = 'none';
-        var frame = faqPdfOverlayEl.querySelector('iframe');
-        if (frame) frame.src = 'about:blank';
-        document.body.style.overflow = '';
-    }
-
-    function openFaqPdfOverlay(url, fileName) {
-        if (!url) return;
-        if (!faqPdfOverlayEl) {
-            faqPdfOverlayEl = document.createElement('div');
-            faqPdfOverlayEl.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.72);display:none;';
-            faqPdfOverlayEl.innerHTML =
-                '<div style="position:absolute;inset:12px;background:#fff;border-radius:10px;display:flex;flex-direction:column;overflow:hidden;">' +
-                '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#1f2937;color:#fff;">' +
-                '<strong id="faqPdfOverlayTitle" style="font-size:14px;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></strong>' +
-                '<div style="display:flex;gap:8px;">' +
-                '<a id="faqPdfOverlayOpenNew" target="_blank" rel="noopener noreferrer" style="padding:6px 10px;background:#374151;color:#fff;border-radius:6px;text-decoration:none;font-size:12px;">새 창</a>' +
-                '<button type="button" id="faqPdfOverlayClose" style="padding:6px 10px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">닫기</button>' +
-                '</div></div>' +
-                '<iframe id="faqPdfOverlayFrame" title="FAQ PDF viewer" style="flex:1;border:0;"></iframe>' +
-                '</div>';
-            document.body.appendChild(faqPdfOverlayEl);
-            faqPdfOverlayEl.querySelector('#faqPdfOverlayClose').addEventListener('click', closeFaqPdfOverlay);
-            faqPdfOverlayEl.addEventListener('click', function (e) {
-                if (e.target === faqPdfOverlayEl) closeFaqPdfOverlay();
-            });
-        }
-
-        faqPdfOverlayEl.querySelector('#faqPdfOverlayTitle').textContent = fileName || '첨부파일.pdf';
-        faqPdfOverlayEl.querySelector('#faqPdfOverlayOpenNew').href = url;
-        faqPdfOverlayEl.querySelector('#faqPdfOverlayFrame').src = url;
-        faqPdfOverlayEl.style.display = 'block';
-        document.body.style.overflow = 'hidden';
     }
 
     /**
@@ -159,10 +121,8 @@
             var pdfHtml = '';
             if (p.pdfUrl) {
                 var pdfName = (p.pdfFileName || '첨부파일.pdf').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                var encodedUrl = encodeURIComponent(p.pdfUrl);
-                var encodedName = encodeURIComponent(p.pdfFileName || '첨부파일.pdf');
                 pdfHtml = '<div class="faq-a-attachment" style="margin-top: 10px;">' +
-                    '<a href="' + p.pdfUrl + '" data-pdf-url="' + encodedUrl + '" data-pdf-name="' + encodedName + '" class="faq-pdf-download" style="color: #1565c0; font-weight: 600; text-decoration: none;">' +
+                    '<a href="' + p.pdfUrl + '" target="_blank" rel="noopener noreferrer" class="faq-pdf-download" style="color: #1565c0; font-weight: 600; text-decoration: none;">' +
                     '<i class="fas fa-file-pdf" style="color:#c62828;margin-right:8px;"></i>' + pdfName + ' <span style="font-weight:400;color:#666;">(PDF 다운로드)</span>' +
                     '</a>' +
                     '</div>';
@@ -261,14 +221,6 @@
 
         // 아코디언 토글 이벤트
         wrap.addEventListener('click', function(e) {
-            var pdfLink = e.target && e.target.closest ? e.target.closest('a.faq-pdf-download') : null;
-            if (pdfLink) {
-                e.preventDefault();
-                var pdfUrl = decodeURIComponent(pdfLink.getAttribute('data-pdf-url') || '');
-                var pdfName = decodeURIComponent(pdfLink.getAttribute('data-pdf-name') || '첨부파일.pdf');
-                openFaqPdfOverlay(pdfUrl, pdfName);
-                return;
-            }
             var qEl = e.target && e.target.closest ? e.target.closest('.faq-accordion-q') : null;
             if (!qEl) return;
             var item = qEl.closest('.faq-accordion-item');
