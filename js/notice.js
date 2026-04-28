@@ -8,6 +8,7 @@
 
     var _noticeListCache = [];
     var db = null;
+    var noticePdfOverlayEl = null;
 
     /**
      * Firebase 초기화 (로그인 없이도 작동)
@@ -67,17 +68,45 @@
         return s;
     }
 
-    /** 공지 PDF: 새 탭에서 열기 (한 경로만 사용) */
-    function triggerPdfDownload(url, fileName, storagePath) {
+    function closeNoticePdfOverlay() {
+        if (!noticePdfOverlayEl) return;
+        noticePdfOverlayEl.style.display = 'none';
+        var frame = noticePdfOverlayEl.querySelector('iframe');
+        if (frame) frame.src = 'about:blank';
+        document.body.style.overflow = '';
+    }
+
+    function openNoticePdfOverlay(url, fileName) {
         if (!url) return;
-        var a = document.createElement('a');
-        a.href = url;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        if (!noticePdfOverlayEl) {
+            noticePdfOverlayEl = document.createElement('div');
+            noticePdfOverlayEl.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.72);display:none;';
+            noticePdfOverlayEl.innerHTML =
+                '<div style="position:absolute;inset:12px;background:#fff;border-radius:10px;display:flex;flex-direction:column;overflow:hidden;">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#1f2937;color:#fff;">' +
+                '<strong id="noticePdfOverlayTitle" style="font-size:14px;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></strong>' +
+                '<div style="display:flex;gap:8px;">' +
+                '<a id="noticePdfOverlayOpenNew" target="_blank" rel="noopener noreferrer" style="padding:6px 10px;background:#374151;color:#fff;border-radius:6px;text-decoration:none;font-size:12px;">새 창</a>' +
+                '<button type="button" id="noticePdfOverlayClose" style="padding:6px 10px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">닫기</button>' +
+                '</div></div>' +
+                '<iframe id="noticePdfOverlayFrame" title="Notice PDF viewer" style="flex:1;border:0;"></iframe>' +
+                '</div>';
+            document.body.appendChild(noticePdfOverlayEl);
+            noticePdfOverlayEl.querySelector('#noticePdfOverlayClose').addEventListener('click', closeNoticePdfOverlay);
+            noticePdfOverlayEl.addEventListener('click', function (e) {
+                if (e.target === noticePdfOverlayEl) closeNoticePdfOverlay();
+            });
+        }
+        noticePdfOverlayEl.querySelector('#noticePdfOverlayTitle').textContent = fileName || '첨부파일.pdf';
+        noticePdfOverlayEl.querySelector('#noticePdfOverlayOpenNew').href = url;
+        noticePdfOverlayEl.querySelector('#noticePdfOverlayFrame').src = url;
+        noticePdfOverlayEl.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    /** 공지 PDF: 아이폰 대응 인페이지 뷰어 */
+    function triggerPdfDownload(url, fileName, storagePath) {
+        openNoticePdfOverlay(url, fileName || '첨부파일.pdf');
     }
 
     function formatDate(createdAt) {
