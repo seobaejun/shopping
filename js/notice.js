@@ -9,6 +9,7 @@
     var _noticeListCache = [];
     var db = null;
     var noticePdfOverlayEl = null;
+    var noticePdfObjectUrl = null;
 
     /**
      * Firebase 초기화 (로그인 없이도 작동)
@@ -73,10 +74,14 @@
         noticePdfOverlayEl.style.display = 'none';
         var frame = noticePdfOverlayEl.querySelector('iframe');
         if (frame) frame.src = 'about:blank';
+        if (noticePdfObjectUrl) {
+            URL.revokeObjectURL(noticePdfObjectUrl);
+            noticePdfObjectUrl = null;
+        }
         document.body.style.overflow = '';
     }
 
-    function openNoticePdfOverlay(url, fileName) {
+    async function openNoticePdfOverlay(url, fileName) {
         if (!url) return;
         if (!noticePdfOverlayEl) {
             noticePdfOverlayEl = document.createElement('div');
@@ -89,6 +94,7 @@
                 '<a id="noticePdfOverlayOpenNew" target="_blank" rel="noopener noreferrer" style="padding:6px 10px;background:#374151;color:#fff;border-radius:6px;text-decoration:none;font-size:12px;">새 창</a>' +
                 '<button type="button" id="noticePdfOverlayClose" style="padding:6px 10px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">닫기</button>' +
                 '</div></div>' +
+                '<div id="noticePdfOverlayLoading" style="padding:10px 12px;background:#f3f4f6;color:#374151;font-size:13px;">PDF를 불러오는 중...</div>' +
                 '<iframe id="noticePdfOverlayFrame" title="Notice PDF viewer" style="flex:1;border:0;"></iframe>' +
                 '</div>';
             document.body.appendChild(noticePdfOverlayEl);
@@ -99,9 +105,25 @@
         }
         noticePdfOverlayEl.querySelector('#noticePdfOverlayTitle').textContent = fileName || '첨부파일.pdf';
         noticePdfOverlayEl.querySelector('#noticePdfOverlayOpenNew').href = url;
-        noticePdfOverlayEl.querySelector('#noticePdfOverlayFrame').src = url;
+        var loadingEl = noticePdfOverlayEl.querySelector('#noticePdfOverlayLoading');
+        var frame = noticePdfOverlayEl.querySelector('#noticePdfOverlayFrame');
+        if (frame) frame.src = 'about:blank';
+        if (loadingEl) loadingEl.style.display = 'block';
         noticePdfOverlayEl.style.display = 'block';
         document.body.style.overflow = 'hidden';
+        try {
+            var response = await fetch(url, { credentials: 'omit' });
+            if (!response.ok) throw new Error('PDF 요청 실패: ' + response.status);
+            var blob = await response.blob();
+            if (noticePdfObjectUrl) URL.revokeObjectURL(noticePdfObjectUrl);
+            noticePdfObjectUrl = URL.createObjectURL(blob);
+            if (frame) frame.src = noticePdfObjectUrl;
+        } catch (error) {
+            console.warn('공지 PDF 인페이지 로드 실패, 원본 URL로 대체:', error);
+            if (frame) frame.src = url;
+        } finally {
+            if (loadingEl) loadingEl.style.display = 'none';
+        }
     }
 
     /** 공지 PDF: 아이폰 대응 인페이지 뷰어 */
