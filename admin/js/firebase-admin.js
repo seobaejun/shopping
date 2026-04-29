@@ -100,6 +100,41 @@ function getStoragePathFromDownloadUrl(url) {
     return null;
 }
 
+var BOARD_EDITOR_STORAGE_PATH_PREFIX = 'products/board-editor/';
+
+/** HTML 본문에서 게시판 에디터용 Storage 경로만 수집 (중복 제거) */
+function collectBoardEditorImageStoragePathsFromHtml(html) {
+    var paths = [];
+    if (!html || typeof html !== 'string') return paths;
+    var seen = {};
+    var re = /<img[^>]+src=["']([^"']+)["']/gi;
+    var m;
+    while ((m = re.exec(html)) !== null) {
+        var path = getStoragePathFromDownloadUrl(m[1]);
+        if (path && path.indexOf(BOARD_EDITOR_STORAGE_PATH_PREFIX) === 0 && !seen[path]) {
+            seen[path] = true;
+            paths.push(path);
+        }
+    }
+    return paths;
+}
+
+function collectBoardEditorImageStoragePathsFromPostData(data) {
+    var out = [];
+    var seen = {};
+    function pushAll(html) {
+        collectBoardEditorImageStoragePathsFromHtml(html).forEach(function (p) {
+            if (!seen[p]) {
+                seen[p] = true;
+                out.push(p);
+            }
+        });
+    }
+    if (data && data.content) pushAll(data.content);
+    if (data && data.answer) pushAll(data.answer);
+    return out;
+}
+
 /**
  * 파일을 Firebase Storage에 업로드하고 다운로드 URL 반환.
  * 상품 이미지 업로드용 (대표/세부). 서버 URL 입력 방식은 건드리지 않음.
@@ -138,6 +173,24 @@ async function uploadNoticePdfToStorage(file) {
     await ref.put(file, { contentType: 'application/pdf' });
     var downloadUrl = await ref.getDownloadURL();
     return { url: downloadUrl, storagePath: path };
+}
+
+/**
+ * 게시판 Quill 본문용 이미지 업로드 (여러 장·용량은 Storage에서 처리)
+ */
+async function uploadBoardEditorImageToStorage(file) {
+    if (!file || !file.size) throw new Error('업로드할 파일이 없습니다.');
+    if (typeof firebase === 'undefined' || !firebase.storage) {
+        throw new Error('Firebase Storage를 사용할 수 없습니다. Storage SDK 로드 여부를 확인하세요.');
+    }
+    var storage = firebase.storage();
+    var safeName = (file.name || 'image.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
+    var unique = Date.now() + '_' + Math.random().toString(36).slice(2, 12);
+    var path = BOARD_EDITOR_STORAGE_PATH_PREFIX + unique + '_' + safeName;
+    var ref = storage.ref(path);
+    var contentType = file.type && file.type.startsWith('image/') ? file.type : 'image/jpeg';
+    await ref.put(file, { contentType: contentType });
+    return await ref.getDownloadURL();
 }
 
 // Firestore 컬렉션 참조
@@ -994,7 +1047,20 @@ const boardService = {
     async deletePost(postId) {
         try {
             if (!db) throw new Error('Firestore가 초기화되지 않았습니다.');
-            await collections.posts().doc(postId).delete();
+            var docRef = collections.posts().doc(postId);
+            var snap = await docRef.get();
+            if (snap.exists && typeof firebase !== 'undefined' && firebase.storage) {
+                var paths = collectBoardEditorImageStoragePathsFromPostData(snap.data());
+                var storage = firebase.storage();
+                for (var i = 0; i < paths.length; i++) {
+                    try {
+                        await storage.ref(paths[i]).delete();
+                    } catch (imgErr) {
+                        console.warn('게시글 본문 Storage 이미지 삭제 실패 (무시):', paths[i], imgErr);
+                    }
+                }
+            }
+            await docRef.delete();
         } catch (error) {
             console.error('게시글 삭제 오류:', error);
             throw error;
@@ -1335,6 +1401,7 @@ window.firebaseAdmin = {
     getDb,
     uploadFileToStorage,
     uploadNoticePdfToStorage,
+    uploadBoardEditorImageToStorage,
     get db() { return db; },
     collections,
     isTestMember,

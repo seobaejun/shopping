@@ -3279,113 +3279,120 @@ function initBoardContentQuill() {
         placeholder: '내용을 입력해주세요...'
     });
     
-    // 이미지 업로드 핸들러 (Canvas 리사이즈 + JPEG 압축)
+    // 이미지: 여러 장 선택 → 리사이즈·JPEG 압축 후 Firebase Storage 업로드 (본문에는 URL만 저장)
     boardContentQuill.getModule('toolbar').addHandler('image', function() {
         var input = document.createElement('input');
         input.setAttribute('type', 'file');
         input.setAttribute('accept', 'image/*');
+        input.setAttribute('multiple', 'multiple');
         input.click();
-        
+
         input.onchange = async function() {
-            var file = input.files[0];
-            if (file) {
-                try {
-                    console.log('이미지 처리 시작:', file.name, file.size, 'bytes');
-                    
-                    // Canvas로 리사이즈 + JPEG 압축
-                    var compressedDataUrl = await compressImageForBoard(file);
-                    console.log('이미지 압축 완료, 길이:', compressedDataUrl.length);
-                    
-                    var range = boardContentQuill.getSelection() || { index: 0 };
-                    boardContentQuill.insertEmbed(range.index, 'image', compressedDataUrl);
-                    
-                    console.log('이미지 삽입 완료');
-                    
-                } catch (error) {
-                    console.error('이미지 처리 실패:', error);
-                    alert('이미지 처리에 실패했습니다: ' + error.message);
+            var files = Array.prototype.slice.call(input.files || []).filter(function (f) {
+                return f.type && f.type.indexOf('image/') === 0;
+            });
+            input.value = '';
+            if (!files.length) return;
+
+            var fa = window.firebaseAdmin;
+            var uploadFn = fa && typeof fa.uploadBoardEditorImageToStorage === 'function'
+                ? fa.uploadBoardEditorImageToStorage.bind(fa)
+                : null;
+            if (!uploadFn) {
+                alert('이미지 Storage 업로드를 사용할 수 없습니다. 관리자 페이지를 강력 새로고침(Ctrl+Shift+R) 후 다시 시도해주세요.');
+                return;
+            }
+
+            try {
+                var range = boardContentQuill.getSelection(true);
+                var insertAt = range && range.index != null ? range.index : Math.max(0, boardContentQuill.getLength() - 1);
+                var idx = insertAt;
+                for (var i = 0; i < files.length; i++) {
+                    var file = files[i];
+                    var blob = await compressImageFileToBoardBlob(file);
+                    var uploadFile = new File([blob], 'board-editor.jpg', { type: 'image/jpeg' });
+                    var url = await uploadFn(uploadFile);
+                    boardContentQuill.insertEmbed(idx, 'image', url);
+                    idx += 1;
                 }
+                boardContentQuill.setSelection(idx, 0);
+            } catch (error) {
+                console.error('이미지 업로드 실패:', error);
+                alert('이미지 업로드에 실패했습니다: ' + (error && error.message ? error.message : String(error)));
             }
         };
     });
 }
 
-// Canvas로 이미지 리사이즈 + JPEG 압축 (Firestore 1MB 제한 준수)
-function compressImageForBoard(file) {
-    return new Promise(function(resolve, reject) {
-        if (!file.type.startsWith('image/')) {
+var BOARD_EDITOR_IMAGE_MAX_WIDTH = 1920;
+var BOARD_EDITOR_IMAGE_MAX_BLOB_BYTES = 5 * 1024 * 1024;
+
+/** Storage 업로드용: 리사이즈 후 JPEG Blob (문서 용량이 아닌 파일 크기 기준) */
+function compressImageFileToBoardBlob(file) {
+    return new Promise(function (resolve, reject) {
+        if (!file.type || file.type.indexOf('image/') !== 0) {
             reject(new Error('이미지 파일만 업로드 가능합니다.'));
             return;
         }
-        
+
         var img = new Image();
-        img.onload = function() {
-            console.log('원본 이미지 크기:', img.width, 'x', img.height);
-            
-            // 최대 크기 설정 (가로 기준)
-            var maxWidth = 1280;
-            var maxDataUrlLength = 480000; // 약 48만자 (Firestore 1MB 제한 고려)
-            
-            // 리사이즈 계산
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-            
-            var targetWidth = Math.min(img.width, maxWidth);
+        img.onload = function () {
+            var targetWidth = Math.min(img.width, BOARD_EDITOR_IMAGE_MAX_WIDTH);
             var targetHeight = (img.height * targetWidth) / img.width;
-            
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            
-            // Canvas에 이미지 그리기
-            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-            
-            // JPEG 압축 (품질을 점진적으로 낮춰가며 크기 조절)
-            var quality = 0.8;
+            var imgRef = img;
+
+            function renderCanvas(w, h) {
+                var c = document.createElement('canvas');
+                var ctx = c.getContext('2d');
+                c.width = w;
+                c.height = h;
+                ctx.drawImage(imgRef, 0, 0, w, h);
+                return c;
+            }
+
+            var canvas = renderCanvas(targetWidth, targetHeight);
+            var quality = 0.85;
             var attempts = 0;
-            var maxAttempts = 10;
-            
-            function tryCompress() {
-                var dataUrl = canvas.toDataURL('image/jpeg', quality);
-                console.log('압축 시도', attempts + 1, '품질:', quality, '길이:', dataUrl.length);
-                
-                if (dataUrl.length <= maxDataUrlLength || attempts >= maxAttempts) {
-                    if (dataUrl.length > maxDataUrlLength) {
-                        reject(new Error('이미지가 너무 큽니다. 더 작은 이미지를 선택해주세요.'));
+            var maxAttempts = 14;
+
+            function tryOnce() {
+                canvas.toBlob(function (blob) {
+                    if (!blob) {
+                        reject(new Error('이미지 인코딩에 실패했습니다.'));
                         return;
                     }
-                    console.log('최종 압축 완료 - 크기:', targetWidth + 'x' + targetHeight, '품질:', quality, '길이:', dataUrl.length);
-                    resolve(dataUrl);
-                } else {
-                    attempts++;
-                    quality -= 0.1;
-                    if (quality < 0.1) quality = 0.1;
-                    
-                    // 크기도 줄여보기
-                    if (attempts > 5 && targetWidth > 640) {
-                        targetWidth = Math.max(640, targetWidth * 0.8);
-                        targetHeight = (img.height * targetWidth) / img.width;
-                        canvas.width = targetWidth;
-                        canvas.height = targetHeight;
-                        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                    if (blob.size <= BOARD_EDITOR_IMAGE_MAX_BLOB_BYTES || attempts >= maxAttempts) {
+                        if (blob.size > BOARD_EDITOR_IMAGE_MAX_BLOB_BYTES) {
+                            reject(new Error('이미지가 너무 큽니다. 더 작은 이미지를 선택해주세요.'));
+                            return;
+                        }
+                        resolve(blob);
+                        return;
                     }
-                    
-                    setTimeout(tryCompress, 10);
-                }
+                    attempts++;
+                    quality -= 0.06;
+                    if (quality < 0.18) quality = 0.18;
+                    if (attempts > 6 && targetWidth > 720) {
+                        targetWidth = Math.max(720, targetWidth * 0.82);
+                        targetHeight = (imgRef.height * targetWidth) / imgRef.width;
+                        canvas = renderCanvas(targetWidth, targetHeight);
+                    }
+                    tryOnce();
+                }, 'image/jpeg', quality);
             }
-            
-            tryCompress();
+
+            tryOnce();
         };
-        
-        img.onerror = function() {
+
+        img.onerror = function () {
             reject(new Error('이미지를 로드할 수 없습니다.'));
         };
-        
-        // 이미지 로드
+
         var reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
             img.src = e.target.result;
         };
-        reader.onerror = function() {
+        reader.onerror = function () {
             reject(new Error('파일을 읽을 수 없습니다.'));
         };
         reader.readAsDataURL(file);
