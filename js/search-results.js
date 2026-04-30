@@ -484,9 +484,6 @@ async function init() {
         console.log('✅ Firebase SDK 로드 완료');
 
         // script.js의 함수들 초기화
-        if (typeof initNoticeBanner === 'function') {
-            try { initNoticeBanner(); } catch (e) { console.warn('⚠️ 공지 배너 초기화 실패:', e); }
-        }
         if (typeof initSearchToggle === 'function') {
             try { initSearchToggle(); } catch (e) { console.warn('⚠️ 검색 토글 초기화 실패:', e); }
         }

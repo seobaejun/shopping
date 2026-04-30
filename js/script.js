@@ -532,43 +532,6 @@ function initShareButtons() {
     });
 }
 
-// 공지 배너 닫기
-function initNoticeBanner() {
-    const noticeBanner = document.getElementById('noticeBanner');
-    const closeBanner = document.getElementById('closeBanner');
-    const closeToday = document.getElementById('closeToday');
-    
-    // 로컬스토리지 초기화 (테스트용 - 배너 강제 표시)
-    localStorage.removeItem('noticeBannerClosed');
-    localStorage.removeItem('noticeBannerClosedDate');
-    
-    // 로컬스토리지에서 배너 닫힘 상태 확인
-    const bannerClosed = localStorage.getItem('noticeBannerClosed');
-    const bannerClosedDate = localStorage.getItem('noticeBannerClosedDate');
-    const today = new Date().toDateString();
-    
-    // 영구 닫힘이거나 오늘 닫힌 경우
-    if (bannerClosed === 'true' || bannerClosedDate === today) {
-        noticeBanner.style.display = 'none';
-    }
-    
-    // X 버튼 - 영구 닫기
-    if (closeBanner) {
-        closeBanner.addEventListener('click', () => {
-            noticeBanner.style.display = 'none';
-            localStorage.setItem('noticeBannerClosed', 'true');
-        });
-    }
-    
-    // 오늘 하루 그만보기 - 오늘만 닫기
-    if (closeToday) {
-        closeToday.addEventListener('click', () => {
-            noticeBanner.style.display = 'none';
-            localStorage.setItem('noticeBannerClosedDate', today);
-        });
-    }
-}
-
 // 초기화 - 히어로 문구 고정: 첫 줄 "세상에 없던 쇼핑몰", 둘째 줄 "10쇼핑게임" (10 강조)
 function initHeroTitle() {
     const heroTitle = document.querySelector('.slide-content h1');
@@ -776,7 +739,6 @@ function initMainProductGridClick() {
 }
 
 function init() {
-    initNoticeBanner();
     if (typeof window.initCategorySidebar === 'function') window.initCategorySidebar();
     initHeroTitle();
     initScrollDown();
